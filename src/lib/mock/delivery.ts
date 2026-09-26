@@ -99,19 +99,42 @@ export function startDelivery(id: ID, opts: DeliveryOptions) {
   step(id, 0, opts);
 }
 
+/** The hop that follows each in-flight status. */
+const NEXT_HOP: Partial<Record<MessageStatus, number>> = {
+  queued: 0,
+  sending: 1,
+  sent: 2,
+};
+
 /**
  * A refresh kills the timers but the store keeps the message, so without this
- * it would sit on "Sending…" forever. Anything the server had not finished is
- * picked up again. Seeded data only ever holds terminal states.
+ * it would sit on "Sending…" (or "Sent", short of its final hop) forever.
+ * Anything the server had not finished is picked up at the hop it stopped at.
+ *
+ * `sent` is ambiguous: seeded history uses it as a resting state. A message
+ * this app sent never rests there — delivery ends at `delivered` or `failed` —
+ * so a `sent` message written after the seed anchor is one caught mid-flight,
+ * while seeded ones (all stamped at or before the anchor) are left alone.
  */
 export function resumeDeliveries(opts: DeliveryOptions) {
-  for (const message of Object.values(db.getState().messages)) {
+  const { messages, seededAt } = db.getState();
+  for (const message of Object.values(messages)) {
+    const hop = NEXT_HOP[message.status];
     if (
-      message.direction === "outbound" &&
-      (message.status === "queued" || message.status === "sending") &&
-      !timers.has(message.id)
+      hop === undefined ||
+      message.direction !== "outbound" ||
+      timers.has(message.id)
     ) {
-      startDelivery(message.id, opts);
+      continue;
     }
+    // A cleared workspace has no seeded history, so any `sent` is in flight.
+    if (
+      message.status === "sent" &&
+      seededAt &&
+      message.updatedAt <= seededAt
+    ) {
+      continue;
+    }
+    step(message.id, hop, opts);
   }
 }

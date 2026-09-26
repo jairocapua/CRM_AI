@@ -52,7 +52,8 @@ directly. The mock database lives in `src/lib/mock/` behind `src/lib/api/`.
 - **`useResource`: skeleton on `isLoading`, never on `isRefreshing`.** Every
   mutation invalidates; gating a skeleton on a refetch blanks the screen.
 - **Message delivery status is server-owned.** `lib/mock/delivery.ts` plays
-  the carrier; components render status and call `retry()`, nothing more.- **`@tanstack/react-table` is pinned to `8.21.3`** with a matching `overrides`
+  the carrier; components render status and call `retry()`, nothing more.
+- **`@tanstack/react-table` is pinned to `8.21.3`** with a matching `overrides`
   entry. Latest is 9.x, which is a hard API break that every shadcn example and
   most model training data predates. Do not run `shadcn add data-table` — it can
   pull v9 back in. Verify with `npm ls @tanstack/react-table`.

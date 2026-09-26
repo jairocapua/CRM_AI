@@ -57,10 +57,38 @@ const FILTER_CHANNELS: Channel[] = [
 
 type ChannelFilter = Channel | "any";
 
-export function InboxList({ selectedId }: { selectedId: string | undefined }) {
-  const [tab, setTab] = useState<InboxTab>("recents");
-  const [channel, setChannel] = useState<ChannelFilter>("any");
-  const [search, setSearch] = useState("");
+export interface InboxFilters {
+  tab: InboxTab;
+  channel: ChannelFilter;
+  search: string;
+}
+
+export const DEFAULT_INBOX_FILTERS: InboxFilters = {
+  tab: "recents",
+  channel: "any",
+  search: "",
+};
+
+/**
+ * The inbox list. Its filters are owned by `InboxShell`, not kept here: on
+ * mobile the list unmounts whenever a thread opens (and the shell swaps trees
+ * when the viewport crosses `md`), and the filters must survive both.
+ */
+export function InboxList({
+  selectedId,
+  filters,
+  onFiltersChange,
+}: {
+  selectedId: string | undefined;
+  filters: InboxFilters;
+  onFiltersChange: (next: InboxFilters) => void;
+}) {
+  const { tab, channel, search } = filters;
+  const setTab = (next: InboxTab) => onFiltersChange({ ...filters, tab: next });
+  const setChannel = (next: ChannelFilter) =>
+    onFiltersChange({ ...filters, channel: next });
+  const setSearch = (next: string) =>
+    onFiltersChange({ ...filters, search: next });
   const q = useDebouncedValue(search.trim(), 250);
   const [newOpen, setNewOpen] = useState(false);
 

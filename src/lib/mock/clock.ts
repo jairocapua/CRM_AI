@@ -1,3 +1,4 @@
+import type { ISODate } from "@/types";
 import { db } from "./db";
 
 /**
@@ -30,10 +31,10 @@ const CLOCK_KEY = "nimbus-crm-clock";
 const sessionStart = Date.now();
 
 /** Where this session's clock starts, per seeded world. Read once. */
-let resumed: { seededAt: string; base: number } | null = null;
+let resumed: { seededAt: ISODate; base: number } | null = null;
 let lastIssued = 0;
 
-function readHighWater(): { seededAt: string; at: number } | null {
+function readHighWater(): { seededAt: ISODate; at: number } | null {
   try {
     const raw = window.localStorage.getItem(CLOCK_KEY);
     if (!raw) return null;
@@ -46,7 +47,7 @@ function readHighWater(): { seededAt: string; at: number } | null {
   }
 }
 
-function writeHighWater(seededAt: string, at: number) {
+function writeHighWater(seededAt: ISODate, at: number) {
   try {
     window.localStorage.setItem(CLOCK_KEY, JSON.stringify({ seededAt, at }));
   } catch {
@@ -54,7 +55,7 @@ function writeHighWater(seededAt: string, at: number) {
   }
 }
 
-function baseFor(seededAt: string): number {
+function baseFor(seededAt: ISODate): number {
   if (resumed?.seededAt === seededAt) return resumed.base;
   const anchor = new Date(seededAt).getTime();
   const saved = readHighWater();
@@ -80,7 +81,7 @@ export function apiNowMs(): number {
  * The single writer of timestamps. Every `createdAt`/`updatedAt` comes here.
  * Strictly increasing, so two writes in the same millisecond still order.
  */
-export function nowIso(): string {
+export function nowIso(): ISODate {
   const { seededAt } = db.getState();
   // A cleared workspace runs on the real clock; that must not leak into the
   // demo clock once the workspace is reseeded.
@@ -100,7 +101,7 @@ export function startOfDayAgo(daysAgo: number): number {
 }
 
 /** The last instant of the demo world's "today", as an ISO string. */
-export function endOfTodayIso(): string {
+export function endOfTodayIso(): ISODate {
   const d = apiNow();
   d.setHours(23, 59, 59, 999);
   return d.toISOString();

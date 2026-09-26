@@ -48,8 +48,8 @@ export interface ComposerSend {
   subject?: string;
 }
 
-/** A shortcut being typed at the end of the draft, e.g. "…see /pric". */
-const TRAILING_SHORTCUT = /(^|\s)(\/[\w-]+)$/;
+/** A shortcut typed just before the caret, e.g. "…see /pricing|". */
+const SHORTCUT_BEFORE_CARET = /(^|\s)(\/[\w-]+)$/;
 
 function smsSegments(length: number): number {
   if (length === 0) return 0;
@@ -107,11 +107,22 @@ export function Composer({
     () => api.templates.findMergeTokens(`${subject}\n${body}`),
     [subject, body],
   );
-  // Tokens the last send attempt could not fill. Cleared by any edit.
-  const [blocked, setBlocked] = useState<string[]>([]);
+  // Tokens a render has already reported as having no value — learned when a
+  // template or snippet is inserted, or when a send is attempted. The warning
+  // is derived from what is still in the draft, so fixing the token (and only
+  // that) clears it.
+  const [unfillable, setUnfillable] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const blocked = tokens.filter((t) => unfillable.has(t));
   const [isMerging, setIsMerging] = useState(false);
 
-  const shortcutMatch = TRAILING_SHORTCUT.exec(body)?.[2];
+  // Caret position while nothing is selected; null during a selection.
+  const [caret, setCaret] = useState<number | null>(null);
+  const shortcutMatch =
+    caret === null
+      ? undefined
+      : SHORTCUT_BEFORE_CARET.exec(body.slice(0, caret))?.[2];
   const shortcutSnippet = shortcutMatch
     ? (snippets.data ?? []).find((s) => s.shortcut === shortcutMatch)
     : undefined;
@@ -127,7 +138,12 @@ export function Composer({
     );
   }
 
-  const canSend = body.trim().length > 0 && !isMerging;
+  const canSend = body.trim().length > 0 && !isMerging && blocked.length === 0;
+
+  function learnUnfillable(found: readonly string[]) {
+    if (found.length === 0) return;
+    setUnfillable((prev) => new Set([...prev, ...found]));
+  }
 
   /**
    * Merge fields typed by hand are filled here, at send time, the way a real
@@ -149,7 +165,7 @@ export function Composer({
           ...new Set([...merged.unresolved, ...mergedSubject.unresolved]),
         ];
         if (missing.length > 0) {
-          setBlocked(missing);
+          learnUnfillable(missing);
           return;
         }
         text = merged.text;
@@ -163,7 +179,7 @@ export function Composer({
     }
     onSend({ channel, body: text, subject: subjectText || undefined });
     setBody("");
-    setBlocked([]);
+    setCaret(0);
     textareaRef.current?.focus();
   }
 
@@ -178,10 +194,11 @@ export function Composer({
     const end = el ? el.selectionEnd : body.length;
     const next = body.slice(0, Math.max(0, start)) + text + body.slice(end);
     setBody(next);
-    const caret = Math.max(0, start) + text.length;
+    const nextCaret = Math.max(0, start) + text.length;
+    setCaret(nextCaret);
     requestAnimationFrame(() => {
       el?.focus();
-      el?.setSelectionRange(caret, caret);
+      el?.setSelectionRange(nextCaret, nextCaret);
     });
   }
 
@@ -190,8 +207,11 @@ export function Composer({
     try {
       const rendered = await renderFor(template.body);
       insertText(rendered.text);
+      learnUnfillable(rendered.unresolved);
       if (channel === "email" && template.subject) {
-        setSubject((await renderFor(template.subject)).text);
+        const renderedSubject = await renderFor(template.subject);
+        setSubject(renderedSubject.text);
+        learnUnfillable(renderedSubject.unresolved);
       }
     } catch {
       toast.error("Could not load that template.");
@@ -203,6 +223,7 @@ export function Composer({
     try {
       const rendered = await renderFor(snippet.body);
       insertText(rendered.text, replaceTail);
+      learnUnfillable(rendered.unresolved);
     } catch {
       toast.error("Could not load that snippet.");
     }
@@ -254,10 +275,7 @@ export function Composer({
         {channel === "email" ? (
           <Input
             value={subject}
-            onChange={(event) => {
-              setSubject(event.target.value);
-              setBlocked([]);
-            }}
+            onChange={(event) => setSubject(event.target.value)}
             placeholder="Subject"
             aria-label="Subject"
             className="h-7 min-w-40 flex-1"
@@ -270,7 +288,16 @@ export function Composer({
         value={body}
         onChange={(event) => {
           setBody(event.target.value);
-          setBlocked([]);
+          const el = event.currentTarget;
+          setCaret(
+            el.selectionStart === el.selectionEnd ? el.selectionStart : null,
+          );
+        }}
+        onSelect={(event) => {
+          const el = event.currentTarget;
+          setCaret(
+            el.selectionStart === el.selectionEnd ? el.selectionStart : null,
+          );
         }}
         onKeyDown={(event) => {
           if (event.nativeEvent.isComposing) return;

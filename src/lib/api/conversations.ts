@@ -104,9 +104,11 @@ export interface InboxQuery {
   assigneeId?: ID | "unassigned";
   q?: string;
   /**
-   * Always include this conversation, whatever the filters say. The open
-   * thread is marked read as soon as it is viewed; without this, reading a
-   * thread from the Unread tab would make it vanish from under the cursor.
+   * The open thread. It is exempt from the Unread and Starred tab conditions
+   * only: it is marked read as soon as it is viewed (and may be unstarred from
+   * its header), and without this it would vanish from under the cursor.
+   * Search, channel and archive filters still apply — those are the user's
+   * explicit choices, not side effects of reading.
    */
   keepId?: ID;
 }
@@ -128,8 +130,11 @@ export async function listInbox(
       const matches = (c: Conversation) => {
         // "All" is the only tab that reaches into the archive.
         if (c.isArchived && query.tab !== "all") return false;
-        if (query.tab === "unread" && c.unreadCount === 0) return false;
-        if (query.tab === "starred" && !c.isStarred) return false;
+        const kept = c.id === query.keepId;
+        if (query.tab === "unread" && c.unreadCount === 0 && !kept) {
+          return false;
+        }
+        if (query.tab === "starred" && !c.isStarred && !kept) return false;
         if (query.channel && !c.channels.includes(query.channel)) return false;
         if (query.assigneeId === "unassigned" && c.assigneeId) return false;
         if (
@@ -157,7 +162,7 @@ export async function listInbox(
       };
 
       return Object.values(conversations)
-        .filter((c) => c.id === query.keepId || matches(c))
+        .filter(matches)
         .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))
         .map((c) => {
           const contact = contacts[c.contactId];

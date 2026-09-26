@@ -23,7 +23,11 @@ import {
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ContactPanel } from "./contact-panel";
-import { InboxList } from "./inbox-list";
+import {
+  DEFAULT_INBOX_FILTERS,
+  InboxList,
+  type InboxFilters,
+} from "./inbox-list";
 
 interface InboxContextValue {
   isMobile: boolean;
@@ -43,7 +47,8 @@ export function useInbox(): InboxContextValue {
  * The conversations frame: inbox list | thread | contact details.
  *
  * It lives in the route's layout, so moving between threads swaps only the
- * middle pane — the list keeps its filters and scroll position.
+ * middle pane — the list keeps its scroll position. Inbox filters live here
+ * too, so they also survive the list unmounting (mobile, breakpoint changes).
  *
  * Pane sizes persist through `useDefaultLayout`, which reads localStorage while
  * rendering. That is safe only because `DbGate` never renders the app subtree
@@ -59,6 +64,7 @@ export function InboxShell({ children }: { children: React.ReactNode }) {
   const params = useParams<{ id?: string }>();
   const selectedId = typeof params.id === "string" ? params.id : undefined;
   const isMobile = useIsMobile();
+  const [filters, setFilters] = useState<InboxFilters>(DEFAULT_INBOX_FILTERS);
 
   // Unset until toggled: open beside the thread on desktop, closed on mobile
   // (where it is a sheet that would otherwise cover the thread on arrival).
@@ -83,7 +89,15 @@ export function InboxShell({ children }: { children: React.ReactNode }) {
     return (
       <InboxContext.Provider value={context}>
         <div className="flex h-[calc(100svh-3.5rem)] min-h-0 flex-col">
-          {selectedId ? children : <InboxList selectedId={undefined} />}
+          {selectedId ? (
+            children
+          ) : (
+            <InboxList
+              selectedId={undefined}
+              filters={filters}
+              onFiltersChange={setFilters}
+            />
+          )}
         </div>
         <Sheet open={detailsOpen} onOpenChange={(open) => setShowDetails(open)}>
           <SheetContent side="right" className="w-full max-w-sm p-0">
@@ -117,7 +131,11 @@ export function InboxShell({ children }: { children: React.ReactNode }) {
             minSize="260px"
             maxSize="480px"
           >
-            <InboxList selectedId={selectedId} />
+            <InboxList
+              selectedId={selectedId}
+              filters={filters}
+              onFiltersChange={setFilters}
+            />
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel id="thread" minSize="360px">

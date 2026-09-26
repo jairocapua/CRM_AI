@@ -119,6 +119,26 @@ Phases come from the approved build plan. A phase is done only when
       keeps moving forward; DND contact has SMS disabled with the reason;
       Unread keeps the open thread; pane layouts saved per pane combination.
       `sentByAutomation` / `Activity.workflowId` still unset (Phase 8a).
+      A two-axis review then found, all fixed and re-verified in the browser:
+      - **A reload at "Sent" stranded the message.** Resume only covered
+        `queued`/`sending`; the final (fallible) hop runs from `sent`. It now
+        resumes from the hop it stopped at, telling in-flight `sent` apart
+        from seeded history by `updatedAt` vs the seed anchor.
+      - **`keepId` bypassed every filter**, so the open thread showed under a
+        search it did not match. It now exempts only the Unread/Starred tab
+        conditions.
+      - **Tab expansion deleted the wrong text** with the caret mid-draft
+        (matched at the end, replaced at the caret). Both now use the caret.
+      - **Inserted templates hid unfillable tokens** behind the neutral
+        "filled when you send" note. Unfillable tokens are learned from every
+        render and warn (and block Send) immediately.
+      - **Inbox filters reset** when the list unmounted (mobile, crossing
+        `md`). Filters now live in `InboxShell`.
+      - The details pane listed won/lost deals as "open deals"; `useResource`
+        dropped a standing error during refetch, flashing a 404 to a skeleton.
+      Code smells from the review (duplicated star/archive setters, the
+      contact fetch chain in two places, `CallRow`'s parallel cascades, the
+      unused `assigneeId` filter) are left for a cleanup pass.
       Deferred: attachments, assign/close conversation (no API setters yet),
       a Demo Data link from `/settings`.
 - [ ] **Phase 6 — Dashboard** (4 pts) ← next

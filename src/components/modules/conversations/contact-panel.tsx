@@ -10,7 +10,6 @@ import { EmptyState } from "@/components/common/empty-state";
 import { Money } from "@/components/common/money";
 import { ContactStatusBadge } from "@/components/modules/contacts/contact-status-badge";
 import { ContactInfoPanel } from "@/components/modules/contacts/detail/contact-info-panel";
-import { OpportunityStatusBadge } from "@/components/modules/opportunities/opportunity-status-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -136,26 +135,25 @@ function OpenDeals({ contactId }: { contactId: string }) {
   );
   if (opportunities.isLoading) return <Skeleton className="h-20 w-full" />;
 
-  const rows = opportunities.data ?? [];
+  // Won and lost deals are history; beside a live thread only what is still
+  // in play matters.
+  const rows = (opportunities.data ?? []).filter((d) => d.status === "open");
   if (rows.length === 0) return null;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm">Opportunities</CardTitle>
+        <CardTitle className="text-sm">Open deals</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-2.5">
         {rows.map((deal) => (
           <div key={deal.id} className="flex flex-col gap-0.5">
-            <div className="flex items-center justify-between gap-2">
-              <Link
-                href={`/opportunities/${deal.id}`}
-                className="truncate text-sm font-medium hover:underline"
-              >
-                {deal.name}
-              </Link>
-              <OpportunityStatusBadge status={deal.status} />
-            </div>
+            <Link
+              href={`/opportunities/${deal.id}`}
+              className="truncate text-sm font-medium hover:underline"
+            >
+              {deal.name}
+            </Link>
             <Money
               cents={deal.value}
               currency={deal.currency}

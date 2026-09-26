@@ -111,7 +111,10 @@ export function useResource<T>(
 
   return {
     data: resolved.data,
-    error: resolved.forRequest === request ? resolved.error : null,
+    // Like data, the last error stands while the same query refreshes, so an
+    // error screen (a 404, say) does not flash to a skeleton on every
+    // unrelated invalidation. A successful refetch clears it.
+    error: resolved.forQuery === query ? resolved.error : null,
     isLoading: resolved.forQuery !== query,
     isRefreshing:
       resolved.forQuery === query && resolved.forRequest !== request,
