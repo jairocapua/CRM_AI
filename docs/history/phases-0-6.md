@@ -1,4 +1,9 @@
-# Progress
+# Build history: Phases 0–6
+
+> Moved here from `PROGRESS.md` on 2026-10-21, when the agentic build system took
+> over tracking. The live tracker is `docs/PROGRESS.md`; remaining work is in
+> `docs/phases/` and `docs/BACKLOG.md`. The unchecked Phase 7–10 rows below are
+> kept as they were written.
 
 Phases come from the approved build plan. A phase is done only when
 `npm run check` is green and its manual checks pass.

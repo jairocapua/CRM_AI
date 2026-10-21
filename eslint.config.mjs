@@ -64,6 +64,11 @@ const eslintConfig = defineConfig([
     "build/**",
     "coverage/**",
     "next-env.d.ts",
+    // Saved workflow scripts use top-level await/return and run in Claude
+    // Code's workflow runtime, not Node.
+    ".claude/workflows/**",
+    "playwright-report/**",
+    "test-results/**",
   ]),
 ]);
 

@@ -1,0 +1,67 @@
+# Build progress
+
+> **Source of truth for build status.** Agents change it only through `node scripts/progress.mjs` (`set` / `phase` / `add` / `sync`).
+> Humans may edit it by hand: keep the table format, then run `node scripts/progress.mjs --check`.
+>
+> **Task status:** `todo` → `in-progress` → `review` (agent finished; awaiting your approval) → `done` · `blocked` (needs you; see Notes)
+> **Phase status:** `todo` → `active` → `gate` (all tasks done; exit criteria being verified) → `done` (gate passed; merge the phase branch into `master`)
+> **Depends:** task IDs, or a phase ID (meaning that phase's gate has passed). Task definitions live in `docs/phases/`.
+> Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
+
+<!-- summary:start -->
+**Overall:** 0/30 tasks done (0%) · **Current phase:** P7 · **Next agent task:** P7-T01 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+<!-- summary:end -->
+
+## P7 — Calendars
+Status: active · Progress: 0/9 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+
+| ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
+|---|---|---|---|---|---|---|---|
+| P7-T01 | Vitest harness and first API tests | agent | todo | — |  |  |  |
+| P7-T02 | Playwright e2e harness | agent | todo | — |  |  |  |
+| P7-T03 | Calendar time model and slot engine (step 0) | agent | todo | P7-T01 |  |  |  |
+| P7-T04 | Calendars page: URL state, toolbar and calendar list | agent | todo | P7-T02 |  |  |  |
+| P7-T05 | Month view | agent | todo | P7-T03, P7-T04 |  |  |  |
+| P7-T06 | Week and day views | agent | todo | P7-T03, P7-T04 |  |  |  |
+| P7-T07 | Appointment details, status and cancel | agent | todo | P7-T05 |  |  |  |
+| P7-T08 | Booking dialog and the contact Appointments tab | agent | todo | P7-T03, P7-T07 |  |  |  |
+| P7-T09 | Availability editor | agent | todo | P7-T03, P7-T04 |  |  |  |
+
+## P8 — Automation
+Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md
+
+| ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
+|---|---|---|---|---|---|---|---|
+| P8-T01 | Authored types and the automation registry | agent | todo | P7 |  |  |  |
+| P8-T02 | Deterministic layout | agent | todo | P8-T01 |  |  |  |
+| P8-T03 | Automation list page | agent | todo | P8-T01 |  |  |  |
+| P8-T04 | Detail page with the step list | agent | todo | P8-T02, P8-T03 |  |  |  |
+| P8-T05 | Read-only diagram | agent | todo | P8-T04 |  |  |  |
+| P8-T06 | Run history data | agent | todo | P8-T01 |  |  |  |
+| P8-T07 | Run history UI | agent | todo | P8-T04, P8-T06 |  |  |  |
+| P8-T08 | Automation requests | agent | todo | P8-T03 |  |  |  |
+
+## P9 — Settings
+Status: todo · Progress: 0/6 · Points: 4 · Branch: phase/p9-settings · File: docs/phases/P9-settings.md
+
+| ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
+|---|---|---|---|---|---|---|---|
+| P9-T01 | Settings API fixes (step 0) | agent | todo | P8 |  |  |  |
+| P9-T02 | Settings shell, profile and business | agent | todo | P8 |  |  |  |
+| P9-T03 | Team and invites | agent | todo | P9-T01, P9-T02 |  |  |  |
+| P9-T04 | Custom fields manager | agent | todo | P9-T01, P9-T02 |  |  |  |
+| P9-T05 | Pipelines and stages manager | agent | todo | P9-T01, P9-T02 |  |  |  |
+| P9-T06 | Tags manager with merge | agent | todo | P9-T02 |  |  |  |
+
+## P10 — Polish
+Status: todo · Progress: 0/7 · Points: 5 · Branch: phase/p10-polish · File: docs/phases/P10-polish.md
+
+| ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
+|---|---|---|---|---|---|---|---|
+| P10-T01 | Command palette (⌘K) | agent | todo | P9 |  |  |  |
+| P10-T02 | Loading and error audit | agent | todo | P9 |  |  |  |
+| P10-T03 | Responsive pass at 375px | agent | todo | P9 |  |  |  |
+| P10-T04 | Keyboard and accessibility | agent | todo | P9 |  |  |  |
+| P10-T05 | Cleanup from the Phase 5 review | agent | todo | P9 |  |  |  |
+| P10-T06 | Load the seed lazily | agent | todo | P9 |  |  |  |
+| P10-T07 | README and demo walkthrough | agent | todo | P10-T01, P10-T02, P10-T03, P10-T04 |  |  |  |

@@ -10,3 +10,10 @@ src/components/ui/
 # Markdown is authored by hand (plans, progress) — Prettier's table and list
 # rewrites create churn in documents that are reviewed line by line.
 *.md
+
+# Saved workflow scripts use top-level await/return, which Prettier can't parse.
+.claude/workflows/
+
+# Playwright output.
+playwright-report/
+test-results/

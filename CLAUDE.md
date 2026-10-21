@@ -12,11 +12,13 @@ behind without rewriting the UI.
 
 ```bash
 npm run dev      # dev server (Turbopack)
-npm run check    # format:check -> lint -> typecheck -> build. The gate.
+npm run check    # format:check -> lint -> typecheck -> tests -> build. The gate.
 ```
 
-Run `npm run check` at the end of every phase. Do not tick a phase off in
-`PROGRESS.md` until it is green.
+Every build task runs `npm run check` before it is committed (see "Running the
+build"). Build status lives in `docs/PROGRESS.md` and changes only through
+`node scripts/progress.mjs`; a task or phase is never marked done while the
+gate is red.
 
 ## The one rule: the API seam
 
@@ -85,3 +87,113 @@ So: prefer `read_page` / `get_page_text` over screenshots while the pane is
 hidden, and do not "fix" animation-state oddities observed there without first
 checking `document.timeline` / a `requestAnimationFrame` callback actually
 fires.
+
+## Running the build
+
+The build runs through the saved workflow `.claude/workflows/build-phase.js`.
+Each run handles **one task** from `docs/phases/` (plan → implement → verify +
+review → fix → record/commit on the phase branch) and then stops.
+
+| The owner says | You do |
+|---|---|
+| "run the build-phase workflow" / "next task" | `Workflow({ name: 'build-phase' })` |
+| "approve" | `Workflow({ name: 'build-phase', args: { approve: true } })`: marks the reviewed task done, then runs the next one |
+| "rework P7-T03: <feedback>" | `Workflow({ name: 'build-phase', args: { rework: 'P7-T03', feedback: '<feedback>' } })` |
+| "run task P7-T05" | `Workflow({ name: 'build-phase', args: { task: 'P7-T05' } })` |
+| "run task P7-T05 as is" (after a split proposal) | `Workflow({ name: 'build-phase', args: { task: 'P7-T05', allowLarge: true } })` |
+| "next task in P8" | `Workflow({ name: 'build-phase', args: { phase: 'P8' } })` |
+| "run the gate for P7" | `Workflow({ name: 'build-phase', args: { gate: 'P7' } })` |
+| "dry run" | `Workflow({ name: 'build-phase', args: { dryRun: true } })`: reports what would run, changes nothing |
+| "approve P7-T03 but don't continue" | `node scripts/progress.mjs set P7-T03 done --commit <sha>` directly |
+
+- Pass `args` as a JSON object, not a string. When your session gives a
+  `Co-Authored-By:` line, pass it as `args.trailer`.
+- A run stops if the tree has uncommitted changes outside `docs/` and
+  `AGENTS.md`. Ask the owner what to do with them.
+- After a run, relay the result: status, commit, `reviewTier`, what changed,
+  human checks, suggestions and `howToContinue`. Don't claim results the
+  workflow didn't return.
+- Phase branches (`phase/p7-calendars` …) are cut from `master`. The owner
+  merges each one at its gate (`git switch master && git merge --no-ff <branch>`).
+  Nothing is pushed.
+
+## Autopilot
+
+**Autopilot is on** (owner, 2026-10-21): you act as the owner's reviewer and
+keep the build loop moving without waiting for "approve".
+
+After every run:
+1. **Review it yourself.** Read the full diff (`git show <commit>`), the
+   acceptance evidence and the suggestions. For a task that changed UI, also
+   open the page in the in-app browser (`preview_start` with `crm`, then
+   `read_page`) and look.
+2. **Decide**, then call the workflow:
+   - **Rework** for a real defect: a bug, a broken CLAUDE.md rule, new logic
+     without a test that can go red, docs that contradict the code. Feedback
+     names files and the exact fix. If the same defect survives two reworks,
+     stop and ask the owner.
+   - **Approve** otherwise. Cosmetic or optional suggestions become a
+     `docs/BACKLOG.md` entry or a new task (`node scripts/progress.mjs add …`),
+     never a rework.
+   - **Split proposal:** accept it when each piece is testable on its own:
+     narrow the task in its phase file, `add` the rest, `set <ID> todo`, then
+     `run task <ID>`.
+3. **Tell the owner** in a few plain-language lines: what the task changed,
+   your verdict and why, any new task or backlog entry.
+
+**Stop and wait for the owner** when the next step is theirs: a run is blocked
+on a product question, a phase gate passed (they merge), or anything would be
+pushed.
+
+**Fresh session:** after about 6 approved tasks in one session, or right after
+a phase gate, start a new session (`start_session`: context `fresh`, this
+folder, no worktree) with the brief "Autopilot: continue the build per
+CLAUDE.md", then stop work in the old one.
+
+## Subagents (`.claude/agents/`)
+
+| Subagent | Role |
+|---|---|
+| `planner` | Plans a task and checks its size; read-only |
+| `implementer` | Writes code + tests; never commits |
+| `verifier` | Runs checks and proves acceptance; no edit tools |
+| `reviewer` | Diff review against these notes; no edit tools |
+| `recorder` | Git + tracker + memory only |
+
+The workflow uses them; the owner can also ask for one directly ("use the
+reviewer on my changes"). Memory for the build lives in `docs/memory/`
+(HANDOFF, LEARNINGS, DECISIONS); the plan is `docs/spec.md` plus
+`docs/design/`; Phases 0–6 history is `docs/history/phases-0-6.md`.
+
+## Skills
+
+Each task's **Skills** line in its phase file names what to load. The set:
+
+| Task type | Skills |
+|---|---|
+| React and UI code | `vercel-react-best-practices`, `shadcn`, `vercel-composition-patterns` |
+| Logic and tests | `tdd`, `vitest`, `playwright-cli`, `webapp-testing` |
+| Next 16 runtime checks | `next-dev-loop` |
+| Charts | `dataviz` |
+| The Phase 8 diagram | `react-flow` |
+| UI and accessibility review | `web-design-guidelines`, `frontend-design` |
+| Motion | `fixing-motion-performance` |
+| Editing the build system | `workflow-authoring`, `update-config`, `writing-for-agents` |
+| When stuck | `diagnosing-bugs` |
+
+The skills live at user scope, outside this repo.
+
+## Session start and guardrails
+
+A SessionStart hook runs `node scripts/progress.mjs --brief`, so each session
+opens with the current phase, the next task, pending reviews, blockers and the
+handoff. If it isn't there, run the command yourself.
+
+`.claude/settings.json` denies `git push`, `git reset --hard` and `git clean`,
+and pre-approves the routine commands the workflow needs (tracker script, npm
+scripts, local git) for both the Bash and PowerShell tools.
+
+## Talking to the owner
+
+The owner builds solo and learns as they go: use plain words, and explain any
+technical term the first time it comes up.
