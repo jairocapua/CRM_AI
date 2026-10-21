@@ -26,6 +26,22 @@ export function refPlusDays(days: number, hour = 9, minute = 0): string {
   return d.toISOString();
 }
 
+/**
+ * `refPlusDays` for something that has already happened.
+ *
+ * REF_DATE is 09:00 UTC, so "0 days ago at 16:00" is seven hours in the
+ * future — past the demo clock's "now", where it sorts above everything that
+ * happens in the session. Offsets are capped at 0 and a day-0 time after the
+ * anchor rolls back a day. Makes no draws, so callers keep their stream.
+ */
+export function refPast(days: number, hour = 9, minute = 0): string {
+  const offset = Math.min(days, 0);
+  const iso = refPlusDays(offset, hour, minute);
+  return iso > REF_DATE.toISOString()
+    ? refPlusDays(offset - 1, hour, minute)
+    : iso;
+}
+
 export function refPlusMinutes(minutes: number): string {
   return new Date(REF_DATE.getTime() + minutes * 60_000).toISOString();
 }

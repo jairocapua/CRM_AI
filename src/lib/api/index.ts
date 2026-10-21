@@ -26,6 +26,16 @@ export * as templates from "./templates";
 export * as users from "./users";
 export * as workflows from "./workflows";
 
+export type {
+  DashboardSummary,
+  Kpi,
+  Period,
+  PipelineSummary,
+  SourceSlice,
+  WinRate,
+} from "./analytics";
+export type { ActivityRow } from "./activities";
+export type { AppointmentRow } from "./calendars";
 export type { StageRollup } from "./opportunities";
 export type {
   ChannelOption,

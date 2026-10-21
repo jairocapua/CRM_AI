@@ -192,16 +192,27 @@ export async function setStatus(
     closedAt: status === "open" ? undefined : at,
   });
 
+  // Reopening is not a loss: it gets the neutral type, so the feed and the
+  // timeline never say "Lost" about a deal that was just revived.
+  const outcome = {
+    won: { type: "opportunity.won", summary: "Won" },
+    lost: { type: "opportunity.lost", summary: "Lost" },
+    abandoned: { type: "opportunity.lost", summary: "Abandoned" },
+    open: { type: "opportunity.stage_changed", summary: "Reopened" },
+  } as const satisfies Record<
+    Opportunity["status"],
+    { type: Activity["type"]; summary: string }
+  >;
+  const { type, summary } = outcome[status];
   pushActivity({
-    type: status === "won" ? "opportunity.won" : "opportunity.lost",
+    type,
     at,
     contactId: opportunity.contactId,
     opportunityId: opportunity.id,
     actorId: db.getState().currentUserId,
-    summary:
-      status === "won"
-        ? `Won "${opportunity.name}"`
-        : `Lost "${opportunity.name}"${lostReason ? ` - ${lostReason}` : ""}`,
+    summary: `${summary} "${opportunity.name}"${
+      status === "lost" && lostReason ? ` - ${lostReason}` : ""
+    }`,
   });
 
   invalidate("activities");
@@ -215,6 +226,15 @@ export async function remove(ids: ID[]): Promise<void> {
     db.setState((s) => cascadeOpportunityDelete(s, ids));
   });
   invalidate("opportunities", "tasks", "activities", "analytics");
+}
+
+/**
+ * Lost and abandoned deals are dead: they stay visible for the record but are
+ * never counted as pipeline. Lives here rather than in the board because the
+ * board's rollups and the dashboard's must agree on what "live" means.
+ */
+export function isDeadDeal(deal: Opportunity): boolean {
+  return deal.status === "lost" || deal.status === "abandoned";
 }
 
 export interface StageRollup {

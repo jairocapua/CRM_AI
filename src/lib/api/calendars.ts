@@ -81,7 +81,9 @@ export async function listAppointments(range: {
 export async function listUpcoming(limit = 6): Promise<AppointmentRow[]> {
   return simulate(
     () => {
-      const from = nowIso();
+      // `apiNowMs`, not `nowIso`: a read must not advance the clock's
+      // persisted high-water mark.
+      const from = new Date(apiNowMs()).toISOString();
       const rows = Object.values(db.getState().appointments)
         .filter((a) => a.startAt >= from && a.status === "confirmed")
         .sort((a, b) => a.startAt.localeCompare(b.startAt))

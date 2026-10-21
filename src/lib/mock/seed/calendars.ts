@@ -7,7 +7,7 @@ import type {
   User,
 } from "@/types";
 import { newId } from "../ids";
-import { REF_DATE, chance, int, pick, refPlusDays } from "./rng";
+import { REF_DATE, chance, int, pick, refPast, refPlusDays } from "./rng";
 
 /** Mon–Fri 9-5, with a shorter Friday. Weekends off. */
 function weekdayAvailability(endHour = "17:00"): AvailabilityRule[] {
@@ -159,7 +159,7 @@ export function seedAppointments(
         ? "confirmed"
         : "cancelled";
 
-    appointments.push({
+    const appointment: Appointment = {
       id: newId("appt"),
       calendarId: calendar.id,
       contactId: contact.id,
@@ -174,9 +174,16 @@ export function seedAppointments(
       status,
       location: pick(LOCATIONS),
       source: pick(["booking_widget", "booking_widget", "manual", "workflow"]),
-      createdAt: refPlusDays(dayOffset - int(1, 14), int(8, 18)),
-      updatedAt: refPlusDays(Math.min(dayOffset, 0), int(8, 18)),
-    });
+      // Booked 1–14 days ahead of the slot, but never after "now": an upcoming
+      // appointment was booked in the past, not on some future day.
+      createdAt: refPast(Math.min(dayOffset, 0) - int(1, 14), int(8, 18)),
+      updatedAt: refPast(dayOffset, int(8, 18)),
+    };
+    // Both can roll back a day independently; an edit never precedes the booking.
+    if (appointment.updatedAt < appointment.createdAt) {
+      appointment.updatedAt = appointment.createdAt;
+    }
+    appointments.push(appointment);
   }
 
   return appointments;

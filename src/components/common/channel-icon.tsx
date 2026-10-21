@@ -6,21 +6,12 @@ import {
   VoicemailIcon,
 } from "lucide-react";
 
-import type { Channel } from "@/types";
+import { CHANNEL_LABELS, type Channel } from "@/types";
+
+export { CHANNEL_LABELS };
 import { InstagramIcon, MessengerIcon } from "@/components/icons/social";
 import { WhatsAppIcon } from "@/components/icons/whatsapp";
 import { cn } from "@/lib/utils";
-
-export const CHANNEL_LABELS: Record<Channel, string> = {
-  sms: "SMS",
-  email: "Email",
-  whatsapp: "WhatsApp",
-  messenger: "Messenger",
-  instagram: "Instagram",
-  livechat: "Live chat",
-  call: "Call",
-  voicemail: "Voicemail",
-};
 
 const ICONS: Record<Channel, React.ComponentType<{ className?: string }>> = {
   sms: MessageSquareIcon,

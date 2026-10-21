@@ -321,7 +321,20 @@ export function OpportunityFormSheet({
                   control={form.control}
                   name="stageId"
                   render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // Status follows the stage the way `move()` derives it;
+                        // otherwise "Open" rides along into Closed Won and the
+                        // save reopens the deal `move()` just won.
+                        const won = stages.find((s) => s.id === value)?.isWon;
+                        if (won) form.setValue("status", "won");
+                        else if (form.getValues("status") === "won") {
+                          form.setValue("status", "open");
+                        }
+                      }}
+                    >
                       <SelectTrigger id="stageId" className="w-full">
                         <SelectValue>
                           {(value: string) =>

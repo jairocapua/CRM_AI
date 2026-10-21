@@ -6,6 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { differenceInDays } from "date-fns";
 
 import type { Contact, Opportunity, Tag, User } from "@/types";
+import * as api from "@/lib/api";
 import { apiNow } from "@/lib/api";
 import { Money } from "@/components/common/money";
 import { TagBadge } from "@/components/modules/contacts/tag-badge";
@@ -13,7 +14,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { fullName, initials, toDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { isDeadDeal } from "./board-dnd";
 import { OpportunityStatusBadge } from "./opportunity-status-badge";
 
 export function DealCardBody({
@@ -134,8 +134,10 @@ export function DealCardBody({
  * A draggable board card. The pointer sensor uses a small distance threshold,
  * so a click that never moves opens the deal instead of starting a drag.
  *
- * Dead deals are shown but pinned in place — see `isDeadDeal` for why dragging
- * one would quietly bring it back to life.
+ * Dead deals are shown but pinned in place. Dragging one would resurrect it:
+ * `api.opportunities.move` recomputes `status` from the destination stage, and
+ * since no seeded stage carries `isLost`, every destination reads as "open" —
+ * clearing `closedAt` while a stale `lostReason` stays attached.
  */
 export function DealCard({
   opportunity,
@@ -150,7 +152,7 @@ export function DealCard({
   tags: Tag[];
   onOpen: (opportunity: Opportunity) => void;
 }) {
-  const dead = isDeadDeal(opportunity);
+  const dead = api.opportunities.isDeadDeal(opportunity);
   const {
     attributes,
     listeners,

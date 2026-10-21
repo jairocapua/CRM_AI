@@ -1,3 +1,4 @@
+import { format, isValid, parse, parseISO } from "date-fns";
 import { z } from "zod";
 
 import {
@@ -68,14 +69,16 @@ export interface OpportunityFormValues {
 
 /**
  * `<input type="date">` speaks "YYYY-MM-DD" while the store holds `ISODate`.
- * Both sides treat the value as UTC midnight, so the pair round-trips.
+ * Both directions use the *local* calendar date, because that is what every
+ * screen displays. Reading the UTC date instead shifted a seeded 17:00 UTC
+ * close back a day east of Greenwich — each save of the form moved it again.
  */
 export function dateInputToIso(value: string): ISODate | undefined {
   if (!value) return undefined;
-  const parsed = new Date(`${value}T00:00:00.000Z`);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+  const parsed = parse(value, "yyyy-MM-dd", new Date(0));
+  return isValid(parsed) ? parsed.toISOString() : undefined;
 }
 
 export function isoToDateInput(iso: ISODate | undefined): string {
-  return iso ? iso.slice(0, 10) : "";
+  return iso ? format(parseISO(iso), "yyyy-MM-dd") : "";
 }

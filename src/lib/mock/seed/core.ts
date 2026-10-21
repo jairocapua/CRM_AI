@@ -8,7 +8,7 @@ import type {
   User,
 } from "@/types";
 import { newId } from "../ids";
-import { REF_DATE, chance, int, refPlusDays } from "./rng";
+import { REF_DATE, chance, int, refPlusDays, refPlusMinutes } from "./rng";
 
 const created = {
   createdAt: refPlusDays(-420),
@@ -112,7 +112,7 @@ export function seedUsers(): User[] {
     phone: `+1415555${String(1000 + i * 7).slice(-4)}`,
     timezone: "America/Los_Angeles",
     isActive: true,
-    lastSeenAt: refPlusDays(0, 8 + i, int(0, 59)),
+    lastSeenAt: refPlusMinutes(-(i * 45 + int(0, 59) + 1)),
     ...created,
   }));
 }

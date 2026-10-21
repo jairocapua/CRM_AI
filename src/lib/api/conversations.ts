@@ -7,6 +7,7 @@ import type {
   InboxTab,
   Message,
 } from "@/types";
+import { CHANNEL_LABELS } from "@/types";
 import { db } from "@/lib/mock/db";
 import { startDelivery } from "@/lib/mock/delivery";
 import { newId } from "@/lib/mock/ids";
@@ -337,7 +338,7 @@ export async function send(input: {
         contactId: conversation.contactId,
         conversationId: conversation.id,
         actorId: state.currentUserId,
-        summary: `Sent a ${input.channel} message`,
+        summary: `${CHANNEL_LABELS[input.channel]} sent`,
       };
 
       db.setState((s) => ({

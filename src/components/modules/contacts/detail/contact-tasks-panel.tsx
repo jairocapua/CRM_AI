@@ -1,17 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { formatDistanceToNow } from "date-fns";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { useAction, useResource } from "@/lib/api";
+import { apiNow, useAction, useResource } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toDate } from "@/lib/format";
+import { formatRelative } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function ContactTasksPanel({ contactId }: { contactId: string }) {
@@ -89,10 +88,7 @@ export function ContactTasksPanel({ contactId }: { contactId: string }) {
                 </span>
                 {task.dueAt ? (
                   <span className="text-xs text-muted-foreground">
-                    Due{" "}
-                    {formatDistanceToNow(toDate(task.dueAt), {
-                      addSuffix: true,
-                    })}
+                    Due {formatRelative(task.dueAt, apiNow())}
                   </span>
                 ) : null}
               </div>

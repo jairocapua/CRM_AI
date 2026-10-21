@@ -24,7 +24,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { Money } from "@/components/common/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { isDeadDeal, stageIdFromDroppable } from "./board-dnd";
+import { stageIdFromDroppable } from "./board-dnd";
 import { BoardColumn } from "./board-column";
 import { BoardToolbar } from "./board-toolbar";
 import { DealCardBody } from "./deal-card";
@@ -130,7 +130,10 @@ export function OpportunitiesBoard() {
    * mid-funnel columns — are hidden by default.
    */
   const visible = useMemo(
-    () => (showLost ? searched : searched.filter((d) => !isDeadDeal(d))),
+    () =>
+      showLost
+        ? searched
+        : searched.filter((d) => !api.opportunities.isDeadDeal(d)),
     [searched, showLost],
   );
 
@@ -140,7 +143,7 @@ export function OpportunitiesBoard() {
    * rollups read `live`, not `visible`.
    */
   const live = useMemo(
-    () => searched.filter((d) => !isDeadDeal(d)),
+    () => searched.filter((d) => !api.opportunities.isDeadDeal(d)),
     [searched],
   );
 

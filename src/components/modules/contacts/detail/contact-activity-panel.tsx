@@ -1,10 +1,9 @@
 "use client";
 
-import { formatDistanceToNow } from "date-fns";
 import { HistoryIcon } from "lucide-react";
 
 import * as api from "@/lib/api";
-import { useResource } from "@/lib/api";
+import { apiNow, useResource } from "@/lib/api";
 import {
   Item,
   ItemContent,
@@ -13,7 +12,7 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toDate } from "@/lib/format";
+import { formatRelative } from "@/lib/format";
 
 export function ContactActivityPanel({ contactId }: { contactId: string }) {
   const activities = useResource(
@@ -43,7 +42,7 @@ export function ContactActivityPanel({ contactId }: { contactId: string }) {
           <ItemContent>
             <ItemTitle>{activity.summary}</ItemTitle>
             <ItemDescription>
-              {formatDistanceToNow(toDate(activity.at), { addSuffix: true })}
+              {formatRelative(activity.at, apiNow())}
             </ItemDescription>
           </ItemContent>
         </Item>

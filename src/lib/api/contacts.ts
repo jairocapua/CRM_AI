@@ -100,7 +100,8 @@ export async function update(
     return next;
   });
 
-  invalidate("contacts", "activities");
+  // Analytics too: the lead-source breakdown reads `source`.
+  invalidate("contacts", "activities", "analytics");
   return contact;
 }
 

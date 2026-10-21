@@ -42,6 +42,17 @@ export type Channel =
   | "call"
   | "voicemail";
 
+export const CHANNEL_LABELS: Record<Channel, string> = {
+  sms: "SMS",
+  email: "Email",
+  whatsapp: "WhatsApp",
+  messenger: "Messenger",
+  instagram: "Instagram",
+  livechat: "Live chat",
+  call: "Call",
+  voicemail: "Voicemail",
+};
+
 export type LeadSource =
   | "website_form"
   | "facebook_ads"

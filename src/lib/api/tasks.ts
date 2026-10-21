@@ -1,4 +1,4 @@
-import type { ID, Task } from "@/types";
+import type { Activity, ID, Task } from "@/types";
 import { db } from "@/lib/mock/db";
 import { newId } from "@/lib/mock/ids";
 import { applyQuery } from "@/lib/mock/query-engine";
@@ -88,9 +88,28 @@ export async function update(id: ID, patch: Partial<Task>): Promise<Task> {
 }
 
 export async function setCompleted(id: ID, done: boolean): Promise<Task> {
-  return update(id, {
+  const task = await update(id, {
     completedAt: done ? nowIso() : undefined,
   });
+  // Same entry the seed writes, so a task ticked off today reaches the feed
+  // and the contact's timeline like the seeded ones do. (`update` already
+  // invalidated `activities`, but the entry lands after it; invalidate again.)
+  if (done && task.completedAt) {
+    const activity: Activity = {
+      id: newId("act"),
+      type: "task.completed",
+      at: task.completedAt,
+      contactId: task.contactId,
+      opportunityId: task.opportunityId,
+      actorId: db.getState().currentUserId,
+      summary: `Completed "${task.title}"`,
+    };
+    db.setState((s) => ({
+      activities: { ...s.activities, [activity.id]: activity },
+    }));
+    invalidate("activities");
+  }
+  return task;
 }
 
 export async function remove(id: ID): Promise<void> {

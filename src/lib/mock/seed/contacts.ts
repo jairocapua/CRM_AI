@@ -8,7 +8,15 @@ import type {
   User,
 } from "@/types";
 import { newId } from "../ids";
-import { chance, faker, int, pick, pickSome, refPlusDays } from "./rng";
+import {
+  chance,
+  faker,
+  int,
+  pick,
+  pickSome,
+  refPast,
+  refPlusDays,
+} from "./rng";
 import { maybeAvatar } from "./core";
 
 const STATUS_WEIGHTS: ContactStatus[] = [
@@ -154,13 +162,13 @@ export function seedContacts(
             : status === "churned"
               ? int(0, 40)
               : int(5, 70),
-      lastActivityAt: refPlusDays(-lastActivityDaysAgo, int(8, 18), int(0, 59)),
+      lastActivityAt: refPast(-lastActivityDaysAgo, int(8, 18), int(0, 59)),
       lastContactedAt: chance(0.8)
-        ? refPlusDays(-int(lastActivityDaysAgo, createdDaysAgo), int(8, 18))
+        ? refPast(-int(lastActivityDaysAgo, createdDaysAgo), int(8, 18))
         : undefined,
       followers: chance(0.2) ? [pick(users).id] : [],
-      createdAt: refPlusDays(-createdDaysAgo, int(7, 20), int(0, 59)),
-      updatedAt: refPlusDays(-lastActivityDaysAgo, int(8, 18), int(0, 59)),
+      createdAt: refPast(-createdDaysAgo, int(7, 20), int(0, 59)),
+      updatedAt: refPast(-lastActivityDaysAgo, int(8, 18), int(0, 59)),
     };
 
     contacts.push(contact);
