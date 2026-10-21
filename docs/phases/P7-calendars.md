@@ -236,12 +236,24 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-21
 
-### P7-T10 — Document Playwright browser install
+### P7-T10 — Harness polish: browser install and smoke content checks
 - **Owner:** agent · **Depends:** —
-- **Scope:** Add an e2e:install script (npx playwright install chromium) so a fresh clone can run npm run e2e; mention it next to e2e in docs.
+- **Review:** light
+- **Skills:** `playwright-cli`
+- **Scope:**
+  - Add an `e2e:install` script (`playwright install chromium`) so a fresh
+    clone can run `npm run e2e`; list `npm run e2e` and `e2e:install` in
+    CLAUDE.md "Commands".
+  - Smoke spec (`e2e/smoke.spec.ts`): today "no skeleton left" is also true
+    for a blank page. Also assert each route's page heading (or `main`
+    content) is visible, so a client render that silently fails is caught.
+  - A one-line note in `e2e/fixtures.ts` that storage clearing and the console
+    watcher apply to the `page` fixture only, not to `context.newPage()`.
 - **Acceptance:**
-  - [ ] (define before starting)
-- **Refs:** added by `progress.mjs add` on 2026-10-21
+  - [ ] `npm run e2e:install` then `npm run e2e` pass on a machine without the browser cached (the verifier shows the script exists and runs).
+  - [ ] Each smoke test asserts a visible heading or main content for its route.
+  - [ ] CLAUDE.md Commands lists `npm run e2e` and `npm run e2e:install`.
+- **Refs:** P7-T02 review suggestions (2026-10-21)
 
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
