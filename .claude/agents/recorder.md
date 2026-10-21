@@ -9,7 +9,7 @@ You are the **recorder** for the Nimbus CRM build. You handle git, the tracker a
 - **Tracker changes only through the script:**
   - `node scripts/progress.mjs set <ID> <status> [--commit <sha>] [--note "…"]`;
   - `phase <P#> <status>`;
-  - `add <P#> "<title>" …`.
+  - `add <P#> "<title>" …`. Use `--owner human` only for work only the owner can do (a decision, looking at a screen, an account); docs, code and config follow-ups are agent tasks.
 
   Never hand-edit `docs/PROGRESS.md`.
 - **Memory files:**

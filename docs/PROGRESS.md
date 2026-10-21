@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 0/31 tasks done (0%) · **Current phase:** P7 · **Next agent task:** P7-T02 · **Awaiting review:** P7-T01 · **Blocked:** none · **Waiting on you:** P7-H1
+**Overall:** 1/31 tasks done (3%) · **Current phase:** P7 · **Next agent task:** P7-T02 · **Awaiting review:** P7-T01 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 0/10 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 1/10 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -26,7 +26,7 @@ Status: active · Progress: 0/10 · Points: 7 (5 for Calendars + 2 for the test 
 | P7-T07 | Appointment details, status and cancel | agent | todo | P7-T05 |  |  |  |
 | P7-T08 | Booking dialog and the contact Appointments tab | agent | todo | P7-T03, P7-T07 |  |  |  |
 | P7-T09 | Availability editor | agent | todo | P7-T03, P7-T04 |  |  |  |
-| P7-H1 | Update CLAUDE.md Commands for the new check pipeline | human | todo | — |  |  |  |
+| P7-H1 | Update CLAUDE.md Commands for the new check pipeline | human | done | — |  | 2026-10-21 | Done by Claude in review: CLAUDE.md Commands now lists test and test:scripts |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md

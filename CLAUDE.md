@@ -12,7 +12,8 @@ behind without rewriting the UI.
 
 ```bash
 npm run dev      # dev server (Turbopack)
-npm run check    # format:check -> lint -> typecheck -> tests -> build. The gate.
+npm test         # Vitest unit tests (src/**/*.test.ts); helpers in src/lib/mock/testing.ts
+npm run check    # format:check -> lint -> typecheck -> test -> test:scripts -> build. The gate.
 ```
 
 Every build task runs `npm run check` before it is committed (see "Running the

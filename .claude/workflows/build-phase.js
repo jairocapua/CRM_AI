@@ -328,7 +328,7 @@ function recordPassPrompt(prep, r) {
     `Review suggestions (non-blocking): ${JSON.stringify((r.rev && r.rev.suggestions) || [])}`,
     `Learnings to append: ${JSON.stringify(learnings)}`,
     `Decisions to log: ${JSON.stringify(decisions)}`,
-    `Follow-up work the implementer reported: ${JSON.stringify(openIssues)}. Add each genuinely needed item as a task with \`node scripts/progress.mjs add ${prep.phaseId} "<title>" --scope "<detail>"\`. Mention the rest in the handoff.`,
+    `Follow-up work the implementer reported: ${JSON.stringify(openIssues)}. Add each genuinely needed item as a task with \`node scripts/progress.mjs add ${prep.phaseId} "<title>" --scope "<detail>"\` (an agent task: \`--owner human\` only for work only the owner can do, such as a decision or looking at a screen). Mention the rest in the handoff.`,
     'Steps:',
     `1. Append the learnings to docs/memory/LEARNINGS.md and the decisions to docs/memory/DECISIONS.md ("During the build"), dated with \`date +%F\`, tagged [${prep.taskId}], skipping duplicates.`,
     `2. \`node scripts/progress.mjs set ${prep.taskId} review --note "<≤120-char summary>"\`.`,
