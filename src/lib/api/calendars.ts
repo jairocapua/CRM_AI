@@ -135,7 +135,8 @@ export type AppointmentDraft = Pick<
  * Books one of the calendar's free slots. `startAt` must be exactly one of
  * the instants `availableSlots()` offers for that day (any ISO spelling of
  * it); anything else is a 409. With the matching check in `setStatus()`, a
- * double booking cannot happen through the API.
+ * double booking cannot happen through the API, and neither can a booking
+ * inside another's buffers, in whichever order the two were made.
  */
 export async function book(draft: AppointmentDraft): Promise<Appointment> {
   const appointment = await simulate(
@@ -286,9 +287,11 @@ export async function cancel(id: ID): Promise<Appointment> {
 
 /**
  * The start times a calendar offers on one day, as ISO strings: its
- * availability windows for that weekday, minus live bookings and their
- * buffers, minus the minimum scheduling notice, and nothing beyond
- * `dateRangeDays`. See `@/lib/mock/slots` for the time model.
+ * availability windows for that weekday, minus every slot that collides with
+ * a live booking (buffers apply both ways, so neighbours keep a gap of the
+ * larger buffer whichever was booked first), minus the minimum scheduling
+ * notice, and nothing beyond `dateRangeDays`. See `@/lib/mock/slots` for the
+ * time model.
  *
  * `day` is a calendar date, "YYYY-MM-DD", in the calendar's own timezone, not
  * the viewer's: from Asia one local day spans two Los Angeles dates, so the

@@ -5,9 +5,10 @@ import { freshModules } from "../testing";
 
 /**
  * The seeded appointments must be something the booking API could have
- * produced: no overlaps within a calendar, every one inside its calendar's
- * hours read in the calendar's zone (Los Angeles), no day over its cap, and
- * statuses that agree with whether the meeting has happened yet.
+ * produced: no overlaps within a calendar and none inside another's buffers,
+ * every one inside its calendar's hours read in the calendar's zone (Los
+ * Angeles), no day over its cap, and statuses that agree with whether the
+ * meeting has happened yet.
  *
  * The availability check reads wall-clock time through `Intl` with an explicit
  * `timeZone`, an oracle that shares nothing with the slot engine. Before P7 the
@@ -98,6 +99,34 @@ describe("seeded appointments", () => {
       }
     }
     expect(overlaps).toEqual([]);
+  });
+
+  it("keep clear of each other's buffers within a calendar", async () => {
+    // Buffers apply both ways (P7-H2), so neighbours need a gap of at least
+    // max(before, after). Every status counts: each placed appointment holds
+    // its slot, cancelled ones included. One slot length per calendar and no
+    // overlaps, so checking neighbours in start order is enough.
+    const { appointments, calendars } = await build();
+    const tooClose: string[] = [];
+    for (const [calendarId, rows] of byCalendar(appointments)) {
+      const calendar: Calendar = calendars[calendarId]!;
+      const minGap =
+        Math.max(calendar.bufferBeforeMin, calendar.bufferAfterMin) * 60_000;
+      const sorted = [...rows].sort((a, b) =>
+        a.startAt.localeCompare(b.startAt),
+      );
+      for (let i = 1; i < sorted.length; i++) {
+        const prev = sorted[i - 1]!;
+        const next = sorted[i]!;
+        const gap = Date.parse(next.startAt) - Date.parse(prev.endAt);
+        if (gap < minGap) {
+          tooClose.push(
+            `${calendar.slug} ${prev.startAt}-${prev.endAt} / ${next.startAt} gap ${gap / 60_000}min`,
+          );
+        }
+      }
+    }
+    expect(tooClose).toEqual([]);
   });
 
   it("start and end inside an open window, in the calendar's zone", async () => {

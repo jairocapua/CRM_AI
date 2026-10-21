@@ -230,12 +230,12 @@ describe.each(ZONES)("availableSlots() with the runtime in $zone", (zone) => {
       "2026-11-01T11:30:00.000Z", // 03:30 PST
     ]);
 
-    // 01:30 PDT; its 10-minute after-buffer reaches into 01:00 PST.
+    // 01:30 PDT; its 10-minute after-buffer reaches into 01:00 PST, and
+    // 01:00 PDT's own after-buffer would reach into it.
     await book(discovery, "2026-11-01T08:30:00.000Z");
     expect(await slots(discovery, "2026-11-01")).toEqual([
       "2026-11-01T07:00:00.000Z",
       "2026-11-01T07:30:00.000Z",
-      "2026-11-01T08:00:00.000Z",
       "2026-11-01T09:30:00.000Z",
       "2026-11-01T10:00:00.000Z",
       "2026-11-01T10:30:00.000Z",
@@ -305,10 +305,12 @@ describe.each(ZONES)("book() with the runtime in $zone", (zone) => {
       status: "confirmed",
       source: "manual",
     });
-    // 17:30Z goes too: it starts inside the 10-minute after-buffer.
+    // Both neighbours go too: 17:30Z starts inside the booking's 10-minute
+    // after-buffer, and 16:30Z's own after-buffer would reach into it.
     expect(await slots(discovery, "2026-10-27")).toEqual(
       DISCOVERY_TUESDAY.filter(
         (iso) =>
+          iso !== "2026-10-27T16:30:00.000Z" &&
           iso !== "2026-10-27T17:00:00.000Z" &&
           iso !== "2026-10-27T17:30:00.000Z",
       ),
@@ -325,9 +327,11 @@ describe.each(ZONES)("book() with the runtime in $zone", (zone) => {
 
     const restored = await settle(api.setStatus(booked.id, "confirmed"));
     expect(restored.status).toBe("confirmed");
+    // The booking and both neighbours, as before it was cancelled.
     expect(await slots(discovery, "2026-10-27")).toEqual(
       DISCOVERY_TUESDAY.filter(
         (iso) =>
+          iso !== "2026-10-27T16:30:00.000Z" &&
           iso !== "2026-10-27T17:00:00.000Z" &&
           iso !== "2026-10-27T17:30:00.000Z",
       ),
@@ -357,6 +361,15 @@ describe.each(ZONES)("book() with the runtime in $zone", (zone) => {
       restored: "2026-10-27T17:00:00.000Z",
       taken: ["2026-10-27T16:30:00.000Z"],
       to: "showed",
+    },
+    {
+      // The mirror of the case above: 16:30Z's own 10-minute after-buffer
+      // runs to 17:10Z, past the start of the booking made at 17:00Z.
+      name: "a time whose own after-buffer reaches a new booking",
+      calendar: "discovery",
+      restored: "2026-10-27T16:30:00.000Z",
+      taken: ["2026-10-27T17:00:00.000Z"],
+      to: "confirmed",
     },
     {
       // Strategy Session takes three a day; none of these touch 16:00Z.
@@ -400,6 +413,108 @@ describe.each(ZONES)("book() with the runtime in $zone", (zone) => {
       expect(await snapshot()).toEqual(before);
       const live = before.appointments.filter((a) => a.status !== "cancelled");
       expect(live.map((a) => a.startAt)).toEqual(c.taken);
+    },
+  );
+
+  /**
+   * Buffers apply both ways (P7-H2): no booking may sit inside another's
+   * before- or after-buffer, whichever was booked first, so neighbours need a
+   * gap of max(bufferBeforeMin, bufferAfterMin). Each row is run in both
+   * orders, each in a fresh world. The seeded grids step by a whole slot, so
+   * the boundary rows reconfigure Strategy to 1-minute steps; the 20/5 rows
+   * put the larger buffer before, unlike any seeded calendar.
+   */
+  const ORDERS: {
+    name: string;
+    calendar: "discovery" | "strategy";
+    patch?: Partial<Calendar>;
+    earlier: string;
+    later: string;
+    /** What happens to whichever start is booked second. */
+    second: "booked" | "rejected";
+  }[] = [
+    {
+      // Discovery: 0 before, 10 after. 16:30Z's after-buffer runs to 17:10Z.
+      name: "back-to-back Discovery slots",
+      calendar: "discovery",
+      earlier: "2026-10-27T16:30:00.000Z", // 09:30 PDT
+      later: "2026-10-27T17:00:00.000Z", // 10:00 PDT
+      second: "rejected",
+    },
+    {
+      name: "Discovery slots a slot apart",
+      calendar: "discovery",
+      earlier: "2026-10-27T16:00:00.000Z", // 09:00 PDT
+      later: "2026-10-27T17:00:00.000Z", // 10:00 PDT
+      second: "booked",
+    },
+    {
+      // 10 before, 15 after: the gap must be 15.
+      name: "a 15-minute gap with 10/15 buffers",
+      calendar: "strategy",
+      patch: { slotIntervalMin: 1 },
+      earlier: "2026-10-27T17:00:00.000Z", // 10:00-11:00 PDT
+      later: "2026-10-27T18:15:00.000Z", // 11:15 PDT
+      second: "booked",
+    },
+    {
+      name: "a 14-minute gap with 10/15 buffers",
+      calendar: "strategy",
+      patch: { slotIntervalMin: 1 },
+      earlier: "2026-10-27T17:00:00.000Z", // 10:00-11:00 PDT
+      later: "2026-10-27T18:14:00.000Z", // 11:14 PDT
+      second: "rejected",
+    },
+    {
+      // 20 before, 5 after: the gap must be 20.
+      name: "a 20-minute gap with 20/5 buffers",
+      calendar: "strategy",
+      patch: { slotIntervalMin: 1, bufferBeforeMin: 20, bufferAfterMin: 5 },
+      earlier: "2026-10-27T17:00:00.000Z", // 10:00-11:00 PDT
+      later: "2026-10-27T18:20:00.000Z", // 11:20 PDT
+      second: "booked",
+    },
+    {
+      name: "a 19-minute gap with 20/5 buffers",
+      calendar: "strategy",
+      patch: { slotIntervalMin: 1, bufferBeforeMin: 20, bufferAfterMin: 5 },
+      earlier: "2026-10-27T17:00:00.000Z", // 10:00-11:00 PDT
+      later: "2026-10-27T18:19:00.000Z", // 11:19 PDT
+      second: "rejected",
+    },
+  ];
+
+  it.each(
+    ORDERS.flatMap((row) => [
+      { ...row, order: "earlier first", first: row.earlier, then: row.later },
+      { ...row, order: "later first", first: row.later, then: row.earlier },
+    ]),
+  )(
+    "gives the same answer whichever is booked first: $name, $order",
+    async (c) => {
+      const world = await loadWorld(zone);
+      const { api, slots, book } = world;
+      const calendar = c.patch
+        ? await settle(api.update(world[c.calendar].id, c.patch))
+        : world[c.calendar];
+
+      await book(calendar, c.first);
+
+      // What availableSlots() offers and what book() accepts must agree.
+      const offered = await slots(calendar, "2026-10-27");
+      expect(offered.includes(c.then), `${c.then} offered`).toBe(
+        c.second === "booked",
+      );
+
+      const second = book(calendar, c.then);
+      if (c.second === "booked") {
+        await expect(second).resolves.toMatchObject({ startAt: c.then });
+      } else {
+        await expect(second).rejects.toMatchObject({
+          status: 409,
+          code: "SLOT_UNAVAILABLE",
+        });
+      }
     },
   );
 

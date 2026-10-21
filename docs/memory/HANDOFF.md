@@ -8,23 +8,25 @@
 - **Status:** P7-T03 in review.
 
 ## Last change
-- P7-T03: new pure slot engine `src/lib/mock/slots.ts` (@date-fns/tz): days are calendar-zone `YYYY-MM-DD`, windows are wall-clock, slots step by elapsed minutes (25-hour 2026-11-01 handled); dateRangeDays now honoured.
-- `book()` rejects non-offered starts (409 SLOT_UNAVAILABLE) and non-instants (422 INVALID_START); `setStatus()` restoring a cancelled booking checks `hasRoomFor` (409 on conflict). AppointmentDraft narrowed; record built field by field.
-- Seed: same faker stream, appointments placed on open LA grid slots (46 moved, 1 to next day); SEED_VERSION 4. KPIs unchanged.
-- Harness: `vitest.setup.ts` preloads @date-fns/tz (fake-timer Date bug); `setDemoNow`, `stubLocalStorage`; 60 new tests, 145 total green. Added P7-T11 (booking guards) and P7-H2 (buffer semantics decision).
+- P7-T03 rework (P7-H2): `isBlocked()` in `src/lib/mock/slots.ts` now checks buffers both ways; neighbours need a gap >= max(before, after) whichever was booked first. hasRoomFor/openSlots/freeSlots/book/setStatus/seed place() all share it.
+- Tests: booking-order table (both orders, both zones, availableSlots agrees with book()), boundary rows at gap = max and one minute short, restore-mirror 409 row, seed buffer oracle. Three expected lists updated with reasons. 172/172 green; 5 mutants all killed.
+- Seed: only Discovery 2026-08-31 18:00Z moves to 19:30Z (47 moved in total vs the pre-P7 seed). SEED_VERSION stays 4, so a dev browser that loaded 1704c7b keeps the old placement until a manual reseed.
+- Earlier P7-T03 work (engine, book/setStatus guards, seed placement, harness) unchanged; see git log.
 
 ## Next up
 - **Agent:** P7-T04 (once P7-T03 is approved).
 
 ## Waiting on you
-- Review of P7-T03 (`git show HEAD`).
+- Review of P7-T03 rework (`git show HEAD`).
 - P7-H1: update CLAUDE.md Commands (check pipeline, plus `npm run e2e`).
-- P7-H2: decide symmetric buffer semantics before P7-T08.
 
 ## Open suggestions (non-blocking review notes)
 - vitest.setup.ts comment mis-explains the mechanism: @date-fns/tz enumerates `Date.prototype` own names at evaluation; under fake timers that is ClockDate.prototype (no own getters). Fix is right, comment is not.
 - Type `availableSlots(calendarId, day: CalendarDay): ISODate[]` with an exported alias so T08 sees the day is calendar-zone.
-- Seed test 'never overlap' checks raw overlap only; also assert buffer clearance.
+- isBlocked() equals padding each booking by max(before, after) on both sides; add a one-line comment stating the equivalence.
+- book() JSDoc (calendars.ts:138-139) says buffer intrusion cannot happen through the API; narrow to "through book() or setStatus()" since calendars.update() can raise buffers (P7-T11).
+- calendars.test.ts:169 comment "inside the 15-minute buffer after 19:00Z" reads oddly; reword to "inside the booking's 15-minute after-buffer (it ends at 19:00Z)".
+- DECISIONS seed-placement line could note "buffers applied both ways".
 - Seed realism: 11 upcoming appointments were created further ahead than dateRangeDays allows; could clamp createdAt.
 - `setStatus()` logs a status_changed activity on no-op changes; add a guard before P7-T07.
 - Spring-forward window edges untested (seeded Sundays closed); TZDate pushes skipped edges forward an hour; T09 editor note. P7-T09 zod: zero-padded HH:mm, valid IANA zone, no overlapping windows.

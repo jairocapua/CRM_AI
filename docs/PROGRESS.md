@@ -19,7 +19,7 @@ Status: active · Progress: 4/13 · Points: 7 (5 for Calendars + 2 for the test 
 |---|---|---|---|---|---|---|---|
 | P7-T01 | Vitest harness and first API tests | agent | done | — | 8a2e34d | 2026-10-21 | Vitest 4.1 harness + 77 API/mock tests; reconcile test fails 12-13 on Phase 6 revert; check green |
 | P7-T02 | Playwright e2e harness | agent | done | — | d359deb | 2026-10-21 | Playwright e2e harness: next build+start on 3100, boot/console fixture, 15 tests green |
-| P7-T03 | Calendar time model and slot engine (step 0) | agent | review | P7-T01 |  | 2026-10-21 | TZ-aware slot engine (slots.ts), book() 409/422 guards, seed placed on grid, SEED_VERSION 4; 145 tests green |
+| P7-T03 | Calendar time model and slot engine (step 0) | agent | review | P7-T01 |  | 2026-10-21 | Rework P7-H2: buffers symmetric (gap >= max(before,after)), order-independent; 1 seed appt moved; 172 tests green |
 | P7-T04 | Calendars page: URL state, toolbar and calendar list | agent | todo | P7-T02 |  |  |  |
 | P7-T05 | Month view | agent | todo | P7-T03, P7-T04 |  |  |  |
 | P7-T06 | Week and day views | agent | todo | P7-T03, P7-T04 |  |  |  |

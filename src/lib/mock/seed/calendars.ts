@@ -138,9 +138,9 @@ const hhmm = (hour: number, minute: number) =>
  * the first slot at or after `time` that the booking engine would still
  * offer, else the day's first open slot, else the same search on the next
  * day, and so on. "Open" is `openSlots()`: on the calendar's grid, clear of
- * everything already placed (buffers included), on a day under its cap. Notice
- * and date range are left out; they describe "now", and most of the seed is in
- * the past. Makes no draws.
+ * everything already placed with buffers applied both ways, on a day under its
+ * cap. Notice and date range are left out; they describe "now", and most of
+ * the seed is in the past. Makes no draws.
  */
 function place(
   calendar: Calendar,

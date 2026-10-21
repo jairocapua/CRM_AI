@@ -162,8 +162,12 @@ export function slotGrid(calendar: Calendar, day: CalendarDay): Interval[] {
 }
 
 /**
- * Whether `slot` collides with any booking once the calendar's buffers are
- * added around the booking.
+ * Whether `slot` collides with any booking, with buffers applied both ways
+ * (P7-H2): `slot` may not sit inside a booking's before- or after-buffer, and
+ * no booking may sit inside `slot`'s. Buffers may overlap each other. The net
+ * rule is a gap of at least max(bufferBeforeMin, bufferAfterMin) between
+ * neighbours; touching at exactly that gap is allowed. The answer does not
+ * depend on which of two times was booked first.
  */
 export function isBlocked(
   slot: Interval,
@@ -172,9 +176,11 @@ export function isBlocked(
 ): boolean {
   const before = calendar.bufferBeforeMin * MINUTE;
   const after = calendar.bufferAfterMin * MINUTE;
-  return booked.some(
-    (b) => slot.start < b.end + after && slot.end > b.start - before,
-  );
+  // `a` overlaps `b`'s span widened by the buffers (half-open, so touching
+  // the widened edge is not a collision).
+  const intrudes = (a: Interval, b: Interval) =>
+    a.start < b.end + after && a.end > b.start - before;
+  return booked.some((b) => intrudes(slot, b) || intrudes(b, slot));
 }
 
 /** Whether `day` already holds `maxBookingsPerDay` of `booked`. */
@@ -192,7 +198,8 @@ function isDayFull(
 }
 
 /**
- * The grid for `day` minus `booked` and its buffers. Empty once the day holds
+ * The grid for `day` minus every slot that collides with `booked`, buffers
+ * applied both ways (see `isBlocked`). Empty once the day holds
  * `maxBookingsPerDay` bookings. `booked` is every live booking of this
  * calendar; the caller decides what counts as live.
  */
@@ -209,10 +216,11 @@ export function openSlots(
 
 /**
  * Whether `slot` can join `booked` under the rules `openSlots` applies: clear
- * of every booking's buffers, on a day (in the calendar's zone) below
- * `maxBookingsPerDay`. Hours, notice and the booking range are not checked:
- * this is for a booking that already has its time, such as a cancelled one
- * being put back, which must not land on a time taken meanwhile.
+ * of every booking with buffers applied both ways (see `isBlocked`), on a day
+ * (in the calendar's zone) below `maxBookingsPerDay`. Hours, notice and the
+ * booking range are not checked: this is for a booking that already has its
+ * time, such as a cancelled one being put back, which must not land on a time
+ * taken meanwhile.
  */
 export function hasRoomFor(
   calendar: Calendar,
@@ -251,10 +259,11 @@ export function liveBookings(
 
 /**
  * The start times `calendar` offers on `day`, as ISO strings: its hours, minus
- * live bookings and their buffers, minus the minimum scheduling notice, and
- * nothing past `dateRangeDays` calendar days after today (both read in the
- * calendar's zone; the last day is included). `day` must be a valid
- * "YYYY-MM-DD"; check it with `isCalendarDay` first.
+ * slots that collide with live bookings (buffers applied both ways, see
+ * `isBlocked`), minus the minimum scheduling notice, and nothing past
+ * `dateRangeDays` calendar days after today (both read in the calendar's zone;
+ * the last day is included). `day` must be a valid "YYYY-MM-DD"; check it with
+ * `isCalendarDay` first.
  */
 export function freeSlots(input: {
   calendar: Calendar;
