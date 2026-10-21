@@ -157,9 +157,19 @@ hours land around midnight–08:00 local; that is expected.
   coloured by calendar (on the viewer's local day); "+N more" when a day
   overflows; clicking a day opens `?view=day&date=…`. Loading uses
   `isLoading` only (never `isRefreshing`).
+  - From the P7-T04 review: today every prev/next step changes the query, so
+    `isLoading` swaps the whole view for a skeleton on each click. Keep the
+    previous range's grid on screen while the next range loads (a skeleton
+    only on the very first load), in `calendars-workspace.tsx`, so the
+    week/day views (T06) inherit it.
+  - Also from that review: `navigate` pushes a history entry even when the
+    position is unchanged (Today while already on today), so Back seems to do
+    nothing. Skip the push when the search string would not change.
 - **Acceptance:**
   - [ ] e2e: the seeded month shows appointments on the right local days.
   - [ ] e2e: "+N more" appears on a crowded day; clicking a day opens day view.
+  - [ ] e2e: stepping to the next month keeps the grid on screen (no full-view skeleton after the first load).
+  - [ ] e2e: pressing Today while already on today adds no history entry.
 - **Refs:** `src/lib/api/calendars.ts` `listAppointments`
 
 ### P7-T06 — Week and day views
