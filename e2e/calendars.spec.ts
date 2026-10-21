@@ -1,6 +1,9 @@
 import {
+  dayList,
   expectPosition,
   expectViewLoaded,
+  readSeededAppointments,
+  segmentsIn,
   viewButton,
   viewRegion,
   type ViewName,
@@ -148,10 +151,9 @@ test("hiding a calendar drops its appointments from every view", async ({
   await expect(monthChips.first()).toBeVisible();
 
   // Every view: the calendar stays hidden across a view change, and the week
-  // (fetched fresh for its own range) has no Discovery Call rows either. The
-  // week is still the placeholder's per-calendar list until P7-T06.
-  const weekDiscovery = page
-    .getByRole("list", { name: "Appointments in view" })
+  // grid (fetched fresh for its own range) has no Discovery Call blocks
+  // either.
+  const weekDiscovery = viewRegion(page, "Week")
     .getByRole("listitem")
     .filter({ hasText: "Discovery Call" });
   await viewButton(page, "Week").click();
@@ -160,10 +162,19 @@ test("hiding a calendar drops its appointments from every view", async ({
   await expect(discoveryToggle).not.toBeChecked();
   await expect(weekDiscovery).toHaveCount(0);
 
-  // Showing it again brings its rows back, in this view and the month.
+  // Showing it again brings its blocks back, in this view and the month: as
+  // many as the database has in this week, never zero.
+  const weekDiscoveryCount = segmentsIn(
+    "Asia/Singapore",
+    (await readSeededAppointments(page)).filter(
+      (row) => row.calendarName === "Discovery Call",
+    ),
+    dayList("2026-09-06", "2026-09-12"),
+  ).length;
+  expect(weekDiscoveryCount).toBeGreaterThan(0);
   await discoveryToggle.click();
   await expect(discoveryToggle).toBeChecked();
-  await expect(weekDiscovery).toHaveCount(1);
+  await expect(weekDiscovery).toHaveCount(weekDiscoveryCount);
 
   await viewButton(page, "Month").click();
   await expectViewLoaded(page, "Month");
@@ -251,5 +262,32 @@ test.describe("Today on today adds no history entry", () => {
     await expect(page).toHaveURL(/\/calendars\?view=month&date=2026-09-08$/);
     expect(await page.evaluate(() => history.length)).toBe(before);
     await expectPosition(page, "Month", "September 2026");
+  });
+
+  test("from another day of the same month, which it replaces", async ({
+    page,
+    gotoApp,
+  }) => {
+    await gotoApp("/calendars?view=month&date=2026-09-20");
+    await expectPosition(page, "Month", "September 2026");
+    const length = () => page.evaluate(() => history.length);
+
+    await page.getByRole("button", { name: "Next month" }).click();
+    await expect(page).toHaveURL(/\/calendars\?view=month&date=2026-10-20$/);
+    await page.getByRole("button", { name: "Previous month" }).click();
+    await expect(page).toHaveURL(/\/calendars\?view=month&date=2026-09-20$/);
+    await expectPosition(page, "Month", "September 2026");
+    const before = await length();
+
+    // 20 September to 8 September: the URL changes, the grid does not, so
+    // the entry is replaced rather than added.
+    await page.getByRole("button", { name: "Today", exact: true }).click();
+    await expect(page).toHaveURL(/\/calendars\?view=month&date=2026-09-08$/);
+    expect(await length()).toBe(before);
+
+    // So one Back leaves September: no step that shows the same grid again.
+    await page.goBack();
+    await expect(page).toHaveURL(/\/calendars\?view=month&date=2026-10-20$/);
+    await expectPosition(page, "Month", "October 2026");
   });
 });

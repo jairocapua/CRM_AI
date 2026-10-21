@@ -81,3 +81,15 @@
 - 2026-10-21 [P7-T05] Stepping e2e proves the new grid via Oct 31 present / Aug 30 gone ('October 1' also sits in the September grid).
 - 2026-10-21 [P7-T05] Singapore Sep 2026 total of 58 kept as a seed tripwire.
 - 2026-10-21 [P7-T05 review] Cancelled appointments stay visible (struck through) but sort after live ones within a day, so they never push live bookings behind "+N more" (carried out in P7-T07).
+- 2026-10-21 [P7-T06] Block text is contact first, then 'start - end' (deviates from the plan's time-first order): grid position already shows time and narrow week columns truncate the tail. Blocks under 40px use one line, taller two. Screen readers read name, times, ', <calendar>', ', Cancelled'.
+- 2026-10-21 [P7-T06] Day-header row is aria-hidden; aria-current='date' and the full day label (role=group, aria-label=rangeLabel('day')) sit on the day column, matching month cells, not on the header as planned.
+- 2026-10-21 [P7-T06] Each block <li> is placed exactly (top = start minute, height = real duration, min 20px); the 1px gap comes from p-px on an inner tinted div so DOM boxes match the maths.
+- 2026-10-21 [P7-T06] Day columns use overflow-y-clip: a min-height block at day end is clipped at midnight while the now-line dot can still overhang left.
+- 2026-10-21 [P7-T06] A segment cut at midnight loses its rounded corners and border on the cut edge.
+- 2026-10-21 [P7-T06] Scroll target: 30 min before the earliest segment start in view (cut segment starts at 0), clamped at 0; with nothing in view, 30 min before the now line if today is visible, else 08:00. Cancelled appointments count and take a column.
+- 2026-10-21 [P7-T06] Now line: integer wall-clock minutes from apiNow() on a 60s setInterval, red 2px rule with a dot, centred with -translate-y-1/2, only on the matching localDay column.
+- 2026-10-21 [P7-T06] Scroll container is role=region, tabIndex=0, named 'Time grid, <rangeLabel>', with an inset focus outline (a ring would be clipped by the card's rounded overflow).
+- 2026-10-21 [P7-T06] Week grid has min-w-[42rem]; hour gutter and header corner are sticky-left so hour labels stay visible when scrolling sideways.
+- 2026-10-21 [P7-T06] historyMethod: 'none' if search string unchanged; 'replace' if view unchanged and visibleDays start/endExclusive equal (covers the old same-position case); else 'push'.
+- 2026-10-21 [P7-T06] Hide-calendar e2e takes the shown Discovery Call count in the Singapore week from the oracle (segmentsIn), asserting > 0, instead of the placeholder's '1'.
+- 2026-10-21 [P7-T06] Week placement e2e asserts a Singapore tripwire of 11 appointments for Sep 6-12; Kolkata exactly one cut at midnight and some-but-not-all off their UTC day; LA none off the UTC day and none cut.

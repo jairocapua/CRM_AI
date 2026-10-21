@@ -121,10 +121,14 @@ export function calendarSearch({ view, date }: CalendarPosition): string {
  *
  * - `"none"`: the URL would not change (Today while already on today). No
  *   entry, or Back would seem to do nothing.
- * - `"replace"`: the same position, but the URL is not canonical (a bare
- *   `/calendars`, or one that fell back, `?view=year`). Rewritten in place, so
- *   it gains canonical values without a history entry that changes nothing.
- * - `"push"`: a real move; Back returns to it.
+ * - `"replace"`: the URL changes but the screen would not: the same view
+ *   showing the same days. Either the position is unchanged and only the URL
+ *   is not canonical (a bare `/calendars`, or one that fell back,
+ *   `?view=year`), or the date moved within the range on screen (Today from
+ *   20 September in month view, or from Wednesday to Saturday of one week).
+ *   Rewritten in place, so the URL is right without a history entry that
+ *   Back would seem to skip.
+ * - `"push"`: a real move, to another view or other days; Back returns to it.
  */
 export function historyMethod(
   currentSearch: string,
@@ -132,8 +136,15 @@ export function historyMethod(
   next: CalendarPosition,
 ): "none" | "replace" | "push" {
   if (calendarSearch(next) === currentSearch) return "none";
-  if (next.view === current.view && next.date === current.date) {
-    return "replace";
+  if (next.view === current.view) {
+    const shown = visibleDays(current.view, current.date);
+    const coming = visibleDays(next.view, next.date);
+    if (
+      shown.start === coming.start &&
+      shown.endExclusive === coming.endExclusive
+    ) {
+      return "replace";
+    }
   }
   return "push";
 }

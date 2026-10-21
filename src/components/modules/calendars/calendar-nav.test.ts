@@ -173,6 +173,51 @@ describe("historyMethod", () => {
     // From a non-canonical URL too: a real move is always an entry.
     expect(historyMethod("", HERE, next)).toBe("push");
   });
+
+  it.each<[string, CalendarView, string, string]>([
+    // Today from Sep 20 in month view: the same September grid, so Back would
+    // seem to do nothing.
+    ["month Sep 20 -> Sep 8", "month", "2026-09-20", "2026-09-08"],
+    // Both in the week of Sep 6–12.
+    ["week Sep 9 -> Sep 12", "week", "2026-09-09", "2026-09-12"],
+  ])(
+    "replaces a date change that keeps the view and its days: %s",
+    (_, view, from, to) => {
+      expect(
+        historyMethod(
+          calendarSearch({ view, date: from }),
+          { view, date: from },
+          { view, date: to },
+        ),
+      ).toBe("replace");
+    },
+  );
+
+  it.each<[string, CalendarView, string, string]>([
+    // The August and September grids share a week, but are not the same days.
+    ["month Aug 31 -> Sep 1", "month", "2026-08-31", "2026-09-01"],
+    ["week Sep 12 -> Sep 13", "week", "2026-09-12", "2026-09-13"],
+    ["day Sep 8 -> Sep 9", "day", "2026-09-08", "2026-09-09"],
+  ])("pushes a date change that shows other days: %s", (_, view, from, to) => {
+    expect(
+      historyMethod(
+        calendarSearch({ view, date: from }),
+        { view, date: from },
+        { view, date: to },
+      ),
+    ).toBe("push");
+  });
+
+  it("pushes a view change even when the days overlap", () => {
+    // Week Sep 6–12 lies inside the September grid, but the view differs.
+    expect(
+      historyMethod(
+        "?view=month&date=2026-09-08",
+        { view: "month", date: "2026-09-08" },
+        { view: "week", date: "2026-09-08" },
+      ),
+    ).toBe("push");
+  });
 });
 
 describe("shiftDate", () => {

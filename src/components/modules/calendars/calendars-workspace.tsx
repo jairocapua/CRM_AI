@@ -15,7 +15,6 @@ import {
   historyMethod,
   localDay,
   parseCalendarParams,
-  rangeLabel,
   toInstantRange,
   visibleDays,
   zoneLabel,
@@ -23,12 +22,13 @@ import {
 } from "./calendar-nav";
 import { CalendarToolbar } from "./calendar-toolbar";
 import { MonthView } from "./month-view";
-import { ViewPlaceholder } from "./view-placeholder";
+import { TimeGridView } from "./time-grid-view";
 
 const NONE_HIDDEN: ReadonlySet<ID> = new Set();
 
 /**
- * The calendars page body: toolbar, calendar list and the current view.
+ * The calendars page body: toolbar, calendar list and the current view (the
+ * month grid, or the week and day time grids).
  *
  * The view and date live in the URL and nowhere else. They are read with
  * `useSearchParams` (the page wraps this in `<Suspense>`, which Next requires
@@ -114,9 +114,6 @@ export function CalendarsWorkspace() {
 
   // Filtered once, here, so no view can ever receive a hidden calendar's rows,
   // stale ones included.
-  const shownCalendars = (calendars.data ?? []).filter(
-    (calendar) => !hidden.has(calendar.id),
-  );
   const shownAppointments = (shown?.rows ?? []).filter(
     (appointment) => !hidden.has(appointment.calendarId),
   );
@@ -160,11 +157,10 @@ export function CalendarsWorkspace() {
                   onOpenDay={(day) => navigate({ view: "day", date: day })}
                 />
               ) : (
-                // P7-T06 replaces this with the week and day time grids.
-                <ViewPlaceholder
+                <TimeGridView
                   view={shown.view}
-                  label={rangeLabel(shown.view, shown.date)}
-                  calendars={shownCalendars}
+                  date={shown.date}
+                  today={today}
                   appointments={shownAppointments}
                 />
               )}

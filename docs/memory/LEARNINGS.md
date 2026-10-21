@@ -56,3 +56,11 @@
 - 2026-10-21 [P7-T05] A Playwright run during mutation testing rebuilds .next from mutated sources; rerun npm run check after restoring.
 - 2026-10-21 [P7-T05] `python` is not available in Git Bash here (Windows Store alias). Use Edit, sed or node for scripted edits.
 - 2026-10-21 [P7-T05] Tailwind v4 `data-pending:` matches the bare attribute, so `data-pending={pending || undefined}` with `data-pending:opacity-60` works.
+- 2026-10-21 [P7-T06] Tailwind v4: `outline-none` sets `--tw-outline-style: none` and `focus-visible:outline-2` uses `outline-style: var(--tw-outline-style)`, so a focus outline on top of outline-none also needs `focus-visible:outline-solid` or it stays invisible.
+- 2026-10-21 [P7-T06] Playwright `page.clock.setFixedTime(...)` before gotoApp freezes Date.now, so apiNow() is exactly REF_DATE; timers keep running (simulate() latency and debounced persist still work). A sharp test that a component uses the demo clock, not the wall clock.
+- 2026-10-21 [P7-T06] In packIntervals the group-close check (`start >= groupEnd`) hides the column-reuse touch rule for an isolated back-to-back pair; killing a `columnEnd < start` mutant needs a touching pair inside an overlap group, e.g. [0,60],[0,45],[45,90].
+- 2026-10-21 [P7-T06] An 'off its UTC day' count in e2e must use each row's first segment (its local start day), not `start > 0`: a seeded 16:00Z appointment is 00:00 in Singapore (start minute 0).
+- 2026-10-21 [P7-T06] Intl en-US time output puts U+202F before AM/PM; build 'h:mm AM' from formatToParts (hourCycle h23) to match date-fns 'h:mm a'.
+- 2026-10-21 [P7-T06] Reading block geometry in one evaluateAll (getBoundingClientRect per column and block) works inside an inner scroll container; offsets relative to the column hold at any scroll position.
+- 2026-10-21 [P7-T06] Seed facts (Singapore): week Sep 6-12 has Sep 8 = 4 blocks, first at 00:00 (cancelled), so the week opens at scrollTop 0. Day Sep 10 opens at scrollTop 168 (03:30, for a 04:00 cancelled Strategy Session). Sep 15: Strategy 00:00-01:00 and Onboarding 00:00-00:45 overlap, then Discovery 01:00-01:30 touches.
+- 2026-10-21 [P7-T06] `git rm` stages the deletion; use plain rm (or `git restore --staged`) when the index must stay untouched.

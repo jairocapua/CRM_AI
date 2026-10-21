@@ -48,6 +48,7 @@ export async function expectViewLoaded(page: Page, view: ViewName) {
 export interface SeededAppointment {
   id: string;
   startAt: string;
+  endAt: string;
   status: string;
   calendarName: string;
   calendarColor: string;
@@ -57,7 +58,13 @@ interface PersistedDb {
   state: {
     appointments: Record<
       string,
-      { id: string; calendarId: string; startAt: string; status: string }
+      {
+        id: string;
+        calendarId: string;
+        startAt: string;
+        endAt: string;
+        status: string;
+      }
     >;
     calendars: Record<string, { name: string; color: string }>;
   };
@@ -84,6 +91,7 @@ export async function readSeededAppointments(
     return {
       id: a.id,
       startAt: a.startAt,
+      endAt: a.endAt,
       status: a.status,
       calendarName: calendar.name,
       calendarColor: calendar.color,
@@ -112,4 +120,88 @@ export function longDayLabel(day: string): string {
     day: "numeric",
     year: "numeric",
   }).format(new Date(`${day}T00:00:00Z`));
+}
+
+function zonedParts(zone: string, iso: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: zone,
+    hour: "numeric",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(iso));
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((p) => p.type === type)?.value);
+  return { hour: part("hour"), minute: part("minute") };
+}
+
+/** Wall-clock minutes since local midnight in `zone`: 01:30 is 90. */
+export function localMinutesIn(zone: string, iso: string): number {
+  const { hour, minute } = zonedParts(zone, iso);
+  return hour * 60 + minute;
+}
+
+/**
+ * "1:00 AM" for an instant in `zone`, as the calendar blocks print it. Built
+ * from parts with a plain space: Intl's own en-US output puts a narrow
+ * no-break space before "AM".
+ */
+export function localTimeIn(zone: string, iso: string): string {
+  const { hour, minute } = zonedParts(zone, iso);
+  const twelve = hour % 12 === 0 ? 12 : hour % 12;
+  return `${twelve}:${String(minute).padStart(2, "0")} ${hour < 12 ? "AM" : "PM"}`;
+}
+
+/** One appointment's part of one local day, in minutes of that day. */
+export interface DaySegmentOracle {
+  row: SeededAppointment;
+  day: string;
+  start: number;
+  end: number;
+}
+
+/**
+ * Where a time grid should draw each row in `zone`, over `days` only: one
+ * segment per local day the row occupies, from its local start day to the
+ * local day of its last millisecond. A segment starts at the row's local start
+ * time on its first day and at midnight after that, and ends at its local end
+ * time on its last day and at midnight (1440) before that. Computed with Intl
+ * alone, so it shares nothing with the app.
+ */
+export function segmentsIn(
+  zone: string,
+  rows: readonly SeededAppointment[],
+  days: readonly string[],
+): DaySegmentOracle[] {
+  const segments: DaySegmentOracle[] = [];
+  for (const row of rows) {
+    const firstDay = localDayIn(zone, row.startAt);
+    const lastMs = new Date(Date.parse(row.endAt) - 1).toISOString();
+    const lastDay = localDayIn(zone, lastMs);
+    for (const day of days) {
+      if (day < firstDay || day > lastDay) continue;
+      segments.push({
+        row,
+        day,
+        start: day === firstDay ? localMinutesIn(zone, row.startAt) : 0,
+        end:
+          day === localDayIn(zone, row.endAt)
+            ? localMinutesIn(zone, row.endAt)
+            : 24 * 60,
+      });
+    }
+  }
+  return segments;
+}
+
+/** The "YYYY-MM-DD" days from `first` to `last`, inclusive, stepped in UTC. */
+export function dayList(first: string, last: string): string[] {
+  const days: string[] = [];
+  for (
+    let ms = Date.parse(`${first}T00:00:00Z`);
+    ms <= Date.parse(`${last}T00:00:00Z`);
+    ms += 86_400_000
+  ) {
+    days.push(new Date(ms).toISOString().slice(0, 10));
+  }
+  return days;
 }

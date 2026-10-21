@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 6/36 tasks done (17%) · **Current phase:** P7 · **Next agent task:** P7-T06 · **Awaiting review:** P7-T05 · **Blocked:** none · **Waiting on you:** none
+**Overall:** 7/36 tasks done (19%) · **Current phase:** P7 · **Next agent task:** P7-T07 · **Awaiting review:** P7-T06 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 6/15 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 7/15 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -21,8 +21,8 @@ Status: active · Progress: 6/15 · Points: 7 (5 for Calendars + 2 for the test 
 | P7-T02 | Playwright e2e harness | agent | done | — | d359deb | 2026-10-21 | Playwright e2e harness: next build+start on 3100, boot/console fixture, 15 tests green |
 | P7-T03 | Calendar time model and slot engine (step 0) | agent | done | P7-T01 | 4fa791c | 2026-10-21 | Rework P7-H2: buffers symmetric (gap >= max(before,after)), order-independent; 1 seed appt moved; 172 tests green |
 | P7-T04 | Calendars page: URL state, toolbar and calendar list | agent | done | P7-T02 | 3f81f6e | 2026-10-21 | /calendars URL state (view/date), toolbar, calendar list toggles, placeholder views; check+e2e green |
-| P7-T05 | Month view | agent | review | P7-T03, P7-T04 |  | 2026-10-21 | Month grid with +N more, keeps old grid while loading, historyMethod none/replace/push; e2e 32/32 |
-| P7-T06 | Week and day views | agent | todo | P7-T03, P7-T04 |  |  |  |
+| P7-T05 | Month view | agent | done | P7-T03, P7-T04 | 5ed7061 | 2026-10-21 | Month grid with +N more, keeps old grid while loading, historyMethod none/replace/push; e2e 32/32 |
+| P7-T06 | Week and day views | agent | review | P7-T03, P7-T04 |  | 2026-10-21 | Week/day time grid: pure packIntervals, now line from apiNow, scroll-on-open; historyMethod replace in range |
 | P7-T07 | Appointment details, status and cancel | agent | todo | P7-T05 |  |  |  |
 | P7-T08 | Booking dialog and the contact Appointments tab | agent | todo | P7-T03, P7-T07 |  |  |  |
 | P7-T09 | Availability editor | agent | todo | P7-T03, P7-T04 |  |  |  |
