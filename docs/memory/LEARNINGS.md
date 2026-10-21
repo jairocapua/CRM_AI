@@ -25,3 +25,10 @@
 - 2026-10-21 [P7-T01] Seeded KPIs at the anchor (reference only, tests avoid exact totals): Singapore 90-day newContacts 122, wonRevenue 137,450,000c, appointments 57, messages 806; today's messages bar 94 Singapore, 60 UTC, 11 Los Angeles.
 - 2026-10-21 [P7-T01] Git Bash quoted heredocs here still collapsed doubled backslashes in a regex literal; build a backslash with String.fromCharCode(92) in throwaway scripts.
 - 2026-10-21 [P7-T01] For mutation checks without touching source, use a vitest config that mergeConfigs the base and adds an `enforce: "pre"` transform plugin.
+- 2026-10-21 [P7-T02] Playwright's fixture `use(...)` trips eslint-config-next's react-hooks/rules-of-hooks; turn the rule off for e2e/**.
+- 2026-10-21 [P7-T02] Mock DB persist writes are debounced 250ms (db.ts debounceWrites): localStorage['nimbus-crm-db'] is null right after boot; e2e reads of persisted state need expect.poll.
+- 2026-10-21 [P7-T02] On Windows, stopping a background `npm run dev`/`npm run start` leaves the child node process holding the port (3000/3100); find it with netstat and kill the PID.
+- 2026-10-21 [P7-T02] With Turbopack's build cache the `next build` inside `npm run e2e` takes ~10s; a full e2e run is ~15-25s.
+- 2026-10-21 [P7-T02] Playwright reports console.warn as type 'warning', not 'warn'; pageerror text reads 'pageerror: Error: <msg>' when built from error.stack.
+- 2026-10-21 [P7-T02] about:blank and opaque-origin pages throw on storage access: an addInitScript touching storage needs a location.protocol check and try/catch.
+- 2026-10-21 [P7-T02] `timeout: 0` on a Playwright expect means no timeout; for a one-shot check use locator.count().

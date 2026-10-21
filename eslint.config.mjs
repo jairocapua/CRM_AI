@@ -58,6 +58,13 @@ const eslintConfig = defineConfig([
     rules: { "no-restricted-imports": "off" },
   },
 
+  // Playwright fixtures hand each setup callback a `use(value)` function, which
+  // eslint-config-next's rules-of-hooks mistakes for React's `use` hook.
+  {
+    files: ["e2e/**", "playwright.config.ts"],
+    rules: { "react-hooks/rules-of-hooks": "off" },
+  },
+
   globalIgnores([
     ".next/**",
     "out/**",

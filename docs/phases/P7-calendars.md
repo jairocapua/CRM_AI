@@ -236,6 +236,13 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-21
 
+### P7-T10 — Document Playwright browser install
+- **Owner:** agent · **Depends:** —
+- **Scope:** Add an e2e:install script (npx playwright install chromium) so a fresh clone can run npm run e2e; mention it next to e2e in docs.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-21
+
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
       timeline, and in the dashboard Upcoming card, and its slot disappears

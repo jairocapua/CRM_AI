@@ -31,3 +31,9 @@
 - 2026-10-21 [P7-T01] Analytics series assertions use expect.soft so a regression reports every KPI at once.
 - 2026-10-21 [P7-T01] settle() has its own tests; rollupByStage gets a rounding test (two 3c deals at 50% weigh 4c).
 - 2026-10-21 [P7-T01] The clock anchor test moves the wall clock 30 days off the anchor (and asserts Date.now() did) rather than renaming the test; mutants ran via a transform-plugin config, no source edits.
+- 2026-10-21 [P7-T02] e2e runs against `next build && next start -p 3100 -H 127.0.0.1`, not a second `next dev`: Next 16 locks .next/dev/lock; build keeps .next/dev and start takes no lock. Dev-only React warnings are out of e2e's reach; hydration errors still arrive as pageerror.
+- 2026-10-21 [P7-T02] e2e server bound to 127.0.0.1 (loopback only, matches baseURL exactly).
+- 2026-10-21 [P7-T02] Smoke test asserts the exact title `${item.title} · ${APP_NAME}` (APP_NAME from src/lib/constants), stricter than the planned regex.
+- 2026-10-21 [P7-T02] Init script clears all of localStorage (incl. next-themes key), one-shot per tab via a sessionStorage flag, so reloads inside a test keep its data; avoids hard-coding the origin in storageState.
+- 2026-10-21 [P7-T02] Added self-test 'waits while the boot skeleton is up' to cover waitForBoot's waiting branch.
+- 2026-10-21 [P7-T02] e2e is not part of `npm run check` (it does its own build); the gate runs it separately.

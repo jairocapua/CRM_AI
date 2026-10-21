@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:scripts": "node --test \"scripts/*.test.mjs\"",
+    "e2e": "playwright test",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run test:scripts && npm run build"
   },
   "dependencies": {
@@ -51,6 +52,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^10.6.0",
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
