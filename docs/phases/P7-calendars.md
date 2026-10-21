@@ -183,6 +183,10 @@ hours land around midnight–08:00 local; that is expected.
   - A "now" line from `apiNow()`, never the wall clock.
   - On open, scroll to the earliest appointment in view (LA hours fall around
     midnight–08:00 for an Asian viewer).
+  - From the P7-T05 review: `historyMethod` (`calendar-nav.ts`) still pushes
+    when the date changes but the visible range does not (e.g. Month on
+    Sep 20, then Today). Use `replace` when the view is unchanged and the
+    visible days are the same, so Back never looks like it did nothing.
 - **Acceptance:**
   - [ ] Unit tests for the packing function: no overlap, two overlaps, a chain
         of three, back-to-back (touching, not overlapping).
@@ -199,7 +203,11 @@ hours land around midnight–08:00 local; that is expected.
   location, status. Change status via `setStatus`; cancel via `cancel`. Base UI
   rules: `render` prop, labels inside `DropdownMenuGroup`, `SelectValue` with
   a label mapping.
+  - **Decided (review of P7-T05, 2026-10-21):** cancelled appointments stay
+    visible (struck through) but sort after live ones within a day in every
+    view, so cancellations never push live bookings behind "+N more".
 - **Acceptance:**
+  - [ ] e2e: on a day with cancelled and live appointments, the live ones are listed first and stay visible above "+N more".
   - [ ] e2e: cancelling an appointment removes it from the dashboard Upcoming
         card and makes its slot available again.
   - [ ] e2e: a status change appears on the contact's activity timeline.

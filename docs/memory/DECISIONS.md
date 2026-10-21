@@ -80,3 +80,4 @@
 - 2026-10-21 [P7-T05] Colour e2e reads each calendar's colour from the DB and expects bg-{color}-100 (at least 2 calendars), not hard-coded colours.
 - 2026-10-21 [P7-T05] Stepping e2e proves the new grid via Oct 31 present / Aug 30 gone ('October 1' also sits in the September grid).
 - 2026-10-21 [P7-T05] Singapore Sep 2026 total of 58 kept as a seed tripwire.
+- 2026-10-21 [P7-T05 review] Cancelled appointments stay visible (struck through) but sort after live ones within a day, so they never push live bookings behind "+N more" (carried out in P7-T07).
