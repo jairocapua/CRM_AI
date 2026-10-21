@@ -71,3 +71,12 @@
 - 2026-10-21 [P7-T04] The placeholder counts every row listAppointments returns, cancelled included; T05/T06 decide whether to show cancelled.
 - 2026-10-21 [P7-T04] Inactive calendars default to visible but muted (text-muted-foreground, 50% dot, data-inactive) with an outline 'Inactive' Badge.
 - 2026-10-21 [P7-T04] A skeleton shows on appointments.isLoading after every view/date step (new query), so the previous range's data never appears under the new label; never on isRefreshing.
+- 2026-10-21 [P7-T05] Only the day-number button and '+N more' open day view, not the whole cell; the cell stays free for chips (T07) and click-to-book (T08).
+- 2026-10-21 [P7-T05] Cancelled appointments stay in the month grid (struck through, 60% opacity, sr 'Cancelled') and count toward '+N more'.
+- 2026-10-21 [P7-T05] historyMethod: 'none' if URL unchanged, 'replace' if same position but non-canonical URL (bare /calendars or fallback), else 'push'. URLs still not rewritten on load.
+- 2026-10-21 [P7-T05] Appointments cacheKey stays the range only; while loading, the previous result is drawn at its own position (dimmed, aria-busy); skeleton only on first load.
+- 2026-10-21 [P7-T05] Below sm, chips collapse to colour bars (text kept via 'sr-only sm:not-sr-only') and '+N more' shows '+N' with aria-label '+N more'.
+- 2026-10-21 [P7-T05] Local-day e2e runs in three zones (Singapore, Kolkata, Los Angeles), each asserting how many appointments move off their UTC day, since LA alone cannot detect UTC bucketing with this seed.
+- 2026-10-21 [P7-T05] Colour e2e reads each calendar's colour from the DB and expects bg-{color}-100 (at least 2 calendars), not hard-coded colours.
+- 2026-10-21 [P7-T05] Stepping e2e proves the new grid via Oct 31 present / Aug 30 gone ('October 1' also sits in the September grid).
+- 2026-10-21 [P7-T05] Singapore Sep 2026 total of 58 kept as a seed tripwire.

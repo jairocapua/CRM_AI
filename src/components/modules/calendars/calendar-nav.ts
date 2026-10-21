@@ -116,6 +116,29 @@ export function calendarSearch({ view, date }: CalendarPosition): string {
 }
 
 /**
+ * How moving from `current` to `next` should touch the browser history, given
+ * the query string the page has now (`window.location.search`, "" when bare):
+ *
+ * - `"none"`: the URL would not change (Today while already on today). No
+ *   entry, or Back would seem to do nothing.
+ * - `"replace"`: the same position, but the URL is not canonical (a bare
+ *   `/calendars`, or one that fell back, `?view=year`). Rewritten in place, so
+ *   it gains canonical values without a history entry that changes nothing.
+ * - `"push"`: a real move; Back returns to it.
+ */
+export function historyMethod(
+  currentSearch: string,
+  current: CalendarPosition,
+  next: CalendarPosition,
+): "none" | "replace" | "push" {
+  if (calendarSearch(next) === currentSearch) return "none";
+  if (next.view === current.view && next.date === current.date) {
+    return "replace";
+  }
+  return "push";
+}
+
+/**
  * One step back or forward by the view's unit. Months clamp to the shorter
  * month's last day (31 January + 1 month is 28 February), as date-fns does.
  */

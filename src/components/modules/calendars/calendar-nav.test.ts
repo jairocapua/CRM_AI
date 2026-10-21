@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   CALENDAR_VIEWS,
   calendarSearch,
+  historyMethod,
   isCalendarDay,
   localDay,
   parseCalendarParams,
@@ -136,6 +137,42 @@ describe("calendarSearch", () => {
       ).toEqual(position);
     },
   );
+});
+
+describe("historyMethod", () => {
+  const HERE = { view: "month", date: "2026-09-08" } as const;
+
+  it("is none when the search string would not change", () => {
+    // Today while already on today: no entry, or Back would seem to do
+    // nothing.
+    expect(historyMethod("?view=month&date=2026-09-08", HERE, HERE)).toBe(
+      "none",
+    );
+  });
+
+  it.each([
+    "",
+    "?view=year",
+    "?date=2026-02-30",
+    "?date=2026-09-08",
+    "?date=2026-09-08&view=month",
+  ])("replaces the non-canonical URL %j for the same position", (search) => {
+    // The position is unchanged, so no history entry; the URL is made
+    // canonical in place.
+    expect(historyMethod(search, HERE, HERE)).toBe("replace");
+  });
+
+  it.each<[string, { view: CalendarView; date: string }]>([
+    ["another date", { view: "month", date: "2026-10-08" }],
+    ["another view", { view: "week", date: "2026-09-08" }],
+    ["both", { view: "day", date: "2026-09-15" }],
+  ])("pushes a move to %s", (_, next) => {
+    expect(historyMethod("?view=month&date=2026-09-08", HERE, next)).toBe(
+      "push",
+    );
+    // From a non-canonical URL too: a real move is always an entry.
+    expect(historyMethod("", HERE, next)).toBe("push");
+  });
 });
 
 describe("shiftDate", () => {

@@ -22,10 +22,11 @@ import { cn } from "@/lib/utils";
 import { VIEW_LABELS, type CalendarView } from "./calendar-nav";
 
 /**
- * Stands in for the month, week and day views until P7-T05/T06 replace them.
- * It already receives exactly what a real view will: the visible calendars
- * and the appointments in range with hidden calendars filtered out. It shows
- * a per-calendar count, so the data path can be checked end to end.
+ * Stands in for the week and day views until P7-T06 replaces them (the month
+ * view is real since P7-T05). It already receives exactly what a real view
+ * will: the visible calendars and the appointments in range with hidden
+ * calendars filtered out. It shows a per-calendar count, so the data path can
+ * be checked end to end.
  */
 export function ViewPlaceholder({
   view,

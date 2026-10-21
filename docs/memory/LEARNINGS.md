@@ -49,3 +49,10 @@
 - 2026-10-21 [P7-T04] A Browser-pane tab left open on a stopped dev server collects 'WebSocket … _next/hmr failed' errors, and read_console_messages keeps reporting them after restart. Compare error counts across navigations rather than reading them as new errors.
 - 2026-10-21 [P7-T04] Seeded counts at the anchor, viewed from Singapore: the Sep 2026 month grid has 58 appointments; the week of Sep 6-12 has 11 (Discovery Call 3, Onboarding Kickoff 3, Strategy Session 5). Monthly Review (inactive) has none.
 - 2026-10-21 [P7-T04] An absence assertion (toHaveCount(0)) passes trivially while a view is still loading. The e2e helper expectViewLoaded waits for zero [data-slot=skeleton] and the '<View> view' title first.
+- 2026-10-21 [P7-T05] Every seeded appointment starts 16:00–22:45 UTC (all 4 calendars are America/Los_Angeles), so in any American zone the local day equals the UTC day. Asia/Kolkata splits the Sep 2026 grid 29 of 58; Singapore moves all 58.
+- 2026-10-21 [P7-T05] Sep 2026 grid from Singapore: Sep 1 has 8 appointments ('+6 more'); Sep 15 and 22 have 5; Sep 3, 4, 8, 29 and Oct 1 have 4.
+- 2026-10-21 [P7-T05] useResource returns the previous query's data while isLoading. A fetcher that returns its own position ({view, date, rows}) lets the page keep the old grid without drawing old rows on the new range.
+- 2026-10-21 [P7-T05] In the hidden Browser pane a CSSTransition can stay at currentTime 0 while document.timeline advances and rAF fires (no compositor commit). Check transition-driven styles with element.style.transition = 'none'.
+- 2026-10-21 [P7-T05] A Playwright run during mutation testing rebuilds .next from mutated sources; rerun npm run check after restoring.
+- 2026-10-21 [P7-T05] `python` is not available in Git Bash here (Windows Store alias). Use Edit, sed or node for scripted edits.
+- 2026-10-21 [P7-T05] Tailwind v4 `data-pending:` matches the bare attribute, so `data-pending={pending || undefined}` with `data-pending:opacity-60` works.
