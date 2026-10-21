@@ -9,15 +9,15 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 0/30 tasks done (0%) · **Current phase:** P7 · **Next agent task:** P7-T01 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+**Overall:** 0/31 tasks done (0%) · **Current phase:** P7 · **Next agent task:** P7-T02 · **Awaiting review:** P7-T01 · **Blocked:** none · **Waiting on you:** P7-H1
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 0/9 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 0/10 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
-| P7-T01 | Vitest harness and first API tests | agent | todo | — |  |  |  |
+| P7-T01 | Vitest harness and first API tests | agent | review | — |  | 2026-10-21 | Vitest 4.1 harness + 77 API/mock tests; reconcile test fails 12-13 on Phase 6 revert; check green |
 | P7-T02 | Playwright e2e harness | agent | todo | — |  |  |  |
 | P7-T03 | Calendar time model and slot engine (step 0) | agent | todo | P7-T01 |  |  |  |
 | P7-T04 | Calendars page: URL state, toolbar and calendar list | agent | todo | P7-T02 |  |  |  |
@@ -26,6 +26,7 @@ Status: active · Progress: 0/9 · Points: 7 (5 for Calendars + 2 for the test h
 | P7-T07 | Appointment details, status and cancel | agent | todo | P7-T05 |  |  |  |
 | P7-T08 | Booking dialog and the contact Appointments tab | agent | todo | P7-T03, P7-T07 |  |  |  |
 | P7-T09 | Availability editor | agent | todo | P7-T03, P7-T04 |  |  |  |
+| P7-H1 | Update CLAUDE.md Commands for the new check pipeline | human | todo | — |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md

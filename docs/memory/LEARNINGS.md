@@ -18,3 +18,10 @@
 - 2026-09-26 [P6] Adding a `ResourceKey` means editing `cache.ts` twice: the union and the literal list in `invalidateAll()`. Missing the second makes reseed leave that screen stale.
 - 2026-10-21 [bootstrap] `node --test scripts/` (a folder) fails on Node 22 here; use the glob `node --test "scripts/*.test.mjs"`.
 - 2026-10-21 [bootstrap] `core.autocrlf=true` rewrites files with CRLF on branch switches, which fails Prettier's `format:check`; `.gitattributes` pins LF.
+- 2026-10-21 [P7-T01] npm 10.9.4 crashes ('reading edgesOut') installing vitest 4 beside vite 8 (vite 8 -> @vitejs/devtools -> vitest@* peer loop). Install vite@^7 first, then vitest with --legacy-peer-deps, then a plain `npm install` to undo wrongly-set dev flags (react-is). Compare lockfile packages against HEAD.
+- 2026-10-21 [P7-T01] Set TZ for tests via `process.env.TZ` at runtime (setup file or vi.stubEnv); an inline `TZ=` npm script fails under cmd.exe, and a shell $env:TZ did not reach the worker.
+- 2026-10-21 [P7-T01] clock.ts captures sessionStart = Date.now() on load: install fake timers (after vi.resetModules) before importing clock users; import modules under test dynamically after freshModules()/seededWorld().
+- 2026-10-21 [P7-T01] Vitest prints failure details to stderr: capture with `> file 2>&1`, not `2>&1 > file`.
+- 2026-10-21 [P7-T01] Seeded KPIs at the anchor (reference only, tests avoid exact totals): Singapore 90-day newContacts 122, wonRevenue 137,450,000c, appointments 57, messages 806; today's messages bar 94 Singapore, 60 UTC, 11 Los Angeles.
+- 2026-10-21 [P7-T01] Git Bash quoted heredocs here still collapsed doubled backslashes in a regex literal; build a backslash with String.fromCharCode(92) in throwaway scripts.
+- 2026-10-21 [P7-T01] For mutation checks without touching source, use a vitest config that mergeConfigs the base and adds an `enforce: "pre"` transform plugin.

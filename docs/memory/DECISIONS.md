@@ -23,3 +23,11 @@
 - 2026-10-21 [bootstrap] CSV import/export, Smart Lists UI and the opportunities list view stay in `docs/BACKLOG.md` until P7–P10 are done.
 
 ## During the build
+- 2026-10-21 [P7-T01] Vitest 4.1, not 5: Vitest 5 needs Node ^22.12 and @types/node ^22 || >=24; repo declares node >=20.9 and @types/node 20.
+- 2026-10-21 [P7-T01] vite pinned as a devDependency at ^7.3.7: vite 8's optional peer @vitejs/devtools loops back to vitest@* and crashes npm 10.9.4. Do not bump blindly.
+- 2026-10-21 [P7-T01] resolve.alias in vitest.config.mts instead of vite-tsconfig-paths (single tsconfig mapping).
+- 2026-10-21 [P7-T01] Tests sit beside code in src/lib/api and src/lib/mock, so the existing lint rule already permits @/lib/mock/* imports; ESLint and CLAUDE.md unchanged.
+- 2026-10-21 [P7-T01] test.include is src/**/*.test.ts, so Vitest skips scripts/progress.test.mjs (node:test) and the P7-T02 Playwright specs.
+- 2026-10-21 [P7-T01] Analytics series assertions use expect.soft so a regression reports every KPI at once.
+- 2026-10-21 [P7-T01] settle() has its own tests; rollupByStage gets a rounding test (two 3c deals at 50% weigh 4c).
+- 2026-10-21 [P7-T01] The clock anchor test moves the wall clock 30 days off the anchor (and asserts Date.now() did) rather than renaming the test; mutants ran via a transform-plugin config, no source edits.

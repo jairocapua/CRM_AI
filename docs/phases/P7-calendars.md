@@ -229,6 +229,13 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] e2e: shortening a day's window removes the later slots from booking.
 - **Refs:** `src/types/calendar.ts` (`AvailabilityRule`)
 
+### P7-H1 — Update CLAUDE.md Commands for the new check pipeline
+- **Owner:** human · **Depends:** —
+- **Scope:** check now runs format:check -> lint -> typecheck -> test -> test:scripts -> build; CLAUDE.md still lists the old chain.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-21
+
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
       timeline, and in the dashboard Upcoming card, and its slot disappears
