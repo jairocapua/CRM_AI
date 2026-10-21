@@ -241,9 +241,15 @@ hours land around midnight–08:00 local; that is expected.
   interval, buffers before/after, minimum notice and date range, saved through
   `calendars.update`. zod rules: each window ends after it starts; windows on
   a weekday do not overlap; numbers are non-negative.
+  - From the P7-T06 review: once the editor allows slots shorter than 25
+    minutes, the week/day grid's minimum block height (`MIN_BLOCK_PX` in
+    `time-grid-view.tsx`) draws back-to-back short bookings on top of each
+    other. Pack on `max(real end, start + minimum visible minutes)` so short
+    neighbours share a group and sit side by side.
 - **Acceptance:**
   - [ ] Unit test: the availability schema rejects reversed and overlapping
         windows.
+  - [ ] Unit test: two back-to-back 15-minute appointments are laid out side by side, not overlapping.
   - [ ] e2e: shortening a day's window removes the later slots from booking.
 - **Refs:** `src/types/calendar.ts` (`AvailabilityRule`)
 

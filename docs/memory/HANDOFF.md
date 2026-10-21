@@ -5,7 +5,7 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T06 in review.
+- **Status:** P7-T01–T06 approved (Autopilot review, 2026-10-21); P7-T07 is next. Session handed off to a fresh one after 6 approvals, per CLAUDE.md.
 
 ## Last change
 - P7-T06: week and day time grid (time-grid-view.tsx) replaces the placeholder; pure `packIntervals` (pack-intervals.ts) sets overlaps side by side, pure helpers in time-grid.ts cut appointments at local midnight.
@@ -17,8 +17,7 @@
 - **Agent:** P7-T07 Appointment details, status and cancel (what `progress.mjs next` picks once P7-T06 is approved).
 
 ## Waiting on you
-- Review of P7-T06 (`git show HEAD`).
-- No pending human tasks.
+- Nothing: P7-T06 is approved; no pending human tasks. The P7 gate will ask the owner to look at the week view once.
 
 ## Open suggestions (non-blocking review notes)
 - pack-intervals.ts:30-32 docstring claims input order never changes placement; false for identical [start,end) (tie-break is input index). Soften or take a stable key (row id).
