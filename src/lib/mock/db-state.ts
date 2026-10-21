@@ -26,7 +26,7 @@ import type {
  * the stored version and reseeds rather than migrating — fixtures are demo
  * data, so a clean reseed is always preferable to a half-migrated store.
  */
-export const SEED_VERSION = 3;
+export const SEED_VERSION = 4;
 
 /** Collections are keyed by id so lookups and updates stay O(1). */
 export type Table<T> = Record<ID, T>;

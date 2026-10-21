@@ -16,5 +16,7 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     restoreMocks: true,
     unstubEnvs: true,
+    // `stubLocalStorage()` installs `window`/`document`; never leak them.
+    unstubGlobals: true,
   },
 });

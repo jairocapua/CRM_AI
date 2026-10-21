@@ -255,6 +255,20 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] CLAUDE.md Commands lists `npm run e2e` and `npm run e2e:install`.
 - **Refs:** P7-T02 review suggestions (2026-10-21)
 
+### P7-T11 — Guard bookings: inactive calendars, unknown contacts, bad windows
+- **Owner:** agent · **Depends:** —
+- **Scope:** book()/availableSlots() reject isActive:false calendars and missing contactIds; reject startAt without Z/offset (422 INVALID_START); map invalid HH:mm or IANA zone RangeErrors to 422 ApiError (or validate in calendars.update); dedupe slotGrid output for overlapping windows; add a dateRangeDays test at now=2026-10-27T03:00Z proving 'today' is read in the calendar zone.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-21
+
+### P7-H2 — Decide symmetric buffer semantics
+- **Owner:** human · **Depends:** —
+- **Scope:** isBlocked() only pads existing bookings, so buffer enforcement depends on booking order (Discovery: 17:00Z then 16:30Z accepted; reverse rejected). Decide whether to require the candidate's own buffers too before P7-T08 relies on it; changes accepted slot lists in tests.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-21
+
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
       timeline, and in the dashboard Upcoming card, and its slot disappears

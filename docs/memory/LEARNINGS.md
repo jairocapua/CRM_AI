@@ -32,3 +32,11 @@
 - 2026-10-21 [P7-T02] Playwright reports console.warn as type 'warning', not 'warn'; pageerror text reads 'pageerror: Error: <msg>' when built from error.stack.
 - 2026-10-21 [P7-T02] about:blank and opaque-origin pages throw on storage access: an addInitScript touching storage needs a location.protocol check and try/catch.
 - 2026-10-21 [P7-T02] `timeout: 0` on a Playwright expect means no timeout; for a one-shot check use locator.count().
+- 2026-10-21 [P7-T03] @date-fns/tz installs its Date overrides when the module first evaluates; if that first import happens under vi.useFakeTimers (ClockDate global), TZDate silently reads runtime-local fields (right in UTC, a day off in Singapore). vitest.setup.ts preloads it while Date is real; it is external, so vi.resetModules keeps that copy.
+- 2026-10-21 [P7-T03] new TZDate('YYYY-MM-DD', tz) parses the string as UTC midnight, not midnight in the zone. Build zone times from components: new TZDate(y, m-1, d, h, min, tz).
+- 2026-10-21 [P7-T03] TZDate.prototype.toISOString() returns an offset string (…-07:00), not Z. Take .getTime() and format with new Date(ms).toISOString().
+- 2026-10-21 [P7-T03] setDemoNow(iso) works after seededWorld(): clock.ts loads in freshModules with sessionStart = REF_DATE, so vi.setSystemTime moves apiNow() to iso. Install stubLocalStorage() before the first API call, because clock.ts caches its high-water read.
+- 2026-10-21 [P7-T03] faker number.int and number.float each consume one draw, so switching a draw between pick and chance does not shift the stream; the fingerprint confirmed every downstream collection is identical.
+- 2026-10-21 [P7-T03] Scratchpad mutant/fingerprint configs cannot resolve bare 'vitest/config'; a temporary node_modules junction (New-Item -ItemType Junction) fixes it. Remove junctions with `cmd /c rmdir`, never a recursive rm.
+- 2026-10-21 [P7-T03] Seeded KPIs at the anchor are unchanged by the P7 seed (Singapore 90-day appointments 57, messages 806, newContacts 122, wonRevenue 137,450,000c). The Upcoming card's first appointment is now 2026-09-08T17:00Z (10:00 PDT); it was 09:30Z.
+- 2026-10-21 [P7-T03] book() and setStatus() are the only code paths that write appointments. Any future reschedule/update API needs the same hasRoomFor check to keep the no-double-booking guarantee.

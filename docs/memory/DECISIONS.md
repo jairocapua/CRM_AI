@@ -37,3 +37,18 @@
 - 2026-10-21 [P7-T02] Init script clears all of localStorage (incl. next-themes key), one-shot per tab via a sessionStorage flag, so reloads inside a test keep its data; avoids hard-coding the origin in storageState.
 - 2026-10-21 [P7-T02] Added self-test 'waits while the boot skeleton is up' to cover waitForBoot's waiting branch.
 - 2026-10-21 [P7-T02] e2e is not part of `npm run check` (it does its own build); the gate runs it separately.
+- 2026-10-21 [P7-T03] slots.ts lives in src/lib/mock: availability is server-owned like delivery.ts, the seam lint keeps components out, and the API, book() and the seed share it so they cannot disagree.
+- 2026-10-21 [P7-T03] The day passed to availableSlots is a 'YYYY-MM-DD' date in the calendar's zone, checked by round-trip parse; anything else (ISO instants, 2026-02-30) gets 422 INVALID_DAY. T08 handoff: from Asia one local day spans two LA dates, so the booking dialog must map its day onto calendar-zone dates and never pass toISOString().
+- 2026-10-21 [P7-T03] dateRangeDays is inclusive in calendar days: the last bookable day is the calendar-zone date of the demo now plus dateRangeDays. Past days need no lower bound; the notice filter empties them.
+- 2026-10-21 [P7-T03] Slots step by elapsed minutes from each window's start; on the 25-hour fall-back day a window over 01:00-02:00 offers that hour twice. Window edges in a DST gap/overlap resolve as TZDate does (skipped 02:30 -> 03:30; repeated 01:30 takes PDT). Known limit for the T09 editor.
+- 2026-10-21 [P7-T03] book() rejects any start not in freeSlots for its calendar-zone day with 409 SLOT_UNAVAILABLE, and a non-instant start with 422 INVALID_START. Starts are normalised to UTC ISO; endAt is always start + slotDurationMin.
+- 2026-10-21 [P7-T03] AppointmentDraft is narrowed to calendarId, contactId, startAt plus optional title, notes, location, assignedUserId, source. The record is built field by field so callers cannot set id, status or endAt. source defaults to 'manual' and stays an enum with no workflowId.
+- 2026-10-21 [P7-T03] Seed placement: from the drawn day and hour:minute as LA wall-clock, take the first open grid slot at or after that time, else the day's first open slot, then repeat on following days (max 21, else throw). Open = openSlots(): on grid, clear of earlier placements incl. buffers, day under cap. Notice and range ignored. Every placed appointment, cancelled or not, occupies its slot.
+- 2026-10-21 [P7-T03] Seed isPast is endAt <= REF_DATE. createdAt/updatedAt use the final day offset; showed/no-show get updatedAt >= endAt before the updatedAt >= createdAt clamp.
+- 2026-10-21 [P7-T03] Engine buffer rule unchanged: a slot is blocked if slot.start < booked.end + after and slot.end > booked.start - before. Buffers do not reach across midnight from the previous day.
+- 2026-10-21 [P7-T03] settings.test.ts asserts SEED_VERSION === 4 in its own test so the reseed test fails on behaviour alone under version 3.
+- 2026-10-21 [P7-T03] Fixed a harness bug outside the plan: vitest.setup.ts preloads @date-fns/tz so TZDate extends the real Date.
+- 2026-10-21 [P7-T03] 'cancelled' stays reversible; restoring checks the slot (409 on conflict) rather than forbidding the move, giving the P7-T07 UI a clear error.
+- 2026-10-21 [P7-T03] The restore check covers collisions and the daily cap only (hasRoomFor), not hours, notice or dateRangeDays; a past cancelled appointment can still be marked showed/no_show if its time is free.
+- 2026-10-21 [P7-T03] A missing calendar during a restore returns 404 via notFound(), matching book().
+- 2026-10-21 [P7-T03] hasRoomFor and liveBookings live in slots.ts so book(), availableSlots() and setStatus() share one definition of live bookings and the daily cap.

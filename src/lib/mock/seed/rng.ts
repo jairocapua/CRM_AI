@@ -1,5 +1,7 @@
 import { faker } from "@faker-js/faker";
 
+import { addDays, zonedDay, type CalendarDay } from "../slots";
+
 /**
  * The world is anchored to a fixed instant, not to `Date.now()`.
  *
@@ -17,6 +19,15 @@ export function resetRng() {
 }
 
 export { faker };
+
+/**
+ * REF_DATE's calendar date in `timeZone`, moved by `days` calendar days, as
+ * "YYYY-MM-DD". For times that are wall-clock hours somewhere (appointments),
+ * where `refPlusDays`'s UTC hours would be wrong. Makes no draws.
+ */
+export function refDay(days: number, timeZone: string): CalendarDay {
+  return addDays(zonedDay(REF_DATE.getTime(), timeZone), days);
+}
 
 /** Days offset from REF_DATE, as an ISO string. */
 export function refPlusDays(days: number, hour = 9, minute = 0): string {

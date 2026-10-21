@@ -20,6 +20,17 @@ import { REF_DATE } from "./seed/rng";
  * exactly at `now`.
  *
  * This file statically imports only `REF_DATE`, which reads no clock.
+ *
+ * Two more helpers shape the world a test runs in:
+ *
+ * - `setDemoNow(iso)` moves the demo clock to `iso`. Call it after
+ *   `seededWorld()`: `clock.ts` then holds `sessionStart` = the seed anchor,
+ *   so moving the fake system clock moves `apiNow()` by the same amount.
+ * - `stubLocalStorage()` gives the Node environment a `window.localStorage`
+ *   (and the `document` that `db.ts` wires listeners to), so a test can read
+ *   what the clock and the store persist. Install it before the first API
+ *   call: `clock.ts` reads its high-water mark once and caches the result.
+ *   `unstubGlobals` in the Vitest config removes both after each test.
  */
 
 /**
@@ -44,6 +55,53 @@ export async function seededWorld() {
   const { buildDb } = await import("./seed");
   db.setState(buildDb(), true);
   return { db };
+}
+
+/**
+ * Moves the demo clock to `iso` (and the fake system clock with it). Only
+ * meaningful after `seededWorld()`, and only forwards: the demo clock never
+ * runs back past a timestamp it has already issued.
+ */
+export function setDemoNow(iso: string) {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) throw new Error(`setDemoNow(): bad instant ${iso}`);
+  vi.setSystemTime(ms);
+}
+
+const noop = () => {};
+
+/**
+ * A Map-backed `window.localStorage`, plus a `document` stub so `db.ts` can
+ * wire its flush listeners whether it loads before or after this call.
+ * Returns the storage so a test can seed or inspect persisted keys.
+ */
+export function stubLocalStorage() {
+  const items = new Map<string, string>();
+  const localStorage = {
+    get length() {
+      return items.size;
+    },
+    key: (index: number) => [...items.keys()][index] ?? null,
+    getItem: (key: string) => items.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      items.set(key, String(value));
+    },
+    removeItem: (key: string) => {
+      items.delete(key);
+    },
+    clear: () => items.clear(),
+  };
+  vi.stubGlobal("window", {
+    localStorage,
+    addEventListener: noop,
+    removeEventListener: noop,
+  });
+  vi.stubGlobal("document", {
+    visibilityState: "visible",
+    addEventListener: noop,
+    removeEventListener: noop,
+  });
+  return localStorage;
 }
 
 type Outcome<T> = { ok: true; value: T } | { ok: false; error: unknown };

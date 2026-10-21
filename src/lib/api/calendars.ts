@@ -1,8 +1,16 @@
 import type { Activity, Appointment, Calendar, ID, ISODate } from "@/types";
 import { db } from "@/lib/mock/db";
 import { newId } from "@/lib/mock/ids";
+import {
+  freeSlots,
+  hasRoomFor,
+  intervalOf,
+  isCalendarDay,
+  liveBookings,
+  zonedDay,
+} from "@/lib/mock/slots";
 import { invalidate } from "./cache";
-import { apiNowMs, notFound, nowIso, simulate } from "./http";
+import { ApiError, apiNowMs, notFound, nowIso, simulate } from "./http";
 
 export async function list(): Promise<Calendar[]> {
   return simulate(
@@ -106,9 +114,29 @@ export async function listForContact(contactId: ID): Promise<AppointmentRow[]> {
   );
 }
 
-export type AppointmentDraft = Partial<Appointment> &
-  Pick<Appointment, "calendarId" | "contactId" | "startAt">;
+/**
+ * What a caller supplies to book a slot. The rest is derived: a booking always
+ * lasts the calendar's slot length, in the calendar's zone, and starts out
+ * confirmed. `source` is an enum value and stays one; a booking made by an
+ * automation says `"workflow"` and carries no reference to the workflow.
+ */
+export type AppointmentDraft = Pick<
+  Appointment,
+  "calendarId" | "contactId" | "startAt"
+> &
+  Partial<
+    Pick<
+      Appointment,
+      "title" | "notes" | "location" | "assignedUserId" | "source"
+    >
+  >;
 
+/**
+ * Books one of the calendar's free slots. `startAt` must be exactly one of
+ * the instants `availableSlots()` offers for that day (any ISO spelling of
+ * it); anything else is a 409. With the matching check in `setStatus()`, a
+ * double booking cannot happen through the API.
+ */
 export async function book(draft: AppointmentDraft): Promise<Appointment> {
   const appointment = await simulate(
     () => {
@@ -116,28 +144,60 @@ export async function book(draft: AppointmentDraft): Promise<Appointment> {
       const calendar =
         state.calendars[draft.calendarId] ??
         notFound("Calendar", draft.calendarId);
+
+      const startMs = Date.parse(draft.startAt);
+      if (Number.isNaN(startMs)) {
+        throw new ApiError(
+          `"${draft.startAt}" is not a date and time.`,
+          422,
+          "INVALID_START",
+        );
+      }
+      const startAt = new Date(startMs).toISOString();
+
+      // The check and the write below run in one synchronous block, so two
+      // bookings racing for the same slot cannot both pass it.
+      const offered = freeSlots({
+        calendar,
+        day: zonedDay(startMs, calendar.timezone),
+        appointments: Object.values(state.appointments),
+        nowMs: apiNowMs(),
+      });
+      if (!offered.includes(startAt)) {
+        throw new ApiError(
+          "That time is not an open slot on this calendar. Pick another one.",
+          409,
+          "SLOT_UNAVAILABLE",
+        );
+      }
+
       const contact = state.contacts[draft.contactId];
       const at = nowIso();
 
-      const endAt =
-        draft.endAt ??
-        new Date(
-          new Date(draft.startAt).getTime() + calendar.slotDurationMin * 60_000,
-        ).toISOString();
-
+      // Field by field, never a spread of the draft: a caller must not be able
+      // to set the id, the status or the end time.
       const record: Appointment = {
         id: newId("appt"),
+        calendarId: calendar.id,
+        contactId: draft.contactId,
+        assignedUserId:
+          draft.assignedUserId ??
+          calendar.teamMemberIds[0] ??
+          state.currentUserId,
         title:
           draft.title ??
           `${calendar.name} - ${contact?.firstName ?? ""} ${contact?.lastName ?? ""}`.trim(),
+        ...(draft.notes ? { notes: draft.notes } : {}),
+        startAt,
+        endAt: new Date(
+          startMs + calendar.slotDurationMin * 60_000,
+        ).toISOString(),
         timezone: calendar.timezone,
         status: "confirmed",
-        source: "manual",
-        assignedUserId: calendar.teamMemberIds[0] ?? state.currentUserId,
+        ...(draft.location ? { location: draft.location } : {}),
+        source: draft.source ?? "manual",
         createdAt: at,
         updatedAt: at,
-        ...draft,
-        endAt,
       };
 
       const activity: Activity = {
@@ -164,12 +224,38 @@ export async function book(draft: AppointmentDraft): Promise<Appointment> {
   return appointment;
 }
 
+/**
+ * Moves an appointment to `status`. Moving a cancelled one to any other status
+ * takes its time back, so it is a 409 if another booking has taken that time
+ * (or filled that day) since: the collision and daily-cap rules `book()`
+ * applies. Its hours, notice and booking range are not rechecked.
+ */
 export async function setStatus(
   id: ID,
   status: Appointment["status"],
 ): Promise<Appointment> {
   const appointment = await simulate(() => {
-    const prev = db.getState().appointments[id] ?? notFound("Appointment", id);
+    const state = db.getState();
+    const prev = state.appointments[id] ?? notFound("Appointment", id);
+
+    // Checked in the same synchronous block as the write, as in `book()`.
+    if (prev.status === "cancelled" && status !== "cancelled") {
+      const calendar =
+        state.calendars[prev.calendarId] ??
+        notFound("Calendar", prev.calendarId);
+      const booked = liveBookings(
+        calendar.id,
+        Object.values(state.appointments),
+      );
+      if (!hasRoomFor(calendar, intervalOf(prev), booked)) {
+        throw new ApiError(
+          "Another booking has taken this time since it was cancelled. Book a new slot instead.",
+          409,
+          "SLOT_UNAVAILABLE",
+        );
+      }
+    }
+
     const at = nowIso();
     const next: Appointment = { ...prev, status, updatedAt: at };
 
@@ -179,7 +265,7 @@ export async function setStatus(
       at,
       contactId: next.contactId,
       appointmentId: next.id,
-      actorId: db.getState().currentUserId,
+      actorId: state.currentUserId,
       summary: `Appointment marked ${status.replace("_", " ")}`,
     };
 
@@ -199,81 +285,40 @@ export async function cancel(id: ID): Promise<Appointment> {
 }
 
 /**
- * Free slots for one day: the calendar's availability windows for that weekday,
- * minus existing bookings, minus buffers, minus the minimum scheduling notice.
+ * The start times a calendar offers on one day, as ISO strings: its
+ * availability windows for that weekday, minus live bookings and their
+ * buffers, minus the minimum scheduling notice, and nothing beyond
+ * `dateRangeDays`. See `@/lib/mock/slots` for the time model.
+ *
+ * `day` is a calendar date, "YYYY-MM-DD", in the calendar's own timezone, not
+ * the viewer's: from Asia one local day spans two Los Angeles dates, so the
+ * caller maps the day it shows onto the calendar's dates. Anything that is not
+ * a real "YYYY-MM-DD" date is rejected with a 422.
  */
 export async function availableSlots(
   calendarId: ID,
-  dayIso: ISODate,
+  day: string,
 ): Promise<string[]> {
   return simulate(
     () => {
       const state = db.getState();
       const calendar =
         state.calendars[calendarId] ?? notFound("Calendar", calendarId);
-
-      const day = new Date(dayIso);
-      day.setHours(0, 0, 0, 0);
-      const weekday = day.getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6;
-      const rule = calendar.availability.find((r) => r.weekday === weekday);
-      if (!rule?.enabled) return [];
-
-      const dayStart = day.getTime();
-      const dayEnd = dayStart + 86_400_000;
-      const taken = Object.values(state.appointments).filter(
-        (a) =>
-          a.calendarId === calendarId &&
-          a.status !== "cancelled" &&
-          new Date(a.startAt).getTime() < dayEnd &&
-          new Date(a.endAt).getTime() > dayStart,
-      );
-
-      if (
-        calendar.maxBookingsPerDay &&
-        taken.length >= calendar.maxBookingsPerDay
-      ) {
-        return [];
+      if (!isCalendarDay(day)) {
+        throw new ApiError(
+          `"${day}" is not a calendar day (expected YYYY-MM-DD).`,
+          422,
+          "INVALID_DAY",
+        );
       }
 
-      const notBefore =
-        apiNowMs() + calendar.minSchedulingNoticeHours * 3_600_000;
-      const slots: string[] = [];
-
-      for (const window of rule.windows) {
-        const [startHour = 9, startMinute = 0] = window.start
-          .split(":")
-          .map(Number);
-        const [endHour = 17, endMinute = 0] = window.end.split(":").map(Number);
-
-        let cursor = new Date(day);
-        cursor.setHours(startHour, startMinute, 0, 0);
-        const windowEnd = new Date(day);
-        windowEnd.setHours(endHour, endMinute, 0, 0);
-
-        while (
-          cursor.getTime() + calendar.slotDurationMin * 60_000 <=
-          windowEnd.getTime()
-        ) {
-          const slotStart = cursor.getTime();
-          const slotEnd = slotStart + calendar.slotDurationMin * 60_000;
-
-          const blocked = taken.some((a) => {
-            const bookedStart =
-              new Date(a.startAt).getTime() - calendar.bufferBeforeMin * 60_000;
-            const bookedEnd =
-              new Date(a.endAt).getTime() + calendar.bufferAfterMin * 60_000;
-            return slotStart < bookedEnd && slotEnd > bookedStart;
-          });
-
-          if (!blocked && slotStart >= notBefore) {
-            slots.push(new Date(slotStart).toISOString());
-          }
-
-          cursor = new Date(slotStart + calendar.slotIntervalMin * 60_000);
-        }
-      }
-
-      return slots;
+      return freeSlots({
+        calendar,
+        day,
+        appointments: Object.values(state.appointments),
+        // A read: `apiNowMs`, never `nowIso`, which advances the high-water mark.
+        nowMs: apiNowMs(),
+      });
     },
     { canFail: false },
   );
