@@ -58,3 +58,16 @@
 - 2026-10-21 [P7-T03] Each booking-order case asserts availableSlots membership matches the book() outcome (expect(includes, message) to avoid dumping the slot list).
 - 2026-10-21 [P7-T03] The seed buffer oracle includes cancelled appointments (every placed appointment occupies its slot) and uses independent Date.parse arithmetic, not slots.ts.
 - 2026-10-21 [P7-T03] SEED_VERSION stays 4 after the rework (task pins it; P8 reserves 5). A browser store saved from the first P7-T03 attempt keeps the old 18:00Z placement until a manual reseed; harmless (past, showed).
+- 2026-10-21 [P7-T04] URL state is client-only: useSearchParams inside <Suspense> in a static page.tsx, writes through window.history.pushState (verified: no RSC request, Back/Forward work). page.tsx does not read searchParams, so the route stays prerendered.
+- 2026-10-21 [P7-T04] Weeks start on Sunday (date-fns default).
+- 2026-10-21 [P7-T04] The URL `date` is a viewer-local calendar day; it becomes a Date only in calendar-nav.ts, as local midnight.
+- 2026-10-21 [P7-T04] Calendar visibility is component state: survives view/date changes, resets on reload. Not in the URL because seeded nanoid ids change on every reseed.
+- 2026-10-21 [P7-T04] Invalid or missing params are not rewritten into the URL on load; the next user step writes canonical values.
+- 2026-10-21 [P7-T04] The month range is the full weeks-by-days grid (Sep 2026: 2026-08-30 to 2026-10-04 exclusive), so T05 can reuse visibleDays.
+- 2026-10-21 [P7-T04] Month steps keep the day of month and clamp to the shorter month (01-31 +1 month = 02-28), as date-fns addMonths does.
+- 2026-10-21 [P7-T04] The timezone label's offset is taken at the viewed date's local midnight, not at the demo now.
+- 2026-10-21 [P7-T04] No stepLabel helper: Previous/Next aria-labels use the view name ('Previous month', 'Next week'); toggle labels come from VIEW_LABELS.
+- 2026-10-21 [P7-T04] Hidden calendars are left out of the placeholder list entirely (not shown as 0); the total drops by their count.
+- 2026-10-21 [P7-T04] The placeholder counts every row listAppointments returns, cancelled included; T05/T06 decide whether to show cancelled.
+- 2026-10-21 [P7-T04] Inactive calendars default to visible but muted (text-muted-foreground, 50% dot, data-inactive) with an outline 'Inactive' Badge.
+- 2026-10-21 [P7-T04] A skeleton shows on appointments.isLoading after every view/date step (new query), so the previous range's data never appears under the new label; never on isRefreshing.

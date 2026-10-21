@@ -269,6 +269,13 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-21
 
+### P7-T12 — Merge duplicate day validators into a shared non-mock module
+- **Owner:** agent · **Depends:** —
+- **Scope:** parseDay/isCalendarDay in src/components/modules/calendars/calendar-nav.ts and parseDay in src/lib/mock/slots.ts duplicate each other; move to e.g. src/lib/dates.ts and import from both (seam lint blocks components importing the mock copy).
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-21
+
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
       timeline, and in the dashboard Upcoming card, and its slot disappears
