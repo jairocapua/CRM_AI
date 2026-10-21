@@ -52,3 +52,4 @@
 - 2026-10-21 [P7-T03] The restore check covers collisions and the daily cap only (hasRoomFor), not hours, notice or dateRangeDays; a past cancelled appointment can still be marked showed/no_show if its time is free.
 - 2026-10-21 [P7-T03] A missing calendar during a restore returns 404 via notFound(), matching book().
 - 2026-10-21 [P7-T03] hasRoomFor and liveBookings live in slots.ts so book(), availableSlots() and setStatus() share one definition of live bookings and the daily cap.
+- 2026-10-21 [P7-H2] Buffers are symmetric: no appointment may sit inside another appointment's before/after buffer, whichever was booked first (buffers may overlap each other). Decided in review as the meaning of "buffer before/after" in GHL/Calendly; the order-dependent check was a defect, fixed in the P7-T03 rework.

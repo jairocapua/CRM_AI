@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 3/34 tasks done (9%) · **Current phase:** P7 · **Next agent task:** P7-T04 · **Awaiting review:** P7-T03 · **Blocked:** none · **Waiting on you:** P7-H2
+**Overall:** 4/34 tasks done (12%) · **Current phase:** P7 · **Next agent task:** P7-T04 · **Awaiting review:** P7-T03 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 3/13 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 4/13 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -29,7 +29,7 @@ Status: active · Progress: 3/13 · Points: 7 (5 for Calendars + 2 for the test 
 | P7-H1 | Update CLAUDE.md Commands for the new check pipeline | human | done | — |  | 2026-10-21 | Done by Claude in review: CLAUDE.md Commands now lists test and test:scripts |
 | P7-T10 | Harness polish: browser install and smoke content checks | agent | todo | — |  |  |  |
 | P7-T11 | Guard bookings: inactive calendars, unknown contacts, bad windows | agent | todo | — |  |  |  |
-| P7-H2 | Decide symmetric buffer semantics | human | todo | — |  |  |  |
+| P7-H2 | Decide symmetric buffer semantics | human | done | — |  | 2026-10-21 | Decided in review: symmetric buffers (order-independent); fixed in P7-T03 rework |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md
