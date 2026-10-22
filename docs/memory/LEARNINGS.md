@@ -112,3 +112,10 @@
 - 2026-10-23 [P7-T15] Chromium with Playwright timezoneId 'Asia/Kolkata' labels the viewer zone 'Asia/Calcutta · GMT+5:30' (same alias as Node ICU); e2e should assert only 'GMT+5:30'.
 - 2026-10-23 [P7-T15] Seed's first Kolkata midnight-crossing appointment is 10–11 Aug 2026 (23:30–00:30 IST); 7–8 Sept (23:45–00:30) is the only crossing in the week of 6 Sept.
 - 2026-10-23 [P7-T15] Full e2e under load (16 workers + another dev server): cross-route link clicks can miss the 5s toHaveURL (server took 4–6s); plain rerun passed 57/57.
+- 2026-10-23 [P7-T16] CDP Accessibility.getPartialAXTree on a Base UI Select hidden input: ignored, ignoredReasons [ariaHiddenElement]. Without aria-hidden: role textbox, empty name, value = raw value. read_page's "textbox named after the value" is its own heuristic.
+- 2026-10-23 [P7-T16] Base UI Select hidden input id is `${rootId}-hidden-input` (root id base-ui-_r_N_ even if trigger has its own id); it is the trigger's next DOM sibling. Combobox and OTPField use the same suffix; TagPicker's is also ignored.
+- 2026-10-23 [P7-T16] Unnamed Select triggers (empty CDP name): contacts status filter, opportunities pipeline, bulk Owner Select. FieldLabel htmlFor names sheet triggers.
+- 2026-10-23 [P7-T16] page.context().newCDPSession(page) + DOM.getDocument({depth:0}) + DOM.querySelectorAll works without the full tree; AXNode.role.value is `any`, narrow with typeof.
+- 2026-10-23 [P7-T16] The P7-T15 cross-route toHaveURL flake recurred (calendars-details.spec.ts:413); rerun passed 66/66.
+- 2026-10-23 [P7-T16] expect.poll cannot catch late-mounting Selects: trigger and hidden input mount in the same commit, so counts always agree. Wait for every Select before polling.
+- 2026-10-23 [P7-T16] ContactFormSheet's custom fields load via their own useResource; the sheet can open with only Status/Source/Owner for ~165–275ms.

@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 17/51 tasks done (33%) · **Current phase:** P7 · **Next agent task:** P7-T16 · **Awaiting review:** P7-T15 · **Blocked:** none · **Waiting on you:** none
+**Overall:** 18/52 tasks done (35%) · **Current phase:** P7 · **Next agent task:** P7-T17 · **Awaiting review:** P7-T16 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 17/30 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 18/31 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -33,9 +33,9 @@ Status: active · Progress: 17/30 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T12 | Merge duplicate day validators into a shared non-mock module | agent | done | — | 476ce90 | 2026-10-23 | One shared YYYY-MM-DD rule in src/lib/dates.ts; booking form, nav, slots and API agree; check + e2e green |
 | P7-T13 | Calendars: error state and retry when appointments fail to load | agent | done | — | 7c57893 | 2026-10-23 | LoadError alert + Retry for calendars appointments, contact Appointments tab, availability list; 4 e2e specs |
 | P7-T14 | Larger tap target for month chips on mobile | agent | done | — | 0ddd360 | 2026-10-23 | 24px month chip and +N more tap targets below sm; details close refocuses opener, restored chip or +N more |
-| P7-T15 | Show end date when an appointment crosses midnight | agent | review | — |  | 2026-10-23 | Crossing-midnight end date in zonedTimes; focus fallback moved to appointment-focus.ts; phone chip gap-1. check + e2e 57 green |
+| P7-T15 | Show end date when an appointment crosses midnight | agent | done | — | f1a32a6 | 2026-10-23 | Crossing-midnight end date in zonedTimes; focus fallback moved to appointment-focus.ts; phone chip gap-1. check + e2e 57 green |
 | P7-H3 | Decide: can past appointments be cancelled or re-statused? | human | done | — |  | 2026-10-23 | Owner: past = Showed/No-show only; Cancel/Confirmed future only |
-| P7-T16 | Check Base UI Select hidden input in the a11y tree | agent | todo | — |  |  |  |
+| P7-T16 | Check Base UI Select hidden input in the a11y tree | agent | review | — |  | 2026-10-23 | Not a bug: Chromium ignores Base UI Select hidden inputs (ariaHiddenElement). New e2e/select-a11y.spec.ts; CLAUDE.md note. |
 | P7-T17 | ContactPicker search: full-name match and no client re-filter | agent | todo | — |  |  |  |
 | P7-T18 | Booking dialog: slot-load error with Retry, ids from formId, fresh form per open | agent | todo | — |  |  |  |
 | P7-T19 | Link-as-button semantics in modules | agent | todo | — |  |  |  |
@@ -47,6 +47,7 @@ Status: active · Progress: 17/30 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T25 | Contact detail: error state instead of endless skeleton on non-404 load failure | agent | todo | — |  |  |  |
 | P7-T26 | Past appointments: only Showed/No-show; Cancel and Confirmed for future only (P7-H3) | agent | todo | — |  |  |  |
 | P7-T27 | e2e: longer toHaveURL timeout for cross-route navigation | agent | todo | — |  |  |  |
+| P7-T28 | Name the unlabelled Select triggers | agent | todo | — |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md

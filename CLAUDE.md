@@ -92,6 +92,13 @@ hidden, and do not "fix" animation-state oddities observed there without first
 checking `document.timeline` / a `requestAnimationFrame` callback actually
 fires.
 
+`read_page` also lists Base UI's form inputs, the
+`<input aria-hidden tabindex=-1>` behind every Select and Combobox, as a
+textbox named after the value. Chromium's accessibility tree ignores them
+(`e2e/select-a11y.spec.ts`), so this is a read_page artifact, not a bug. Check
+a suspected a11y-tree problem with `getByRole` or that spec's CDP reader, not
+`read_page`.
+
 ## Running the build
 
 The build runs through the saved workflow `.claude/workflows/build-phase.js`.

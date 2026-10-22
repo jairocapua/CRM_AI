@@ -457,9 +457,31 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T16 — Check Base UI Select hidden input in the a11y tree
 - **Owner:** agent · **Depends:** —
+- **Skills:** `playwright-cli`, `webapp-testing`
 - **Scope:** read_page shows the Select's hidden form input as a textbox named after the value; affects every Select. Investigate and fix if real.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. On every route that shows a Select on load (/dashboard,
+        /conversations, /contacts, /opportunities, /calendars/availability),
+        Chromium's accessibility tree ignores each Select's hidden input
+        because of its own aria-hidden (`ignoredReasons` includes
+        `ariaHiddenElement`), and each trigger stays exposed as a combobox.
+  - [ ] A2. The same holds inside a modal form: in the "Add contact" sheet,
+        every Select (Status, Source, Owner and any select-type custom field)
+        has an ignored hidden input and an exposed combobox trigger.
+  - [ ] A3. The check cannot pass vacuously: in each scope it fails if no
+        Select triggers exist or if the number of hidden inputs differs from
+        the number of triggers, and it reports an input as a textbox once
+        aria-hidden is removed, so a Base UI upgrade that drops aria-hidden
+        turns the suite red.
+  - [ ] A4. A Select's hidden input never holds focus: it has tabindex=-1, and
+        focusing it moves focus to its trigger.
+  - [ ] A5. The verdict is written where reviewers will see it: CLAUDE.md's
+        "Verifying in the Claude Browser pane" says read_page lists Base UI's
+        aria-hidden form inputs as textboxes named after the value, that this
+        is an artefact, and points to `e2e/select-a11y.spec.ts`.
+  - [ ] A6. No product, seed, API or mock change, and no regression: nothing
+        under src/ changes, `SEED_VERSION` stays 4, `npm run check` is green
+        and the full `npm run e2e` suite passes.
 - **Refs:** added by `progress.mjs add` on 2026-10-22
 
 ### P7-T17 — ContactPicker search: full-name match and no client re-filter
@@ -540,6 +562,13 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T27 — e2e: longer toHaveURL timeout for cross-route navigation
 - **Owner:** agent · **Depends:** —
 - **Scope:** Two specs flaked once at 5s toHaveURL after leaving /calendars under full-suite load; raise timeout for cross-route nav or cap Playwright workers on Windows.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T28 — Name the unlabelled Select triggers
+- **Owner:** agent · **Depends:** —
+- **Scope:** Add aria-label to SelectTriggers in contacts-toolbar.tsx:52, board-toolbar.tsx:43, bulk-actions-bar.tsx:102; add non-empty-name check in e2e/select-a11y.spec.ts
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

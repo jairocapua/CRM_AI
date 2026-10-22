@@ -147,3 +147,9 @@
 - 2026-10-23 [P7-T15] appointmentFocusFallback moved as-is to calendars/appointment-focus.ts (serves month chips and week/day blocks). Supersedes the P7-T14 line saying it lives in month-view.tsx.
 - 2026-10-23 [P7-T15] Month chips gap-1 below sm, gap-0.5 from sm up; e2e keeps ≥3px (outline-2 + offset-1) between chips at both widths.
 - 2026-10-23 [P7-T15] Kolkata e2e picks the seed's first Kolkata midnight-crossing appointment (10–11 Aug) at runtime, opens it from its after-midnight part in day view, checks against an Intl oracle.
+- 2026-10-23 [P7-T16] Verdict: not a bug. Base UI 1.8.0 sets tabIndex -1 and aria-hidden after the props spread (SelectRoot.mjs:448-449); no select.tsx change.
+- 2026-10-23 [P7-T16] Added a 9th, pure self-test of selectAxProblems (zero triggers; 2 triggers/0 inputs) so A3's branches are tested, not just read.
+- 2026-10-23 [P7-T16] Focus test targets the input as the sibling of the aria-label="Pipeline" trigger, count 1, not `.first()`.
+- 2026-10-23 [P7-T16] Inputs ignored for any reason other than their own aria-hidden count as problems.
+- 2026-10-23 [P7-T16] CLAUDE.md note placed after the "So: prefer read_page..." paragraph; spelled "artifact".
+- 2026-10-23 [P7-T16] Add contact test checks six Selects by exact name plus trigger count 6; seed field changes fail loudly.

@@ -5,27 +5,26 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T15 in review.
+- **Status:** P7-T16 in review.
 
 ## Last change
-- P7-T15: zonedTimes names the end date when an appointment ends on a later date ("11:45 PM – Tuesday, September 8, 12:30 AM"); midnight end stays on start date; year only if it differs.
-- appointmentFocusFallback moved to calendars/appointment-focus.ts; phone month chips gap-1; chip comments reworded.
-- check + e2e (57) green; no src/lib change, SEED_VERSION 4. Added P7-T27 (e2e cross-route toHaveURL flake).
+- P7-T16: not a bug. Chromium ignores every Base UI Select hidden input (ariaHiddenElement); triggers are exposed comboboxes.
+- New e2e/select-a11y.spec.ts (9 tests: 5 routes, Add contact sheet, 2 self-tests, focus). CLAUDE.md notes the read_page artifact.
+- check + e2e (66) green; no src change, SEED_VERSION 4. Added P7-T28 (name unlabelled Select triggers).
 
 ## Next up
-- **Agent:** P7-T16 Check Base UI Select hidden input in the a11y tree.
+- **Agent:** P7-T17 (next by tracker).
 
 ## Waiting on you
-- Review of P7-T15 (deep review).
+- Review of P7-T16 (deep review).
 
 ## Open suggestions (non-blocking review notes)
-- Kolkata e2e: put "does not cross in row.timezone" into the `find`, keep the throw.
-- Loop midnight/year unit tests over runtime zones with `inZone`.
-- Reword KOLKATA_START comment "the seed's own case" unless seed really has 2026-09-07T18:15Z.
-- `zone` shows start's offset only; a crossing that also spans DST shows one offset.
-- No jsdom unit test for appointmentFocusFallback (e2e covers it).
-- India viewer label reads 'Asia/Calcutta' (zoneLabel, pre-existing).
-- Earlier: Escape before cancel refetch drops focus (P10-T02); 44px targets/touch-action; focus after Retry; dashboard card error state; failReads limits.
+- CLAUDE.md note claims Combobox too; spec covers Select only. Add a TagPicker case or narrow wording.
+- select-a11y.spec.ts:228 pure self-test: comment that the fixture page is irrelevant.
+- Interaction-only Selects (composer, booking/details dialogs, opportunity sheet, bulk bar) not covered.
+- Route tests could pin expected trigger count/names per route.
+- Recurring cross-route toHaveURL flake (P7-T27).
+- Earlier: P7-T15 notes (Kolkata e2e find, runtime-zone loops, DST offset, focus-fallback unit test, Asia/Calcutta label).
 
 ## Blockers
 - None.
