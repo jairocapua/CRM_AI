@@ -148,9 +148,15 @@ const detail = (dialog: Locator, term: string) =>
 const selectedLabel = (trigger: Locator) =>
   trigger.locator('[data-slot="select-value"]');
 
-/** Opens an appointment's details from its block in day view. */
-async function openFromDayView(page: Page, row: SeededAppointment) {
-  const day = localDayIn(ZONE, row.startAt);
+/**
+ * Opens an appointment's details from its block in day view: by default the
+ * day it starts on in `ZONE`, or another `day` it is drawn on.
+ */
+async function openFromDayView(
+  page: Page,
+  row: SeededAppointment,
+  { zone = ZONE, day = localDayIn(zone, row.startAt) } = {},
+) {
   await expectPosition(page, "Day", longDayLabel(day));
   await expectViewLoaded(page, "Day");
   await viewRegion(page, "Day")
@@ -508,4 +514,71 @@ test("after Undo, closing the details focuses the restored chip", async ({
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(found.chipButton).toBeFocused();
+});
+
+test.describe("viewed from Asia/Kolkata", () => {
+  const KOLKATA = "Asia/Kolkata";
+  test.use({ timezoneId: KOLKATA });
+
+  /** The local day of an appointment's last millisecond in `zone`. */
+  const lastDayIn = (zone: string, row: SeededAppointment) =>
+    localDayIn(zone, new Date(Date.parse(row.endAt) - 1).toISOString());
+
+  test("an appointment that crosses local midnight shows its end date", async ({
+    page,
+    gotoApp,
+  }) => {
+    await gotoApp(MONTH_URL);
+    await expectViewLoaded(page, "Month");
+    const rows = await readSeededAppointments(page);
+
+    // The seed's first appointment that crosses local midnight in Kolkata.
+    const target = byStart(rows).find(
+      (row) => localDayIn(KOLKATA, row.startAt) < lastDayIn(KOLKATA, row),
+    );
+    if (!target) throw new Error("No appointment crosses midnight in Kolkata");
+    // Not vacuous: in the calendar's zone it starts and ends on one day, so
+    // "Calendar time" must show no end date.
+    expect(lastDayIn(target.timezone, target)).toBe(
+      localDayIn(target.timezone, target.startAt),
+    );
+
+    // Opened from its part after midnight, at the top of the next day's
+    // column, rather than from the part before it at the foot of the start
+    // day's, where a short block can be cut off.
+    const endDay = localDayIn(KOLKATA, target.endAt);
+    await gotoApp(`/calendars?view=day&date=${endDay}`);
+    const dialog = await openFromDayView(page, target, {
+      zone: KOLKATA,
+      day: endDay,
+    });
+
+    const endDate = new Intl.DateTimeFormat("en-US", {
+      timeZone: KOLKATA,
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    }).format(new Date(target.endAt));
+    const yours = detail(dialog, "Your time");
+    await expect(yours).toContainText(
+      longDayLabel(localDayIn(KOLKATA, target.startAt)),
+    );
+    await expect(yours).toContainText(
+      `${localTimeIn(KOLKATA, target.startAt)} – ${endDate}, ${localTimeIn(
+        KOLKATA,
+        target.endAt,
+      )}`,
+    );
+    // The offset only: Chromium may name the zone Asia/Calcutta.
+    await expect(yours).toContainText("GMT+5:30");
+
+    const calendar = detail(dialog, "Calendar time");
+    await expect(calendar).toContainText(
+      `${localTimeIn(target.timezone, target.startAt)} – ${localTimeIn(
+        target.timezone,
+        target.endAt,
+      )}`,
+    );
+    await expect(calendar).not.toContainText(endDate);
+  });
 });

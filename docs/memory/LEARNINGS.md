@@ -109,3 +109,6 @@
 - 2026-10-23 [P7-T14] Base UI default already refocuses a day-view block that stays mounted through cancel+Undo; only month-view cases (A5, A6) depend on finalFocus.
 - 2026-10-23 [P7-T14] Hidden browser pane: after resize_window, reload before measuring; some nodes keep stale layout.
 - 2026-10-23 [P7-T14] Seed (Asia/Singapore, Sept): Tue 15 Sept is a future crowded day ('+3 more'). At 375px a chip is 39.9px wide; week rows 114px (was ~64px).
+- 2026-10-23 [P7-T15] Chromium with Playwright timezoneId 'Asia/Kolkata' labels the viewer zone 'Asia/Calcutta · GMT+5:30' (same alias as Node ICU); e2e should assert only 'GMT+5:30'.
+- 2026-10-23 [P7-T15] Seed's first Kolkata midnight-crossing appointment is 10–11 Aug 2026 (23:30–00:30 IST); 7–8 Sept (23:45–00:30) is the only crossing in the week of 6 Sept.
+- 2026-10-23 [P7-T15] Full e2e under load (16 workers + another dev server): cross-route link clicks can miss the 5s toHaveURL (server took 4–6s); plain rerun passed 57/57.

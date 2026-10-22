@@ -49,7 +49,14 @@ export function calendarDayOf(iso: ISODate, timeZone: string): CalendarDay {
 export interface ZonedTimes {
   /** "Tuesday, September 8, 2026": the start's date. */
   day: string;
-  /** "10:00 AM – 10:30 AM". */
+  /**
+   * "10:00 AM – 10:30 AM". When it ends on a later date in this zone, the end
+   * names that date first: "11:45 PM – Tuesday, September 8, 12:30 AM", with
+   * the year only when it is not the start's ("Friday, January 1, 2027,
+   * 12:30 AM"). The end's date is the date of its last millisecond, so an end
+   * at exactly midnight stays on the start's date ("11:30 PM – 12:00 AM"), as
+   * the week and day grids draw it (`daySegments` in time-grid.ts).
+   */
   times: string;
   /** "America/Los_Angeles · GMT-7", the offset on the start's date. */
   zone: string;
@@ -57,22 +64,31 @@ export interface ZonedTimes {
 
 /**
  * The start's date and the start and end times in `timeZone`, or in the
- * viewer's own zone when none is given.
+ * viewer's own zone when none is given. Each zone dates the end on its own,
+ * so an appointment can cross midnight in one zone and not in the other.
  */
 export function zonedTimes(
   startAt: ISODate,
   endAt: ISODate,
   timeZone?: string,
 ): ZonedTimes {
-  const at = (iso: ISODate) =>
-    timeZone === undefined
-      ? new Date(iso)
-      : new TZDate(Date.parse(iso), timeZone);
-  const start = at(startAt);
-  const end = at(endAt);
+  const at = (ms: number) =>
+    timeZone === undefined ? new Date(ms) : new TZDate(ms, timeZone);
+  const endMs = Date.parse(endAt);
+  const start = at(Date.parse(startAt));
+  const end = at(endMs);
+  const time = (date: Date) => format(date, "h:mm a");
+
+  const endsLater =
+    format(at(endMs - 1), "yyyy-MM-dd") > format(start, "yyyy-MM-dd");
+  const sameYear = format(end, "yyyy") === format(start, "yyyy");
+  const endLabel = endsLater
+    ? `${format(end, sameYear ? "EEEE, MMMM d" : "EEEE, MMMM d, yyyy")}, ${time(end)}`
+    : time(end);
+
   return {
     day: format(start, "EEEE, MMMM d, yyyy"),
-    times: `${format(start, "h:mm a")} ${EN_DASH} ${format(end, "h:mm a")}`,
+    times: `${time(start)} ${EN_DASH} ${endLabel}`,
     zone: zoneLabel(new Date(startAt), timeZone),
   };
 }

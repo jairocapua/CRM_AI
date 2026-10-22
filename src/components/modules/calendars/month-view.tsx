@@ -11,7 +11,6 @@ import { dayStart, rangeLabel, type CalendarDay } from "./calendar-nav";
 import {
   groupByLocalDay,
   isInMonth,
-  localStartDay,
   monthWeeks,
   splitOverflow,
 } from "./month-grid";
@@ -26,11 +25,13 @@ import {
  * and the rest of the cell is left free for click-to-book.
  *
  * Presentational: the workspace fetches, filters hidden calendars, orders the
- * rows and owns the URL. Below `sm` the same DOM collapses each chip to a thin
- * coloured bar and "+N more" to "+N"; the text stays in the accessibility
- * tree. The bar is only the visible mark: its button is at least 24px tall,
- * and "+N more" and the day number are 24px square, the WCAG 2.2 minimum
- * target size (SC 2.5.8), so a cell is still tappable on a phone.
+ * rows and owns the URL. Below `sm` the same DOM draws each chip as a tinted
+ * pill at least 24px tall with the calendar's colour as a bar across it, its
+ * text visually hidden but kept in the accessibility tree, and "+N more" reads
+ * "+N". Each chip's button, "+N more" and the day number are at least 24px
+ * square, the WCAG 2.2 minimum target size (SC 2.5.8), so a cell is still
+ * tappable on a phone. Chips sit `gap-1` apart there, so a chip's focus ring
+ * (a 2px outline, 1px out) is never covered by the next chip.
  */
 export function MonthView({
   date,
@@ -121,7 +122,10 @@ function DayCell({
       </Button>
 
       {visible.length > 0 ? (
-        <ul aria-label="Appointments" className="flex min-w-0 flex-col gap-0.5">
+        <ul
+          aria-label="Appointments"
+          className="flex min-w-0 flex-col gap-1 sm:gap-0.5"
+        >
           {visible.map((appointment) => (
             <AppointmentChip
               key={appointment.id}
@@ -150,35 +154,11 @@ function DayCell({
 }
 
 /**
- * Where focus goes when an appointment's details close and the button that
- * opened them has left the screen. In month view that happens when a cancel
- * moves the chip behind "+N more" (live appointments are listed first), and
- * without somewhere to go focus would fall to `<body>`. In order: the
- * appointment's own chip or block, if it is back (after Undo, as a new
- * element); else the "+N more" of the day it is filed under; else null.
- *
- * Appointment ids, seeded or booked, are a prefix and a nanoid
- * (`appt_` + `[0-9a-z]`), so they need no escaping inside a quoted attribute
- * selector.
- */
-export function appointmentFocusFallback(
-  root: ParentNode,
-  appointment: Pick<AppointmentRow, "id" | "startAt">,
-): HTMLElement | null {
-  return (
-    root.querySelector<HTMLElement>(
-      `li[data-appointment-id="${appointment.id}"] > button`,
-    ) ??
-    root.querySelector<HTMLElement>(
-      `[data-day="${localStartDay(appointment.startAt)}"] [data-day-more]`,
-    )
-  );
-}
-
-/**
- * One appointment: start time and contact on the calendar's tint, as a button
- * that opens its details. The tint, status and id stay on the list item; the
- * button fills it, and below `sm` is at least 24px tall around the bar.
+ * One appointment on the calendar's tint, as a button that opens its details.
+ * The tint, status and id stay on the list item and the button fills it.
+ * Below `sm` it is a tinted pill at least 24px tall with the calendar's colour
+ * as a bar across it, its text visually hidden; from `sm` up it is one line of
+ * start time and contact beside a coloured dot.
  */
 function AppointmentChip({
   appointment,

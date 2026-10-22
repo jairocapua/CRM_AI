@@ -199,6 +199,105 @@ describe("zonedTimes", () => {
       zone: "America/Los_Angeles · GMT-8",
     });
   });
+
+  describe("an appointment that crosses midnight", () => {
+    // 23:45 on 7 September to 00:30 on the 8th in Kolkata (GMT+5:30), but
+    // 11:15 AM to noon on the 7th in Los Angeles: the seed's own case.
+    const KOLKATA_START = "2026-09-07T18:15:00.000Z";
+    const KOLKATA_END = "2026-09-07T19:00:00.000Z";
+
+    it("adds the end date when it ends on a later date in that zone, whatever the runtime zone", () => {
+      for (const [runtime, offset] of [
+        ["Asia/Singapore", -480],
+        ["America/Los_Angeles", 420],
+      ] as const) {
+        inZone(runtime, KOLKATA_START, offset);
+        expect(zonedTimes(KOLKATA_START, KOLKATA_END, "Asia/Kolkata")).toEqual({
+          day: "Monday, September 7, 2026",
+          times: "11:45 PM – Tuesday, September 8, 12:30 AM",
+          zone: "Asia/Kolkata · GMT+5:30",
+        });
+        expect(
+          zonedTimes(KOLKATA_START, KOLKATA_END, "America/Los_Angeles"),
+        ).toEqual({
+          day: "Monday, September 7, 2026",
+          times: "11:15 AM – 12:00 PM",
+          zone: "America/Los_Angeles · GMT-7",
+        });
+      }
+    });
+
+    it("dates the calendar zone's end while the viewer's does not cross, and the reverse", () => {
+      // 23:30 on 8 September to 00:30 on the 9th in Los Angeles, 2:30 PM to
+      // 3:30 PM on the 9th in Singapore.
+      const START = "2026-09-09T06:30:00.000Z";
+      const END = "2026-09-09T07:30:00.000Z";
+      const laCrossing = {
+        day: "Tuesday, September 8, 2026",
+        times: "11:30 PM – Wednesday, September 9, 12:30 AM",
+        zone: "America/Los_Angeles · GMT-7",
+      };
+
+      inZone("Asia/Singapore", START, -480);
+      expect(zonedTimes(START, END, "America/Los_Angeles")).toEqual(laCrossing);
+      expect(zonedTimes(START, END)).toEqual({
+        day: "Wednesday, September 9, 2026",
+        times: "2:30 PM – 3:30 PM",
+        zone: "Asia/Singapore · GMT+8",
+      });
+
+      inZone("America/Los_Angeles", START, 420);
+      expect(zonedTimes(START, END)).toEqual(laCrossing);
+    });
+
+    it("shows the viewer's own end date when no zone is given", () => {
+      inZone("Asia/Kolkata", KOLKATA_START, -330);
+      const times = zonedTimes(KOLKATA_START, KOLKATA_END);
+      expect(times).toMatchObject({
+        day: "Monday, September 7, 2026",
+        times: "11:45 PM – Tuesday, September 8, 12:30 AM",
+      });
+      // The offset only: the runtime may name the zone by its legacy id,
+      // Asia/Calcutta.
+      expect(times.zone).toMatch(/ · GMT\+5:30$/);
+    });
+
+    it("keeps an end exactly at local midnight on the start date", () => {
+      // 23:30 on 7 September in Los Angeles to midnight, as the week and day
+      // grids draw it (`daySegments`: it stays on its own day only).
+      const START = "2026-09-08T06:30:00.000Z";
+      expect(
+        zonedTimes(START, "2026-09-08T07:00:00.000Z", "America/Los_Angeles"),
+      ).toEqual({
+        day: "Monday, September 7, 2026",
+        times: "11:30 PM – 12:00 AM",
+        zone: "America/Los_Angeles · GMT-7",
+      });
+      // A quarter of an hour later it ends on the 8th.
+      expect(
+        zonedTimes(START, "2026-09-08T07:15:00.000Z", "America/Los_Angeles"),
+      ).toEqual({
+        day: "Monday, September 7, 2026",
+        times: "11:30 PM – Tuesday, September 8, 12:15 AM",
+        zone: "America/Los_Angeles · GMT-7",
+      });
+    });
+
+    it("names the end's year only when it differs from the start's", () => {
+      // New Year's Eve in Los Angeles, standard time.
+      expect(
+        zonedTimes(
+          "2027-01-01T07:30:00.000Z",
+          "2027-01-01T08:30:00.000Z",
+          "America/Los_Angeles",
+        ),
+      ).toEqual({
+        day: "Thursday, December 31, 2026",
+        times: "11:30 PM – Friday, January 1, 2027, 12:30 AM",
+        zone: "America/Los_Angeles · GMT-8",
+      });
+    });
+  });
 });
 
 describe("offersStart", () => {

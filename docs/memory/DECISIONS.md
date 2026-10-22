@@ -143,3 +143,7 @@
 - 2026-10-23 [P7-T14] Details finalFocus order: connected opener, then the appointment's chip by id (after Undo), then that day's '+N more', then true (Base UI default). No day-number branch (unreachable).
 - 2026-10-23 [P7-T14] appointmentFocusFallback lives in month-view.tsx; the workspace reads refs only at close time.
 - 2026-10-23 [P7-T14] Details e2e locates the grid with includeHidden: true because the page behind the modal is aria-hidden.
+- 2026-10-23 [P7-T15] Crossing midnight: ZonedTimes.times reads '<start> – <end weekday, month day[, year]>, <end time>'. End dated by its last millisecond (midnight end keeps start date, as daySegments); year only when it differs. Shape unchanged, callers untouched.
+- 2026-10-23 [P7-T15] appointmentFocusFallback moved as-is to calendars/appointment-focus.ts (serves month chips and week/day blocks). Supersedes the P7-T14 line saying it lives in month-view.tsx.
+- 2026-10-23 [P7-T15] Month chips gap-1 below sm, gap-0.5 from sm up; e2e keeps ≥3px (outline-2 + offset-1) between chips at both widths.
+- 2026-10-23 [P7-T15] Kolkata e2e picks the seed's first Kolkata midnight-crossing appointment (10–11 Aug) at runtime, opens it from its after-midnight part in day view, checks against an Intl oracle.

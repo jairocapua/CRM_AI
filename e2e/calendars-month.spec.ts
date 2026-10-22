@@ -249,9 +249,11 @@ test.describe("the September grid from Asia/Singapore", () => {
 });
 
 /**
- * Below `sm` a chip is a thin coloured bar, but its button, "+N more" and the
- * day number stay at least 24px square: the WCAG 2.2 minimum target size (SC
- * 2.5.8). From `sm` up the chips are one line of text again.
+ * Below `sm` a chip is a tinted pill at least 24px tall with the calendar's
+ * colour as a bar across it, and its button, "+N more" and the day number are
+ * at least 24px square: the WCAG 2.2 minimum target size (SC 2.5.8). Chips sit
+ * far enough apart that a chip's focus ring is not covered by the next one.
+ * From `sm` up the chips are one line of text again.
  */
 test.describe("on a phone", () => {
   test.use({
@@ -297,6 +299,33 @@ test.describe("on a phone", () => {
       onPhone.filter((target) => target.width < 24 || target.height < 24),
     ).toEqual([]);
 
+    const FOCUS_RING_PX = 3; // outline-2 + outline-offset-1 on the chip button (month-view.tsx)
+    /**
+     * For each pair of neighbouring chips in a day cell, the room between the
+     * first one's button and the second chip: a focus ring that reaches
+     * further is drawn under the next chip.
+     */
+    const ringRoom = () =>
+      grid.locator("[data-day] ul").evaluateAll((lists) =>
+        lists.flatMap((list) => {
+          const items = [...list.children];
+          return items.slice(1).map((item, i) => {
+            const button = items[i]?.querySelector("button");
+            if (!button) throw new Error("A chip without a button");
+            return (
+              item.getBoundingClientRect().top -
+              button.getBoundingClientRect().bottom
+            );
+          });
+        }),
+      );
+    const tooTight = (room: number[]) =>
+      room.filter((px) => px < FOCUS_RING_PX);
+    const roomOnPhone = await ringRoom();
+    // Never vacuous: a crowded day shows two chips.
+    expect(roomOnPhone.length).toBeGreaterThan(0);
+    expect(tooTight(roomOnPhone)).toEqual([]);
+
     // A tap on a chip opens that appointment's details.
     const chip = grid.locator("li[data-appointment-id]").first();
     const id = await chip.getAttribute("data-appointment-id");
@@ -320,5 +349,8 @@ test.describe("on a phone", () => {
         ),
       )
       .toEqual([]);
+    // And still leave the ring room between chips.
+    await expect.poll(async () => tooTight(await ringRoom())).toEqual([]);
+    expect((await ringRoom()).length).toBeGreaterThan(0);
   });
 });

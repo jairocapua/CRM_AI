@@ -404,10 +404,48 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T15 — Show end date when an appointment crosses midnight
 - **Owner:** agent · **Depends:** —
+- **Skills:** `tdd`, `vitest`, `playwright-cli`
 - **Scope:** zonedTimes prints only the start date; show the end date (or next-day marker) when it differs, in both zones.
   - From the P7-T14 review, small month-view cleanups: month-view.tsx comments (header and AppointmentChip) and the calendars-month.spec.ts describe comment say a chip below sm is "a thin coloured bar" and "the bar is only the visible mark"; on screen it is a 24px tinted pill with the bar inside, so reword them. Below sm use gap-1 between chips (the 2px focus ring + 1px offset is 1px wider than gap-0.5). Move appointmentFocusFallback out of month-view.tsx (or rename it) since it also serves the time-grid blocks.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. `zonedTimes` shows the end's date when the appointment ends on a
+        later date in the zone it prints, as "h:mm a – EEEE, MMMM d, h:mm a"
+        ("11:45 PM – Tuesday, September 8, 12:30 AM"); `day` stays the
+        start's date, and a same-date appointment prints exactly as before
+        ("10:00 AM – 10:30 AM").
+  - [ ] A2. Both zones: the calendar's zone and the viewer's own zone each get
+        their own end date, independently of each other and of the runtime
+        zone (the calendar's zone crosses while the viewer's does not, and the
+        reverse).
+  - [ ] A3. An appointment that ends exactly at local midnight shows as ending
+        on its start date ("11:30 PM – 12:00 AM"), as the week/day grid keeps
+        it on its own day (`daySegments`); one that ends after midnight shows
+        the end date.
+  - [ ] A4. The end date carries the year only when it differs from the
+        start's (31 December to 1 January).
+  - [ ] A5. In the browser, from Asia/Kolkata, the seeded appointment that
+        crosses local midnight shows in its details: "Your time" has its start
+        date and "<start> – <end weekday, month day>, <end>", and "Calendar
+        time" (Los Angeles, the same day there) a plain start – end range with
+        no end date.
+  - [ ] A6. Every place that prints `zonedTimes` gets the end date with no
+        wiring of its own: both detail rows, the booking dialog's "Calendar
+        time" line and the "Appointment booked" toast.
+  - [ ] A7. The month-view.tsx header and `AppointmentChip` comments and the
+        calendars-month.spec.ts phone describe comment describe a chip below
+        `sm` as a tinted pill at least 24px tall with a coloured bar inside;
+        none says "thin coloured bar" or "only the visible mark".
+  - [ ] A8. Below `sm`, chips in a day cell are `gap-1` apart, so a chip
+        button's focus ring (2px outline + 1px offset) is never covered by the
+        next chip; from `sm` up the spacing is unchanged (`gap-0.5`) and still
+        clears the ring.
+  - [ ] A9. `appointmentFocusFallback` lives in its own module
+        (`appointment-focus.ts`), documented for month chips and time-grid
+        blocks; month-view.tsx neither defines nor exports it, and focus
+        return behaves as before.
+  - [ ] A10. No seed, API or mock change, and no regression: `SEED_VERSION`
+        stays 4, nothing under `src/lib/api` or `src/lib/mock` changes, `npm
+        run check` is green and the full `npm run e2e` suite passes.
 - **Refs:** added by `progress.mjs add` on 2026-10-22
 
 ### P7-H3 — Decide: can past appointments be cancelled or re-statused?
@@ -496,6 +534,13 @@ hours land around midnight–08:00 local; that is expected.
 - **Scope:** Apply the P7-H3 owner rule (DECISIONS.md 2026-10-23) in two places. Past = the appointment's end is before the demo now (apiNow()/nowIso(), never new Date()). (1) appointment-details-dialog.tsx: for a past appointment the status select offers only Showed and No-show and the Cancel button is not shown; for a future one Cancel and Confirmed stay offered as today. (2) src/lib/api/calendars.ts setStatus()/cancel(): reject moving a past appointment to confirmed or cancelled with ApiError 422 (plain-language message, new code e.g. PAST_APPOINTMENT), checked in the same synchronous block as the write, nothing written. The rule names target statuses only; Showed/No-show on future appointments is unchanged. Flag to the owner if a case is unclear (e.g. a past appointment already Cancelled).
 - **Acceptance:**
   - [ ] Vitest: setStatus() on a past appointment to confirmed and cancel() on a past appointment both reject with ApiError status 422 and write nothing (appointment and activities unchanged); past -> showed, past -> no_show and showed <-> no_show succeed; future cancel/confirm still succeed. e2e or component test: the details dialog for a past appointment offers only Showed and No-show and has no Cancel button; for a future appointment Cancel and Confirmed are offered.
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T27 — e2e: longer toHaveURL timeout for cross-route navigation
+- **Owner:** agent · **Depends:** —
+- **Scope:** Two specs flaked once at 5s toHaveURL after leaving /calendars under full-suite load; raise timeout for cross-route nav or cap Playwright workers on Windows.
+- **Acceptance:**
+  - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ## Exit criteria (phase gate)

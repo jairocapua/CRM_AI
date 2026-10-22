@@ -13,6 +13,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppointmentDetailsDialog } from "./appointment-details-dialog";
 import { liveFirst } from "./appointment-display";
+import { appointmentFocusFallback } from "./appointment-focus";
 import { BookingDialog } from "./booking-dialog";
 import { CalendarList } from "./calendar-list";
 import {
@@ -28,7 +29,7 @@ import {
   type CalendarPosition,
 } from "./calendar-nav";
 import { CalendarToolbar } from "./calendar-toolbar";
-import { MonthView, appointmentFocusFallback } from "./month-view";
+import { MonthView } from "./month-view";
 import { TimeGridView } from "./time-grid-view";
 
 const NONE_HIDDEN: ReadonlySet<ID> = new Set();
