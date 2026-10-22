@@ -496,6 +496,7 @@ hours land around midnight–08:00 local; that is expected.
 - **Scope:** calendars-booking.spec.ts:152 (~30s) and :313 hit the 30s default under load; add test.slow()/setTimeout(60_000) or split the :152 flow.
   - From the P7-T13 review: the first full e2e run in P7-T13 timed out 15 tests on a busy machine (a rerun passed), so check the suite-wide timeout too, not only these two flows.
   - Also from P7-T13, two comments in e2e/calendar-helpers.ts: in failReads' Limits paragraph, say that mutations reading the same table (book(), setStatus() call Object.values(state.appointments)) also throw while the fault is on; at restoreReads, say it only clears the flag and leaves the wrapper installed, which is fine because each test gets a fresh page (not shared across context.newPage() tabs).
+  - From the P7-T15 review: in e2e/calendars-details.spec.ts (the Asia/Kolkata describe), put both conditions in the `find` (crosses midnight in Kolkata AND does not cross in row.timezone), keeping the throw when nothing matches, so a reseed cannot pick a row that fails the second check. In appointment-display.test.ts, reword "the seed's own case" above KOLKATA_START to "a case like the seed's" (the seed's crossing row is 2026-10-02 18:00Z, not that instant).
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-22
