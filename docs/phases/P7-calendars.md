@@ -299,6 +299,7 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T12 — Merge duplicate day validators into a shared non-mock module
 - **Owner:** agent · **Depends:** —
 - **Scope:** parseDay/isCalendarDay in src/components/modules/calendars/calendar-nav.ts and parseDay in src/lib/mock/slots.ts duplicate each other; move to e.g. src/lib/dates.ts and import from both (seam lint blocks components importing the mock copy).
+  - From the P7-T08 review: `isDayInput` in `src/lib/validation/appointment.ts` is a third copy and disagrees with `isCalendarDay` ('0099-01-01' passes the schema, fails `isCalendarDay`). Have `bookingFormSchema` use the shared helper.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-21
@@ -306,6 +307,7 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T13 — Calendars: error state and retry when appointments fail to load
 - **Owner:** agent · **Depends:** —
 - **Scope:** calendars-workspace.tsx: if listAppointments fails with no data shown, the skeleton stays forever. Add an appointments.error branch with refetch(); needed once http.ts moves to fetch().
+  - From the P7-T08 review: `contact-appointments-panel.tsx` has the same gap: a failed `listForContact` reads as "No appointments yet." Give it an error branch with Retry too.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-21
@@ -352,6 +354,7 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T18 — Booking dialog: slot-load error with Retry, ids from formId, fresh form per open
 - **Owner:** agent · **Depends:** —
 - **Scope:** booking-dialog.tsx:292 show slots.error.message + Retry (slots.refetch); derive booking-* ids from formId; key BookingForm on an open counter.
+  - From the P7-T08 review: at phone width (400px) the three-column time cards wrap "12:00 AM" onto two lines; keep each time on one line (e.g. `whitespace-nowrap`, or two columns below `sm`).
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-22

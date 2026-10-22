@@ -22,8 +22,7 @@
 - Note: one test appointment was booked in the dev workspace (Discovery Call, Amber Mosciski, 9 Sep); reseed in Settings → Demo Data clears it.
 
 ## Open suggestions (non-blocking review notes)
-- validation/appointment.ts isDayInput is a third YYYY-MM-DD validator; add to P7-T12's merge list.
-- contact-appointments-panel.tsx ignores appointments.error; fits P7-T13.
+- Folded into tasks (P7-T08 review): isDayInput merge → P7-T12; contact panel error branch → P7-T13; time cards wrapping at phone width → P7-T18.
 - STATUS_VARIANTS duplicates details-dialog status display; consider shared AppointmentStatusBadge.
 - e2e: use stable descending sort instead of .reverse(); Upcoming tripwire should filter on demo-now after load.
 - Calendar Select hidden input a11y is covered by P7-T16; inactive calendars/unknown contacts at API level by P7-T11.
