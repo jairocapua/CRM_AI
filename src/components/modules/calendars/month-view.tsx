@@ -17,13 +17,15 @@ import {
 
 /**
  * The month as a weeks-by-days grid. Each day lists its appointments as chips
- * coloured by calendar, filed under the viewer's local day; a crowded day
- * shows two chips and "+N more". The day number and "+N more" open that day
- * in day view (through `onOpenDay`); the rest of the cell is left free for
- * clickable chips (P7-T07) and click-to-book.
+ * coloured by calendar, filed under the viewer's local day in the order they
+ * are given (the workspace puts live ones before cancelled ones); a crowded
+ * day shows two chips and "+N more". The day number and "+N more" open that
+ * day in day view (through `onOpenDay`), a chip opens that appointment's
+ * details (through `onOpenAppointment`), and the rest of the cell is left free
+ * for click-to-book.
  *
- * Presentational: the workspace fetches, filters hidden calendars and owns
- * the URL. Below `sm` the same DOM collapses each chip to a thin coloured bar
+ * Presentational: the workspace fetches, filters hidden calendars, orders the
+ * rows and owns the URL. Below `sm` the same DOM collapses each chip to a thin coloured bar
  * and "+N more" to "+N"; the text stays in the accessibility tree.
  */
 export function MonthView({
@@ -31,11 +33,13 @@ export function MonthView({
   today,
   appointments,
   onOpenDay,
+  onOpenAppointment,
 }: {
   date: CalendarDay;
   today: CalendarDay;
   appointments: readonly AppointmentRow[];
   onOpenDay: (day: CalendarDay) => void;
+  onOpenAppointment: (appointment: AppointmentRow) => void;
 }) {
   const weeks = monthWeeks(date);
   const byDay = groupByLocalDay(appointments);
@@ -64,6 +68,7 @@ export function MonthView({
             inMonth={isInMonth(day, date)}
             appointments={byDay.get(day) ?? []}
             onOpenDay={onOpenDay}
+            onOpenAppointment={onOpenAppointment}
           />
         ))}
       </div>
@@ -77,12 +82,14 @@ function DayCell({
   inMonth,
   appointments,
   onOpenDay,
+  onOpenAppointment,
 }: {
   day: CalendarDay;
   isToday: boolean;
   inMonth: boolean;
   appointments: readonly AppointmentRow[];
   onOpenDay: (day: CalendarDay) => void;
+  onOpenAppointment: (appointment: AppointmentRow) => void;
 }) {
   const label = rangeLabel("day", day);
   const { visible, more } = splitOverflow(appointments);
@@ -112,7 +119,11 @@ function DayCell({
       {visible.length > 0 ? (
         <ul aria-label="Appointments" className="flex min-w-0 flex-col gap-0.5">
           {visible.map((appointment) => (
-            <AppointmentChip key={appointment.id} appointment={appointment} />
+            <AppointmentChip
+              key={appointment.id}
+              appointment={appointment}
+              onOpen={onOpenAppointment}
+            />
           ))}
         </ul>
       ) : null}
@@ -134,10 +145,17 @@ function DayCell({
 }
 
 /**
- * One appointment: start time and contact on the calendar's tint. Not
- * interactive yet; P7-T07 turns it into the button that opens details.
+ * One appointment: start time and contact on the calendar's tint, as a button
+ * that opens its details. The tint, status and id stay on the list item; the
+ * button fills it.
  */
-function AppointmentChip({ appointment }: { appointment: AppointmentRow }) {
+function AppointmentChip({
+  appointment,
+  onOpen,
+}: {
+  appointment: AppointmentRow;
+  onOpen: (appointment: AppointmentRow) => void;
+}) {
   const time = formatClockTime(appointment.startAt);
   const cancelled = appointment.status === "cancelled";
 
@@ -146,30 +164,41 @@ function AppointmentChip({ appointment }: { appointment: AppointmentRow }) {
       title={`${time} ${appointment.contactName} · ${appointment.calendarName}${
         cancelled ? " (cancelled)" : ""
       }`}
+      data-appointment-id={appointment.id}
       data-status={appointment.status}
       className={cn(
-        "flex min-w-0 items-center gap-1 rounded-full text-xs leading-4 sm:rounded-sm sm:border sm:px-1 sm:py-px",
+        "flex min-w-0 items-center rounded-full text-xs leading-4 sm:rounded-sm sm:border sm:px-1 sm:py-px",
         TAG_COLOR_CLASSES[appointment.calendarColor],
         cancelled && "opacity-60",
       )}
     >
-      {/* A full-width bar below `sm`, a dot beside the text from `sm` up. */}
-      <span
-        aria-hidden
-        className={cn(
-          "h-1.5 w-full shrink-0 rounded-full sm:w-1.5",
-          TAG_DOT_CLASSES[appointment.calendarColor],
-        )}
-      />
-      <span className="sr-only sm:not-sr-only sm:min-w-0 sm:flex-1">
-        <span className={cn("block truncate", cancelled && "line-through")}>
-          <span className="tabular-nums">{time}</span> {appointment.contactName}
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        onClick={() => onOpen(appointment)}
+        // A 1px offset stays inside the cell's padding and clear of the
+        // next chip, so the outline is never clipped or covered.
+        className="focus-visible:outline-ring flex w-full min-w-0 cursor-pointer items-center gap-1 rounded-[inherit] text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-solid"
+      >
+        {/* A full-width bar below `sm`, a dot beside the text from `sm` up. */}
+        <span
+          aria-hidden
+          className={cn(
+            "h-1.5 w-full shrink-0 rounded-full sm:w-1.5",
+            TAG_DOT_CLASSES[appointment.calendarColor],
+          )}
+        />
+        <span className="sr-only sm:not-sr-only sm:min-w-0 sm:flex-1">
+          <span className={cn("block truncate", cancelled && "line-through")}>
+            <span className="tabular-nums">{time}</span>{" "}
+            {appointment.contactName}
+          </span>
         </span>
-      </span>
-      <span className="sr-only">
-        {`, ${appointment.calendarName}`}
-        {cancelled ? ", Cancelled" : null}
-      </span>
+        <span className="sr-only">
+          {`, ${appointment.calendarName}`}
+          {cancelled ? ", Cancelled" : null}
+        </span>
+      </button>
     </li>
   );
 }

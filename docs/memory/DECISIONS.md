@@ -93,3 +93,15 @@
 - 2026-10-21 [P7-T06] historyMethod: 'none' if search string unchanged; 'replace' if view unchanged and visibleDays start/endExclusive equal (covers the old same-position case); else 'push'.
 - 2026-10-21 [P7-T06] Hide-calendar e2e takes the shown Discovery Call count in the Singapore week from the oracle (segmentsIn), asserting > 0, instead of the placeholder's '1'.
 - 2026-10-21 [P7-T06] Week placement e2e asserts a Singapore tripwire of 11 appointments for Sep 6-12; Kolkata exactly one cut at midnight and some-but-not-all off their UTC day; LA none off the UTC day and none cut.
+- 2026-10-22 [P7-T07] Plan deviation: no separate 'Calendar' row in the details <dl>; the DialogDescription shows the calendar's colour dot and name (seeded titles already contain the calendar name).
+- 2026-10-22 [P7-T07] 'Cancel appointment' shows while the stored row is not cancelled (not the optimistic status), so its Spinner shows while pending and it goes when the refetch lands.
+- 2026-10-22 [P7-T07] Cancel button uses Base UI focusableWhenDisabled with data-disabled:opacity-50 so focus stays put while pending; Dialog restoreFocus 'popup' takes it when the button unmounts.
+- 2026-10-22 [P7-T07] Status Select is readOnly while a status change or cancel is pending, and handlers guard on busy: random simulate() latency could resolve overlapping setStatus calls out of order.
+- 2026-10-22 [P7-T07] Slot-availability line mounts only when the stored row is cancelled; Skeleton on isLoading only, never isRefreshing.
+- 2026-10-22 [P7-T07] Undo restores the status shown at cancel time (restored or error toast, 409-checked setStatus); clicking Undo does not close the dialog.
+- 2026-10-22 [P7-T07] Location values become links only for zoom/google_meet values starting with https://; otherwise text.
+- 2026-10-22 [P7-T07] No footer Close button; the built-in X stays.
+- 2026-10-22 [P7-T07] Details are a controlled Dialog driven by workspace state, not the URL (seeded ids change on reseed); it shows the latest fetched row, falling back to the click-time snapshot.
+- 2026-10-22 [P7-T07] Cancel has no confirmation step but offers Undo; the Select lists a disabled Cancelled item.
+- 2026-10-22 [P7-T07] liveFirst is a stable split applied once in the workspace; views keep the order they are given. pack-intervals tie-break (input order for identical intervals) is now documented and tested.
+- 2026-10-22 [P7-T07] No seed change: SEED_VERSION stays 4.

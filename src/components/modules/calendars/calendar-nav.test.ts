@@ -370,4 +370,17 @@ describe("the viewer's zone", () => {
       "America/Los_Angeles · GMT-8",
     );
   });
+
+  it("zoneLabel names an explicit zone whatever the runtime zone", () => {
+    inZone("Asia/Singapore", ANCHOR.toISOString(), -480);
+    expect(zoneLabel(ANCHOR, "America/Los_Angeles")).toBe(
+      "America/Los_Angeles · GMT-7",
+    );
+    expect(
+      zoneLabel(new Date("2026-12-01T12:00:00.000Z"), "America/Los_Angeles"),
+    ).toBe("America/Los_Angeles · GMT-8");
+    expect(zoneLabel(ANCHOR, "UTC")).toBe("UTC · GMT");
+    // No zone given: still the runtime's own.
+    expect(zoneLabel(ANCHOR)).toBe("Asia/Singapore · GMT+8");
+  });
 });

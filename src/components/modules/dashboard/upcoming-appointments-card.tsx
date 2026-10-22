@@ -57,7 +57,11 @@ export function UpcomingAppointmentsCard() {
             {rows.map((appointment) => {
               const start = parseISO(appointment.startAt);
               return (
-                <li key={appointment.id} className="flex items-start gap-2.5">
+                <li
+                  key={appointment.id}
+                  data-appointment-id={appointment.id}
+                  className="flex items-start gap-2.5"
+                >
                   <span
                     className={cn(
                       "mt-1.5 size-2 shrink-0 rounded-full",

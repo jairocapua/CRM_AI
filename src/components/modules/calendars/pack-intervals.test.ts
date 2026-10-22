@@ -101,6 +101,21 @@ describe("packIntervals", () => {
     });
   });
 
+  it("identical intervals take columns in input order", () => {
+    // The workspace lists live appointments before cancelled ones, so a live
+    // booking sharing a cancelled one's exact slot is drawn leftmost.
+    const live = iv(540, 600);
+    const cancelled = iv(540, 600);
+    expect(packIntervals([live, cancelled])).toEqual([
+      { column: 0, columns: 2 },
+      { column: 1, columns: 2 },
+    ]);
+    expect(packIntervals([cancelled, live])).toEqual([
+      { column: 0, columns: 2 },
+      { column: 1, columns: 2 },
+    ]);
+  });
+
   it("no intervals: no placements", () => {
     expect(packIntervals([])).toEqual([]);
   });

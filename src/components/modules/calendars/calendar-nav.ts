@@ -230,12 +230,15 @@ export function rangeLabel(view: CalendarView, date: CalendarDay): string {
 }
 
 /**
- * The viewer's zone and its offset at `at`, "Asia/Singapore · GMT+8". Times
- * on the calendars page are shown in this zone.
+ * A zone and its offset at `at`, "Asia/Singapore · GMT+8". Without
+ * `timeZone` it is the viewer's zone, the one times on the calendars page are
+ * shown in; with one (an IANA name such as a calendar's "America/Los_Angeles")
+ * it is that zone, whatever the viewer's.
  */
-export function zoneLabel(at: Date): string {
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+export function zoneLabel(at: Date, timeZone?: string): string {
+  const zone = timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const offset = new Intl.DateTimeFormat("en-US", {
+    timeZone,
     timeZoneName: "shortOffset",
   })
     .formatToParts(at)

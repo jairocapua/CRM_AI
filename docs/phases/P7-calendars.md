@@ -307,6 +307,34 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-21
 
+### P7-T14 — Larger tap target for month chips on mobile
+- **Owner:** agent · **Depends:** —
+- **Scope:** Below sm, chips are 6px bars; give the details button a min tap height or open the day on mobile.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-22
+
+### P7-T15 — Show end date when an appointment crosses midnight
+- **Owner:** agent · **Depends:** —
+- **Scope:** zonedTimes prints only the start date; show the end date (or next-day marker) when it differs, in both zones.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-22
+
+### P7-H3 — Decide: can past appointments be cancelled or re-statused?
+- **Owner:** human · **Depends:** —
+- **Scope:** API allows cancel/any status on past appointments; product decision whether the dialog should offer them.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-22
+
+### P7-T16 — Check Base UI Select hidden input in the a11y tree
+- **Owner:** agent · **Depends:** —
+- **Scope:** read_page shows the Select's hidden form input as a textbox named after the value; affects every Select. Investigate and fix if real.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-22
+
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
       timeline, and in the dashboard Upcoming card, and its slot disappears

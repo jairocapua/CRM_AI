@@ -64,3 +64,11 @@
 - 2026-10-21 [P7-T06] Reading block geometry in one evaluateAll (getBoundingClientRect per column and block) works inside an inner scroll container; offsets relative to the column hold at any scroll position.
 - 2026-10-21 [P7-T06] Seed facts (Singapore): week Sep 6-12 has Sep 8 = 4 blocks, first at 00:00 (cancelled), so the week opens at scrollTop 0. Day Sep 10 opens at scrollTop 168 (03:30, for a 04:00 cancelled Strategy Session). Sep 15: Strategy 00:00-01:00 and Onboarding 00:00-00:45 overlap, then Discovery 01:00-01:30 touches.
 - 2026-10-21 [P7-T06] `git rm` stages the deletion; use plain rm (or `git restore --staged`) when the index must stay untouched.
+- 2026-10-22 [P7-T07] Base UI Select.Icon keeps its default '▼' child inside the shadcn chevron, so toHaveText on the combobox reads 'Confirmed▼'; assert on the trigger's [data-slot=select-value].
+- 2026-10-22 [P7-T07] A focused button that becomes natively disabled drops focus to <body>. Base UI Button's focusableWhenDisabled keeps it focusable (aria-disabled + data-disabled); style with data-disabled:, not disabled:.
+- 2026-10-22 [P7-T07] Base UI Dialog sets restoreFocus: 'popup': when the focused element inside the popup unmounts, focus moves to the popup itself.
+- 2026-10-22 [P7-T07] While a modal Base UI dialog is open the rest of the page is aria-hidden, so getByRole('region', { name: 'Day view' }) finds nothing; press Escape first.
+- 2026-10-22 [P7-T07] A sonner toast action clicked while a modal Base UI dialog is open runs without closing the dialog; the toaster is not inert or aria-hidden.
+- 2026-10-22 [P7-T07] The persisted store (localStorage 'nimbus-crm-db', key state) holds seededAt, contacts and activities; e2e helpers readSeededAt/readPersistedStatus/readContactActivitySummaries use it as an oracle. Object.values order = store order, so a stable sort by startAt reproduces the API's tie order.
+- 2026-10-22 [P7-T07] A full `npm run e2e` once failed on page.goto with net::ERR_NO_BUFFER_SPACE (Windows socket flake); a plain rerun passed.
+- 2026-10-22 [P7-T07] Seed fact (Singapore, Sep 2026 month grid): with live-first ordering, Sep 8 shows its 2 live chips and '+2 more' (the two cancelled behind it).

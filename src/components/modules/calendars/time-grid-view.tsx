@@ -62,20 +62,27 @@ const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
  * top of a working day would show nothing. It scrolls once per range opened,
  * not when a calendar is hidden, rows refetch or the line moves.
  *
- * Presentational: the workspace fetches, filters hidden calendars and owns
- * the URL. The grid scrolls inside its own card, so on a phone the week
- * scrolls sideways there and never widens the page.
+ * Each block is a button that opens the appointment's details (through
+ * `onOpenAppointment`). Blocks are listed in the order they are given, which
+ * the workspace makes live before cancelled, so a live booking comes first to
+ * a screen reader and, sharing a cancelled one's exact slot, sits leftmost.
+ *
+ * Presentational: the workspace fetches, filters hidden calendars, orders the
+ * rows and owns the URL. The grid scrolls inside its own card, so on a phone
+ * the week scrolls sideways there and never widens the page.
  */
 export function TimeGridView({
   view,
   date,
   today,
   appointments,
+  onOpenAppointment,
 }: {
   view: "week" | "day";
   date: CalendarDay;
   today: CalendarDay;
   appointments: readonly AppointmentRow[];
+  onOpenAppointment: (appointment: AppointmentRow) => void;
 }) {
   const days = viewDays(view, date);
   const columns = days.map((day) => ({
@@ -159,6 +166,7 @@ export function TimeGridView({
                 isToday={day === today}
                 segments={segments}
                 nowMinutes={nowLineMinutes(now, day)}
+                onOpenAppointment={onOpenAppointment}
               />
             ))}
           </div>
@@ -211,11 +219,13 @@ function DayColumn({
   isToday,
   segments,
   nowMinutes,
+  onOpenAppointment,
 }: {
   day: CalendarDay;
   isToday: boolean;
   segments: readonly LaidOutSegment<AppointmentRow>[];
   nowMinutes: number | null;
+  onOpenAppointment: (appointment: AppointmentRow) => void;
 }) {
   return (
     <div
@@ -234,7 +244,11 @@ function DayColumn({
       {segments.length > 0 ? (
         <ul aria-label="Appointments" className="absolute inset-0">
           {segments.map((segment) => (
-            <AppointmentBlock key={segment.row.id} segment={segment} />
+            <AppointmentBlock
+              key={segment.row.id}
+              segment={segment}
+              onOpen={onOpenAppointment}
+            />
           ))}
         </ul>
       ) : null}
@@ -258,12 +272,15 @@ function DayColumn({
  * times, on the calendar's tint. The contact leads because the block's place
  * on the grid already shows the time, and a narrow week column truncates
  * whatever comes last. A part cut at midnight loses its rounded edge there.
- * Not interactive yet; P7-T07 turns it into the button that opens details.
+ * The tinted box is a button that opens the appointment's details; the list
+ * item keeps the id, status and exact geometry.
  */
 function AppointmentBlock({
   segment,
+  onOpen,
 }: {
   segment: LaidOutSegment<AppointmentRow>;
+  onOpen: (appointment: AppointmentRow) => void;
 }) {
   const {
     row: appointment,
@@ -294,9 +311,14 @@ function AppointmentBlock({
         width: `${100 / columns}%`,
       }}
     >
-      <div
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        onClick={() => onOpen(appointment)}
         className={cn(
-          "flex h-full overflow-hidden rounded-md border px-1.5 py-0.5 text-xs leading-4",
+          // An inset outline: neighbouring blocks and the column's clip would
+          // cover one drawn outside.
+          "focus-visible:outline-ring flex h-full w-full cursor-pointer overflow-hidden rounded-md border px-1.5 py-0.5 text-left text-xs leading-4 outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-solid",
           oneLine ? "flex-row items-baseline gap-1" : "flex-col",
           TAG_COLOR_CLASSES[appointment.calendarColor],
           clippedStart && "rounded-t-none border-t-0",
@@ -322,7 +344,7 @@ function AppointmentBlock({
           {`, ${appointment.calendarName}`}
           {cancelled ? ", Cancelled" : null}
         </span>
-      </div>
+      </button>
     </li>
   );
 }

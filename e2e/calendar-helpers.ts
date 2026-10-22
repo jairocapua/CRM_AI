@@ -47,58 +47,119 @@ export async function expectViewLoaded(page: Page, view: ViewName) {
 
 export interface SeededAppointment {
   id: string;
+  title: string;
   startAt: string;
   endAt: string;
+  /** The appointment's own zone, an IANA name. */
+  timezone: string;
   status: string;
+  locationType: string | null;
+  contactId: string;
+  contactName: string;
+  calendarId: string;
   calendarName: string;
   calendarColor: string;
+  minSchedulingNoticeHours: number;
 }
 
 interface PersistedDb {
   state: {
+    seededAt: string;
     appointments: Record<
       string,
       {
         id: string;
         calendarId: string;
+        contactId: string;
+        title: string;
         startAt: string;
         endAt: string;
+        timezone: string;
         status: string;
+        location?: { type: string };
       }
     >;
-    calendars: Record<string, { name: string; color: string }>;
+    calendars: Record<
+      string,
+      { name: string; color: string; minSchedulingNoticeHours: number }
+    >;
+    contacts: Record<string, { firstName: string; lastName: string }>;
+    activities: Record<string, { contactId?: string; summary: string }>;
   };
 }
 
+const DB_KEY = "nimbus-crm-db";
+
 /**
- * Every appointment in the app's persisted database, read straight from
- * localStorage as an oracle independent of the UI and the API. Persist writes
- * are debounced by 250ms, so the key is polled for first. The shape is the
- * mock store's internal one: if it changes, this throws rather than passing
- * quietly.
+ * The app's persisted database, read straight from localStorage as an oracle
+ * independent of the UI and the API. Persist writes are debounced by 250ms,
+ * so the key is polled for first. The shape is the mock store's internal one:
+ * the readers below throw if it changes, rather than passing quietly.
+ */
+async function readPersistedDb(page: Page): Promise<PersistedDb["state"]> {
+  const read = () => page.evaluate((key) => localStorage.getItem(key), DB_KEY);
+  await expect.poll(read).not.toBeNull();
+  return (JSON.parse((await read()) ?? "null") as PersistedDb).state;
+}
+
+/**
+ * Every appointment in the persisted database, in the store's own order (the
+ * order the API sorts from, so ties by start time come out the same).
  */
 export async function readSeededAppointments(
   page: Page,
 ): Promise<SeededAppointment[]> {
-  const read = () => page.evaluate(() => localStorage.getItem("nimbus-crm-db"));
-  await expect.poll(read).not.toBeNull();
-
-  const db = JSON.parse((await read()) ?? "null") as PersistedDb;
-  const { appointments, calendars } = db.state;
+  const { appointments, calendars, contacts } = await readPersistedDb(page);
   const rows = Object.values(appointments).map((a) => {
     const calendar = calendars[a.calendarId];
     if (!calendar) throw new Error(`No calendar ${a.calendarId}`);
+    const contact = contacts[a.contactId];
+    if (!contact) throw new Error(`No contact ${a.contactId}`);
     return {
       id: a.id,
+      title: a.title,
       startAt: a.startAt,
       endAt: a.endAt,
+      timezone: a.timezone,
       status: a.status,
+      locationType: a.location?.type ?? null,
+      contactId: a.contactId,
+      contactName: `${contact.firstName} ${contact.lastName}`,
+      calendarId: a.calendarId,
       calendarName: calendar.name,
       calendarColor: calendar.color,
+      minSchedulingNoticeHours: calendar.minSchedulingNoticeHours,
     };
   });
   expect(rows.length, "the seed has appointments").toBeGreaterThan(0);
   return rows;
+}
+
+/** The seed's anchor, the demo clock's starting "now". */
+export async function readSeededAt(page: Page): Promise<string> {
+  const { seededAt } = await readPersistedDb(page);
+  expect(Date.parse(seededAt), "the store has a seed anchor").not.toBeNaN();
+  return seededAt;
+}
+
+/** One appointment's status as persisted, or null when it is not there. */
+export async function readPersistedStatus(
+  page: Page,
+  id: string,
+): Promise<string | null> {
+  const { appointments } = await readPersistedDb(page);
+  return appointments[id]?.status ?? null;
+}
+
+/** The summaries of every activity persisted for one contact. */
+export async function readContactActivitySummaries(
+  page: Page,
+  contactId: string,
+): Promise<string[]> {
+  const { activities } = await readPersistedDb(page);
+  return Object.values(activities)
+    .filter((activity) => activity.contactId === contactId)
+    .map((activity) => activity.summary);
 }
 
 /** The "YYYY-MM-DD" day an instant falls on in `zone`. */

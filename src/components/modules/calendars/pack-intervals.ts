@@ -27,9 +27,11 @@ export interface Placement {
  * Every member of a group shares the group's column count, so widths line up
  * across the group.
  *
- * The order of the input does not change any interval's placement, so a
- * caller can sort for display (say, live before cancelled) without moving
- * blocks.
+ * The input order decides only between identical intervals (same start and
+ * same end): the earlier one takes the lower column. Every other placement is
+ * the same in any input order. The calendars workspace lists live
+ * appointments before cancelled ones (`liveFirst`), so when a live booking
+ * and a cancelled one share a slot exactly, the live one is drawn leftmost.
  */
 export function packIntervals<T extends { start: number; end: number }>(
   items: readonly T[],

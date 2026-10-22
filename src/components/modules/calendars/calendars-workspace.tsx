@@ -5,8 +5,10 @@ import { useSearchParams } from "next/navigation";
 
 import type { ID } from "@/types";
 import * as api from "@/lib/api";
-import { apiNow, useResource } from "@/lib/api";
+import { apiNow, useResource, type AppointmentRow } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AppointmentDetailsDialog } from "./appointment-details-dialog";
+import { liveFirst } from "./appointment-display";
 import { CalendarList } from "./calendar-list";
 import {
   VIEW_LABELS,
@@ -51,6 +53,17 @@ const NONE_HIDDEN: ReadonlySet<ID> = new Set();
  * change to any calendar, so it never reaches the store. Seeded ids also
  * change on every reseed, so they would rot in a bookmarked URL. It survives
  * view and date changes and resets on reload.
+ *
+ * Within a day, live appointments are listed before cancelled ones in every
+ * view (`liveFirst`, applied once here), so a cancellation stays visible,
+ * struck through, but never pushes a live booking behind "+N more".
+ *
+ * Clicking an appointment opens its details in a dialog. Which one is open is
+ * component state, not the URL, for the same reseed reason. The dialog shows
+ * the row as the latest fetch has it, so a status change or cancel made there
+ * shows up once the refetch lands; if the row is gone from the range, the
+ * snapshot taken on click stands. Closing keeps that row, so the exit
+ * animation never draws an empty dialog.
  */
 export function CalendarsWorkspace() {
   const searchParams = useSearchParams();
@@ -112,11 +125,27 @@ export function CalendarsWorkspace() {
     });
   }, []);
 
-  // Filtered once, here, so no view can ever receive a hidden calendar's rows,
-  // stale ones included.
-  const shownAppointments = (shown?.rows ?? []).filter(
-    (appointment) => !hidden.has(appointment.calendarId),
+  // Filtered and ordered once, here, so no view can ever receive a hidden
+  // calendar's rows, stale ones included, or list a cancelled appointment
+  // ahead of a live one on its day.
+  const shownAppointments = liveFirst(
+    (shown?.rows ?? []).filter(
+      (appointment) => !hidden.has(appointment.calendarId),
+    ),
   );
+
+  const [detail, setDetail] = useState<{
+    row: AppointmentRow;
+    open: boolean;
+  } | null>(null);
+  const openAppointment = useCallback(
+    (row: AppointmentRow) => setDetail({ row, open: true }),
+    [],
+  );
+  const detailRow = detail
+    ? ((shown?.rows ?? []).find((row) => row.id === detail.row.id) ??
+      detail.row)
+    : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -155,6 +184,7 @@ export function CalendarsWorkspace() {
                   today={today}
                   appointments={shownAppointments}
                   onOpenDay={(day) => navigate({ view: "day", date: day })}
+                  onOpenAppointment={openAppointment}
                 />
               ) : (
                 <TimeGridView
@@ -162,12 +192,20 @@ export function CalendarsWorkspace() {
                   date={shown.date}
                   today={today}
                   appointments={shownAppointments}
+                  onOpenAppointment={openAppointment}
                 />
               )}
             </section>
           )}
         </div>
       </div>
+      <AppointmentDetailsDialog
+        appointment={detailRow}
+        open={detail?.open ?? false}
+        onOpenChange={(open) =>
+          setDetail((prev) => (prev ? { ...prev, open } : prev))
+        }
+      />
     </div>
   );
 }
