@@ -387,7 +387,8 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] A2. At 375px, a touch tap on a chip opens that appointment's details
         dialog.
   - [ ] A3. From sm up, the month view is unchanged: chips keep their one-line
-        height and every existing month and details spec passes unmodified.
+        height and every existing month and details spec passes with its
+        existing assertions intact.
   - [ ] A4. Closing the details while the element that opened them is still on
         screen returns focus to it: the chip in month view, the block in day
         view.
@@ -404,6 +405,7 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T15 — Show end date when an appointment crosses midnight
 - **Owner:** agent · **Depends:** —
 - **Scope:** zonedTimes prints only the start date; show the end date (or next-day marker) when it differs, in both zones.
+  - From the P7-T14 review, small month-view cleanups: month-view.tsx comments (header and AppointmentChip) and the calendars-month.spec.ts describe comment say a chip below sm is "a thin coloured bar" and "the bar is only the visible mark"; on screen it is a 24px tinted pill with the bar inside, so reword them. Below sm use gap-1 between chips (the 2px focus ring + 1px offset is 1px wider than gap-0.5). Move appointmentFocusFallback out of month-view.tsx (or rename it) since it also serves the time-grid blocks.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-22
