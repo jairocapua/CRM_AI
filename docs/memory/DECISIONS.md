@@ -138,3 +138,4 @@
 - 2026-10-23 [P7-T13] Retry spinner is aria-hidden (avoids 'Loading Retry'); button stays focusable while busy (focusableWhenDisabled); alert carries aria-busy.
 - 2026-10-23 [P7-T13] Calendars page: skeleton still wins while calendars.list loads; the error shows once the calendar list has loaded.
 - 2026-10-23 [P7-T13] LoadError widens alert action space pr-18 -> pr-22 (has-data-[slot=alert-action]:pr-22) since the sm Retry button exceeds 4.5rem.
+- 2026-10-23 [P7-H3] Owner decision: past appointments (end before the demo now) can only be marked Showed or No-show, or switched between them. Cancel and Confirmed are offered only for future appointments. Applies in the details dialog and at the API seam (setStatus/cancel reject the disallowed moves with a 422).

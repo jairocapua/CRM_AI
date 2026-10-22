@@ -469,6 +469,13 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
+### P7-T26 — Past appointments: only Showed/No-show; Cancel and Confirmed for future only (P7-H3)
+- **Owner:** agent · **Depends:** —
+- **Scope:** Apply the P7-H3 owner rule (DECISIONS.md 2026-10-23) in two places. Past = the appointment's end is before the demo now (apiNow()/nowIso(), never new Date()). (1) appointment-details-dialog.tsx: for a past appointment the status select offers only Showed and No-show and the Cancel button is not shown; for a future one Cancel and Confirmed stay offered as today. (2) src/lib/api/calendars.ts setStatus()/cancel(): reject moving a past appointment to confirmed or cancelled with ApiError 422 (plain-language message, new code e.g. PAST_APPOINTMENT), checked in the same synchronous block as the write, nothing written. The rule names target statuses only; Showed/No-show on future appointments is unchanged. Flag to the owner if a case is unclear (e.g. a past appointment already Cancelled).
+- **Acceptance:**
+  - [ ] Vitest: setStatus() on a past appointment to confirmed and cancel() on a past appointment both reject with ApiError status 422 and write nothing (appointment and activities unchanged); past -> showed, past -> no_show and showed <-> no_show succeed; future cancel/confirm still succeed. e2e or component test: the details dialog for a past appointment offers only Showed and No-show and has no Cancel button; for a future appointment Cancel and Confirmed are offered.
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
       timeline, and in the dashboard Upcoming card, and its slot disappears
