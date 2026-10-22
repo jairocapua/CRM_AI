@@ -411,6 +411,7 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T22 — Calendar update: reject explicit undefined keys and use a plain-language 422 message
 - **Owner:** agent · **Depends:** —
 - **Scope:** calendars.update(): {timezone: undefined} passes .partial() and erases the stored value; drop undefined keys or validate merged record. Keep zod path off the toast-facing message (separate field).
+  - From the P7-T11 review: once undefined keys are dropped, nothing can remove a `maxBookingsPerDay` cap (the schema's minimum is 1, and JSON cannot send `undefined`). Give "no cap" an explicit spelling that `update()` accepts (`null`, or 0 as the engine already reads it) and test that it clears the cap.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

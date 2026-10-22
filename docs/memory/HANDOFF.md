@@ -21,7 +21,7 @@
 - P7-H3: decide whether past appointments can be cancelled or re-statused (also: should Undo/restore work on a calendar switched off after booking?).
 
 ## Open suggestions (non-blocking review notes)
-- `maxBookingsPerDay` min 1: a fetch() client cannot clear a cap; consider null/0 = no cap.
+- `maxBookingsPerDay` cannot be cleared: folded into P7-T22's scope (P7-T11 review).
 - `setStatus()` can restore onto an inactive calendar; details dialog SlotAvailability would show "Could not check..." on 409. Unreachable today; handle in a future deactivate feature.
 - Timezone aliases/offsets stored as given; canonicalise via resolvedOptions().timeZone if needed.
 - 'impossible hour' test row passes without the fix (not a regression guard). Move `isTimeZone` into P7-T12's shared module.
