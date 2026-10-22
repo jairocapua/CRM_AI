@@ -87,3 +87,6 @@
 - 2026-10-22 [P7-T09] RHF with a resolver re-validates only the changed field on onChange and useFieldArray skips nested array errors; cross-item rules need register `deps` plus trigger() after append/remove. `deps` fire only after first submit in onSubmit mode.
 - 2026-10-22 [P7-T09] Seed facts (Singapore, clock 2026-09-08T09:00Z): Discovery Call offers 16 times on SGT 2026-09-09 and 16 on 2026-09-10; ending Tuesday at 12:00 PDT leaves the first 6 (12:00 AM-2:30 AM SGT).
 - 2026-10-22 [P7-T09] A 'X is not defined' console error in the hidden pane can be a transient hot reload between two edits; reopen before chasing it.
+- 2026-10-22 [P7-T10] First Chromium launch from a fresh cache with 8 workers pushed calendars-booking flows (spec :152, ~30 s normally) past the 30 s default timeout.
+- 2026-10-22 [P7-T10] Git Bash passes PLAYWRIGHT_BROWSERS_PATH=C:/... to Node fine; set it on each command since Bash calls don't keep env.
+- 2026-10-22 [P7-T10] `playwright install chromium` on Windows downloads chromium-*, chromium_headless_shell-*, ffmpeg-* and winldd-*.

@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 10/44 tasks done (23%) · **Current phase:** P7 · **Next agent task:** P7-T10 · **Awaiting review:** P7-T09 · **Blocked:** none · **Waiting on you:** P7-H3
+**Overall:** 11/45 tasks done (24%) · **Current phase:** P7 · **Next agent task:** P7-T11 · **Awaiting review:** P7-T10 · **Blocked:** none · **Waiting on you:** P7-H3
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 10/23 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 11/24 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -25,9 +25,9 @@ Status: active · Progress: 10/23 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T06 | Week and day views | agent | done | P7-T03, P7-T04 | c949dab | 2026-10-21 | Approved in review: week/day time grid, packIntervals, now line, scroll-to-first, history replace; e2e 40/40 |
 | P7-T07 | Appointment details, status and cancel | agent | done | P7-T05 | 8c3df91 | 2026-10-22 | Details dialog (contact link, two zones, location, status Select), cancel with Undo, live-first ordering; e2e green |
 | P7-T08 | Booking dialog and the contact Appointments tab | agent | done | P7-T03, P7-T07 | f67ea9c | 2026-10-22 | Booking dialog (calendar>contact>day>slot, API error refetch) + contact Appointments tab; check and e2e green |
-| P7-T09 | Availability editor | agent | review | P7-T03, P7-T04 |  | 2026-10-22 | Availability editor + zod schema (overlap/reversed), 15-min side-by-side packing fix, e2e slot removal; all green |
+| P7-T09 | Availability editor | agent | done | P7-T03, P7-T04 | ab2fe4b | 2026-10-22 | Availability editor + zod schema (overlap/reversed), 15-min side-by-side packing fix, e2e slot removal; all green |
 | P7-H1 | Update CLAUDE.md Commands for the new check pipeline | human | done | — |  | 2026-10-21 | Done by Claude in review: CLAUDE.md Commands now lists test and test:scripts |
-| P7-T10 | Harness polish: browser install and smoke content checks | agent | todo | — |  |  |  |
+| P7-T10 | Harness polish: browser install and smoke content checks | agent | review | — |  | 2026-10-22 | e2e:install script; smoke tests assert each route's h1 (proven red on blank page); CLAUDE.md lists e2e commands |
 | P7-T11 | Guard bookings: inactive calendars, unknown contacts, bad windows | agent | todo | — |  |  |  |
 | P7-H2 | Decide symmetric buffer semantics | human | done | — |  | 2026-10-21 | Decided in review: symmetric buffers (order-independent); fixed in P7-T03 rework |
 | P7-T12 | Merge duplicate day validators into a shared non-mock module | agent | todo | — |  |  |  |
@@ -40,6 +40,7 @@ Status: active · Progress: 10/23 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T18 | Booking dialog: slot-load error with Retry, ids from formId, fresh form per open | agent | todo | — |  |  |  |
 | P7-T19 | Link-as-button semantics in modules | agent | todo | — |  |  |  |
 | P7-T20 | Availability editor: unsaved-changes guard and empty open day | agent | todo | — |  |  |  |
+| P7-T21 | Raise timeout on long calendars-booking e2e flows | agent | todo | — |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md

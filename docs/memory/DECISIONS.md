@@ -120,3 +120,5 @@
 - 2026-10-22 [P7-T09] Focus: after remove -> day's 'Add hours'; switching a day on appends with shouldFocus:false; 'Add hours' (aria-label 'Add hours on <Day>') focuses the new start input.
 - 2026-10-22 [P7-T09] Picker lists inactive calendars too; unknown/missing slug falls back to first calendar by name without writing the URL.
 - 2026-10-22 [P7-T09] Phone widths hide the time inputs' picker icon; fieldset gets min-w-0. No seed change: SEED_VERSION stays 4.
+- 2026-10-22 [P7-T10] e2e:install has no --with-deps (sudo on Linux, no-op on Windows) and no --only-shell (--headed needs full Chromium).
+- 2026-10-22 [P7-T10] Smoke heading locator: getByRole('main') > h1 with exact NAV_ITEMS title, so sidebar links and detail-page h1s cannot match; redirect test also checks Dashboard h1.

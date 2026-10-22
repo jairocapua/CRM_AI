@@ -5,27 +5,27 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T09 in review.
+- **Status:** P7-T10 in review.
 
 ## Last change
-- P7-T09: availability editor at `/calendars/availability?calendar=<slug>` (weekly hours + booking rules), saves via `api.calendars.update`; linked from the Calendars toolbar.
-- zod schema `src/lib/validation/availability.ts` (34 tests) rejects reversed, overlapping and malformed windows on enabled days.
-- time-grid packing fix: blocks pack on `max(end, start + 25 min)`, so back-to-back 15-min bookings sit side by side.
-- e2e `calendars-availability.spec.ts`: shortening Tuesday removes the later booking slots. New tasks P7-T19 (Link-as-button), P7-T20 (unsaved guard / empty open day).
+- P7-T10: `npm run e2e:install` (playwright install chromium); verified on an empty browser cache, 49/49 e2e.
+- Smoke spec asserts each route's own h1 inside `<main>`; a blank-render mutant failed all 8 tests.
+- CLAUDE.md Commands lists e2e commands; e2e is outside `check` and must not run alongside it (shared `.next`).
+- New task P7-T21: raise timeout on long calendars-booking e2e flows (one flaky timeout seen).
 
 ## Next up
-- **Agent:** P7-T10 Harness polish: browser install and smoke content checks (once P7-T09 is approved).
+- **Agent:** P7-T11 Guard bookings: inactive calendars, unknown contacts, bad windows (once P7-T10 is approved).
 
 ## Waiting on you
-- Review of P7-T09 (open /calendars/availability, try overlap errors, 375px layout).
+- Review of P7-T10 (run `npm run e2e:install` then `npm run e2e`).
 - P7-H3: decide whether past appointments can be cancelled or re-statused.
 
 ## Open suggestions (non-blocking review notes)
-- Folded (P7-T09 review): editor load-error Retry → P7-T13; API-side availability checks → P7-T11; windows to midnight → docs/BACKLOG.md.
-- time-grid.test pins MIN_BLOCK_PX/HOUR_HEIGHT_PX literals; better invariant `minutesToPx(MIN_BLOCK_MINUTES) === MIN_BLOCK_PX`.
-- Cosmetic: wrap day FieldSets in FieldGroup; use `isSubmitting` instead of a separate `saving` guard.
-- ui/pagination.tsx Link-as-button is generated shadcn code (left out of P7-T19).
-- Pre-existing lint warnings "Compilation Skipped" in data-table, contact-form-sheet, opportunity-form-sheet.
+- Smoke: per-route content landmark (table, board columns) beyond the PageHeader h1.
+- smoke.spec.ts:35 hardcodes "Dashboard"; use `findNavItem("/dashboard")!.title`.
+- Comment at inbox-list.tsx:118 h1 and PageHeader noting the smoke spec depends on the title.
+- Linux CI would need `playwright install --with-deps` (BACKLOG if CI is added).
+- Earlier: time-grid.test literal pins; FieldGroup / isSubmitting cosmetics; pre-existing lint warnings.
 
 ## Blockers
 - None.

@@ -11,15 +11,18 @@ behind without rewriting the UI.
 ## Commands
 
 ```bash
-npm run dev      # dev server (Turbopack)
-npm test         # Vitest unit tests (src/**/*.test.ts); helpers in src/lib/mock/testing.ts
-npm run check    # format:check -> lint -> typecheck -> test -> test:scripts -> build. The gate.
+npm run dev          # dev server (Turbopack)
+npm test             # Vitest unit tests (src/**/*.test.ts); helpers in src/lib/mock/testing.ts
+npm run check        # format:check -> lint -> typecheck -> test -> test:scripts -> build. The gate.
+npm run e2e:install  # once per machine: downloads Playwright's Chromium (fresh clone)
+npm run e2e          # Playwright e2e (e2e/*.spec.ts) on a production build at 127.0.0.1:3100
 ```
 
 Every build task runs `npm run check` before it is committed (see "Running the
 build"). Build status lives in `docs/PROGRESS.md` and changes only through
 `node scripts/progress.mjs`; a task or phase is never marked done while the
-gate is red.
+gate is red. `npm run e2e` is not part of `npm run check` (it runs its own
+`next build`), and the two share `.next`, so never run them at the same time.
 
 ## The one rule: the API seam
 

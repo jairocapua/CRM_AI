@@ -8,6 +8,10 @@ import { test as base, expect, type Page } from "@playwright/test";
  * - a console watcher that fails the test on any console error, uncaught page
  *   error or hydration message;
  * - `gotoApp(path)`, which navigates and waits for the app to boot.
+ *
+ * These apply to the `page` fixture only: a tab opened with
+ * `context.newPage()` gets neither the storage clearing nor the console
+ * watcher.
  */
 
 /** `AppBootSkeleton` (src/components/common/app-boot-skeleton.tsx). The
