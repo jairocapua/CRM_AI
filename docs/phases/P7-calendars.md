@@ -608,6 +608,7 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T29 — Fix ContactPicker selection race after a pick
 - **Owner:** agent · **Depends:** —
 - **Scope:** Keep picked Contact in local state as value immediately; use selected.data only when id matches. Add e2e typing right after a pick without aria-selected wait.
+  - From the P7-T17 review: new-conversation-dialog.tsx is a third ContactPicker consumer; add it as a third entry in SURFACES in e2e/contact-picker.spec.ts (and name it in that file's header) so its behaviour is pinned too. In pickContacts, make the uniqueness check cover phone and jobTitle as well (add them to SeededContact in calendar-helpers.ts), since the server searches those. In query-engine.test.ts, note on the mixed-fields case that its first assertion is the one proving function fields work.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
