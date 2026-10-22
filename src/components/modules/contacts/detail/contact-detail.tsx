@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ContactFormSheet } from "../contact-form-sheet";
 import { DeleteContactDialog } from "../delete-contact-dialog";
 import { ContactActivityPanel } from "./contact-activity-panel";
+import { ContactAppointmentsPanel } from "./contact-appointments-panel";
 import { ContactHeader } from "./contact-header";
 import { ContactInfoPanel } from "./contact-info-panel";
 import { ContactNotesPanel } from "./contact-notes-panel";
@@ -99,6 +100,7 @@ export function ContactDetail({ id }: { id: string }) {
               <TabsTrigger value="activity">Activity</TabsTrigger>
               <TabsTrigger value="notes">Notes</TabsTrigger>
               <TabsTrigger value="tasks">Tasks</TabsTrigger>
+              <TabsTrigger value="appointments">Appointments</TabsTrigger>
             </TabsList>
             <TabsContent value="activity">
               <ContactActivityPanel contactId={record.id} />
@@ -108,6 +110,9 @@ export function ContactDetail({ id }: { id: string }) {
             </TabsContent>
             <TabsContent value="tasks">
               <ContactTasksPanel contactId={record.id} />
+            </TabsContent>
+            <TabsContent value="appointments">
+              <ContactAppointmentsPanel contactId={record.id} />
             </TabsContent>
           </Tabs>
         </div>

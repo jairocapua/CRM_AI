@@ -151,6 +151,31 @@ export async function readPersistedStatus(
   return appointments[id]?.status ?? null;
 }
 
+export interface SeededContact {
+  id: string;
+  /** "First Last", as the contact picker and the app print it. */
+  name: string;
+  lastName: string;
+}
+
+/** Every contact in the persisted database, in the store's own order. */
+export async function readContacts(page: Page): Promise<SeededContact[]> {
+  const { contacts } = await readPersistedDb(page);
+  const rows = Object.entries(contacts).map(([id, contact]) => ({
+    id,
+    name: `${contact.firstName} ${contact.lastName}`,
+    lastName: contact.lastName,
+  }));
+  expect(rows.length, "the seed has contacts").toBeGreaterThan(0);
+  return rows;
+}
+
+/** The ids of every appointment persisted, cancelled ones included. */
+export async function readAppointmentIds(page: Page): Promise<Set<string>> {
+  const { appointments } = await readPersistedDb(page);
+  return new Set(Object.keys(appointments));
+}
+
 /** The summaries of every activity persisted for one contact. */
 export async function readContactActivitySummaries(
   page: Page,

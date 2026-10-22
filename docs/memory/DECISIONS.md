@@ -105,3 +105,9 @@
 - 2026-10-22 [P7-T07] Cancel has no confirmation step but offers Undo; the Select lists a disabled Cancelled item.
 - 2026-10-22 [P7-T07] liveFirst is a stable split applied once in the workspace; views keep the order they are given. pack-intervals tie-break (input order for identical intervals) is now documented and tested.
 - 2026-10-22 [P7-T07] No seed change: SEED_VERSION stays 4.
+- 2026-10-22 [P7-T08] Booking dialog offers only active calendars. Calendar starts empty; Day defaults to the date in view (today if past); from the contact page Day is today and the contact is pre-filled but changeable.
+- 2026-10-22 [P7-T08] Form is noValidate so zod is the only validator; date input min=today only steers the picker. Slot fetcher returns null until a calendar and a real day are set.
+- 2026-10-22 [P7-T08] Time fieldset is aria-busy on load or refresh; skeleton only on isLoading. On a failed book(): clear time, set 'root.server' error (API message) as role=alert, refetch slots; editing any field clears it. submit() ignores re-entry while in flight.
+- 2026-10-22 [P7-T08] Time card ids = useId + slot ms; radio name is the local time, data-start on the visible span. Appointments tab rows: Item (outline) in li[data-appointment-id][data-status]; status via Badge variants, no new colour constants.
+- 2026-10-22 [P7-T08] Plan deviation: e2e error path installs the fake clock after load (demo time = seededAt + fake now - load time), target = slot - notice + 15 min. e2e picks contacts by unique last name.
+- 2026-10-22 [P7-T08] No seed change: SEED_VERSION stays 4.

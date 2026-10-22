@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 8/40 tasks done (20%) · **Current phase:** P7 · **Next agent task:** P7-T09 · **Awaiting review:** P7-T07 · **Blocked:** none · **Waiting on you:** P7-H3
+**Overall:** 9/42 tasks done (21%) · **Current phase:** P7 · **Next agent task:** P7-T09 · **Awaiting review:** P7-T08 · **Blocked:** none · **Waiting on you:** P7-H3
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 8/19 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 9/21 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -23,8 +23,8 @@ Status: active · Progress: 8/19 · Points: 7 (5 for Calendars + 2 for the test 
 | P7-T04 | Calendars page: URL state, toolbar and calendar list | agent | done | P7-T02 | 3f81f6e | 2026-10-21 | /calendars URL state (view/date), toolbar, calendar list toggles, placeholder views; check+e2e green |
 | P7-T05 | Month view | agent | done | P7-T03, P7-T04 | 5ed7061 | 2026-10-21 | Month grid with +N more, keeps old grid while loading, historyMethod none/replace/push; e2e 32/32 |
 | P7-T06 | Week and day views | agent | done | P7-T03, P7-T04 | c949dab | 2026-10-21 | Approved in review: week/day time grid, packIntervals, now line, scroll-to-first, history replace; e2e 40/40 |
-| P7-T07 | Appointment details, status and cancel | agent | review | P7-T05 |  | 2026-10-22 | Details dialog (contact link, two zones, location, status Select), cancel with Undo, live-first ordering; e2e green |
-| P7-T08 | Booking dialog and the contact Appointments tab | agent | todo | P7-T03, P7-T07 |  |  |  |
+| P7-T07 | Appointment details, status and cancel | agent | done | P7-T05 | 8c3df91 | 2026-10-22 | Details dialog (contact link, two zones, location, status Select), cancel with Undo, live-first ordering; e2e green |
+| P7-T08 | Booking dialog and the contact Appointments tab | agent | review | P7-T03, P7-T07 |  | 2026-10-22 | Booking dialog (calendar>contact>day>slot, API error refetch) + contact Appointments tab; check and e2e green |
 | P7-T09 | Availability editor | agent | todo | P7-T03, P7-T04 |  |  |  |
 | P7-H1 | Update CLAUDE.md Commands for the new check pipeline | human | done | — |  | 2026-10-21 | Done by Claude in review: CLAUDE.md Commands now lists test and test:scripts |
 | P7-T10 | Harness polish: browser install and smoke content checks | agent | todo | — |  |  |  |
@@ -36,6 +36,8 @@ Status: active · Progress: 8/19 · Points: 7 (5 for Calendars + 2 for the test 
 | P7-T15 | Show end date when an appointment crosses midnight | agent | todo | — |  |  |  |
 | P7-H3 | Decide: can past appointments be cancelled or re-statused? | human | todo | — |  |  |  |
 | P7-T16 | Check Base UI Select hidden input in the a11y tree | agent | todo | — |  |  |  |
+| P7-T17 | ContactPicker search: full-name match and no client re-filter | agent | todo | — |  |  |  |
+| P7-T18 | Booking dialog: slot-load error with Retry, ids from formId, fresh form per open | agent | todo | — |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md

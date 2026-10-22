@@ -2,13 +2,16 @@
 
 import { useCallback, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { CalendarPlusIcon } from "lucide-react";
 
 import type { ID } from "@/types";
 import * as api from "@/lib/api";
 import { apiNow, useResource, type AppointmentRow } from "@/lib/api";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppointmentDetailsDialog } from "./appointment-details-dialog";
 import { liveFirst } from "./appointment-display";
+import { BookingDialog } from "./booking-dialog";
 import { CalendarList } from "./calendar-list";
 import {
   VIEW_LABELS,
@@ -64,6 +67,10 @@ const NONE_HIDDEN: ReadonlySet<ID> = new Set();
  * shows up once the refetch lands; if the row is gone from the range, the
  * snapshot taken on click stands. Closing keeps that row, so the exit
  * animation never draws an empty dialog.
+ *
+ * The toolbar's Book button opens the booking dialog on the day in view, or
+ * on today when that day is already past. A booking invalidates
+ * "appointments", so the view refetches and shows it without more wiring.
  */
 export function CalendarsWorkspace() {
   const searchParams = useSearchParams();
@@ -147,6 +154,8 @@ export function CalendarsWorkspace() {
       detail.row)
     : null;
 
+  const [bookOpen, setBookOpen] = useState(false);
+
   return (
     <div className="flex flex-col gap-4">
       <CalendarToolbar
@@ -155,7 +164,12 @@ export function CalendarsWorkspace() {
         today={today}
         timeZoneLabel={zoneLabel(dayStart(date))}
         onNavigate={navigate}
-      />
+      >
+        <Button onClick={() => setBookOpen(true)}>
+          <CalendarPlusIcon data-icon="inline-start" />
+          Book
+        </Button>
+      </CalendarToolbar>
       <div className="grid gap-4 md:grid-cols-[14rem_minmax(0,1fr)]">
         <div>
           {calendars.isLoading ? (
@@ -205,6 +219,12 @@ export function CalendarsWorkspace() {
         onOpenChange={(open) =>
           setDetail((prev) => (prev ? { ...prev, open } : prev))
         }
+      />
+      <BookingDialog
+        open={bookOpen}
+        onOpenChange={setBookOpen}
+        // "YYYY-MM-DD" strings compare in date order.
+        defaultDay={date >= today ? date : today}
       />
     </div>
   );

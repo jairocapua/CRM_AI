@@ -19,8 +19,8 @@ import {
 /**
  * Today, previous/next by the view's unit, the range heading, the viewer's
  * zone and the view switch. Presentational: it reports where to go through
- * `onNavigate` and the workspace owns the URL. `children` is the actions slot
- * (the Book button lands there in P7-T08).
+ * `onNavigate` and the workspace owns the URL. `children` is the actions slot,
+ * after the view switch; the workspace puts its Book button there.
  */
 export function CalendarToolbar({
   view,

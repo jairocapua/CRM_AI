@@ -342,6 +342,20 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-22
 
+### P7-T17 — ContactPicker search: full-name match and no client re-filter
+- **Owner:** agent · **Depends:** —
+- **Scope:** contact-picker.tsx: pass filter={null} so server results show as returned; api.contacts.list q matches 'first last'. Affects deal sheet and booking dialog.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-22
+
+### P7-T18 — Booking dialog: slot-load error with Retry, ids from formId, fresh form per open
+- **Owner:** agent · **Depends:** —
+- **Scope:** booking-dialog.tsx:292 show slots.error.message + Retry (slots.refetch); derive booking-* ids from formId; key BookingForm on an open counter.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-22
+
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
       timeline, and in the dashboard Upcoming card, and its slot disappears
