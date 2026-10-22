@@ -1,11 +1,11 @@
 import type { Activity, Appointment, Calendar, ID, ISODate } from "@/types";
+import { isCalendarDay } from "@/lib/dates";
 import { db } from "@/lib/mock/db";
 import { newId } from "@/lib/mock/ids";
 import {
   freeSlots,
   hasRoomFor,
   intervalOf,
-  isCalendarDay,
   liveBookings,
   zonedDay,
 } from "@/lib/mock/slots";

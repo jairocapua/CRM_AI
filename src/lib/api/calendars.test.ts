@@ -320,16 +320,19 @@ describe.each(ZONES)("availableSlots() with the runtime in $zone", (zone) => {
     expect(await slots(strategy, "2026-10-28")).toEqual(STRATEGY_WEDNESDAY);
   });
 
-  it.each(["2026-10-27T00:00:00.000Z", "2026-02-30", "2026-10-7", "tomorrow"])(
-    "rejects %s as a day with a 422",
-    async (day) => {
-      const { discovery, slots } = await loadWorld(zone);
-      await expect(slots(discovery, day)).rejects.toMatchObject({
-        status: 422,
-        code: "INVALID_DAY",
-      });
-    },
-  );
+  it.each([
+    "2026-10-27T00:00:00.000Z",
+    "2026-02-30",
+    "2026-10-7",
+    "tomorrow",
+    "0099-01-01",
+  ])("rejects %s as a day with a 422", async (day) => {
+    const { discovery, slots } = await loadWorld(zone);
+    await expect(slots(discovery, day)).rejects.toMatchObject({
+      status: 422,
+      code: "INVALID_DAY",
+    });
+  });
 });
 
 describe.each(ZONES)("book() with the runtime in $zone", (zone) => {

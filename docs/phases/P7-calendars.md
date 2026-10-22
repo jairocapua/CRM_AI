@@ -325,10 +325,36 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T12 — Merge duplicate day validators into a shared non-mock module
 - **Owner:** agent · **Depends:** —
+- **Skills:** `tdd`, `vitest`
 - **Scope:** parseDay/isCalendarDay in src/components/modules/calendars/calendar-nav.ts and parseDay in src/lib/mock/slots.ts duplicate each other; move to e.g. src/lib/dates.ts and import from both (seam lint blocks components importing the mock copy).
   - From the P7-T08 review: `isDayInput` in `src/lib/validation/appointment.ts` is a third copy and disagrees with `isCalendarDay` ('0099-01-01' passes the schema, fails `isCalendarDay`). Have `bookingFormSchema` use the shared helper.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] `src/lib/dates.ts` is the one place that decides whether a string is
+        a real "YYYY-MM-DD" day. It exports `CalendarDay`, `DayParts`,
+        `isCalendarDay` and `parseCalendarDay` (which throws a `RangeError`
+        "Not a calendar day: <day>"), and imports nothing from `@/lib/mock`,
+        `@/lib/api` or `@faker-js/faker`.
+  - [ ] No duplicate day validator remains: `calendar-nav.ts`, `slots.ts` and
+        `validation/appointment.ts` no longer define `parseDay`,
+        `isDayInput`, `DAY_PATTERN`, `DAY_INPUT` or `isCalendarDay`; they,
+        `api/calendars.ts` and `booking-dialog.tsx` import the check from
+        `@/lib/dates`.
+  - [ ] `bookingFormSchema` agrees with `isCalendarDay`: '0099-01-01' and
+        '0000-01-01' are rejected with "Pick a day.", and every existing
+        accept and reject case is unchanged.
+  - [ ] The shared rule is pinned: it accepts real days, leap days and years
+        0100-9999; it refuses overflow, malformed strings, instants, padding
+        and whitespace, signed years and years 0000-0099; it answers the same
+        in UTC, Asia/Singapore and America/Los_Angeles; `parseCalendarDay`
+        returns a 1-based month.
+  - [ ] The calendars page, the booking engine and the API keep their
+        behaviour: URL dates fall back as before, invalid days still throw
+        `RangeError` in nav and slot maths, and `availableSlots()` answers
+        422 `INVALID_DAY` for the same inputs, now including '0099-01-01', in
+        both runtime zones.
+  - [ ] No seed or UI change: `SEED_VERSION` stays 4 and no faker call moves;
+        `npm run check` is green and the calendars and booking e2e specs
+        pass.
 - **Refs:** added by `progress.mjs add` on 2026-10-21
 
 ### P7-T13 — Calendars: error state and retry when appointments fail to load
@@ -412,6 +438,13 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** calendars.update(): {timezone: undefined} passes .partial() and erases the stored value; drop undefined keys or validate merged record. Keep zod path off the toast-facing message (separate field).
   - From the P7-T11 review: once undefined keys are dropped, nothing can remove a `maxBookingsPerDay` cap (the schema's minimum is 1, and JSON cannot send `undefined`). Give "no cap" an explicit spelling that `update()` accepts (`null`, or 0 as the engine already reads it) and test that it clears the cap.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T23 — Deal form Expected close uses shared isCalendarDay
+- **Owner:** agent · **Depends:** —
+- **Scope:** validation/opportunity.ts dateInputToIso uses date-fns parse and accepts '0099-01-01'; switch to @/lib/dates isCalendarDay/parseCalendarDay with a red-first test.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

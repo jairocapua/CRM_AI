@@ -48,6 +48,8 @@ describe("bookingFormSchema", () => {
     ["a month that does not exist", "2026-13-01"],
     ["an instant rather than a day", "2026-09-09T00:00:00.000Z"],
     ["a day without zero padding", "2026-9-9"],
+    ["a two-digit year that Date reads as 1999", "0099-01-01"],
+    ["year zero", "0000-01-01"],
   ])("rejects %s with 'Pick a day.'", (_, day) => {
     expect(errorsFor({ ...COMPLETE, day })).toEqual({ day: "Pick a day." });
   });

@@ -127,3 +127,8 @@
 - 2026-10-23 [P7-T11] Inactive calendar: 409 CALENDAR_INACTIVE from both book() and availableSlots() (not an empty list). Unknown contactId in book(): 404 NOT_FOUND. Error order book(): 404 calendar, 422 INVALID_START, 404 contact, 409 inactive, 409 SLOT_UNAVAILABLE; availableSlots(): 404, 422 INVALID_DAY, 409 inactive. Order is documented, not test-pinned.
 - 2026-10-23 [P7-T11] startAt must end in Z or ±HH:mm, hours 00-23 (so 'T24:00:00Z' is rejected), optional seconds and up to 3 fraction digits, on a real calendar day; else 422 INVALID_START.
 - 2026-10-23 [P7-T11] Tests: each rejected-settings row names its field (`at`) and checks the message contains '<at>: '; the 'nothing was written' check is one shared snapshot(world) helper.
+- 2026-10-23 [P7-T12] src/lib/dates.ts uses plain Date.UTC + UTC getters (no TZDate, no argument-less new Date()), so it is zone-independent and immune to the P7-T08 fake-timer/TZDate trap.
+- 2026-10-23 [P7-T12] CalendarDay is type-only re-exported from calendar-nav.ts and slots.ts so downstream importers stay unchanged; isCalendarDay is not re-exported (one import path).
+- 2026-10-23 [P7-T12] calendar-nav.test.ts isCalendarDay block moved to src/lib/dates.test.ts with all cases kept; parseCalendarParams fallback tests unchanged.
+- 2026-10-23 [P7-T12] zod 4 .refine(isCalendarDay, ...) takes the type predicate directly; BookingFormValues.day stays string.
+- 2026-10-23 [P7-T12] No SEED_VERSION bump: slots.ts accepts the same days as before (old TZDate probe already refused 0099); no faker call touched.

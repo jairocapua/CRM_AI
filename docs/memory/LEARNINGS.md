@@ -94,3 +94,6 @@
 - 2026-10-23 [P7-T11] Intl.DateTimeFormat accepts offset zones ('+05:30') and case-insensitive aliases ('us/pacific'); throws RangeError for '' and 'Mars/Olympus'. isTimeZone accepts and stores them as given.
 - 2026-10-23 [P7-T11] calendars.ts is the first src/lib/api module importing src/lib/validation; the seam lint rule allows it since validation imports neither @/lib/mock nor faker.
 - 2026-10-23 [P7-T11] zod 4: schema.extend({...}).partial() works; shape.availability.superRefine adds array rules keeping per-item checks. Parsed output drops unknown keys, so an API saving the raw patch uses safeParse only to validate.
+- 2026-10-23 [P7-T12] date-fns parse(value,'yyyy-MM-dd') rejects year '0000' but accepts '0099' as year 99; only the 0099 row was a real red for the old isDayInput.
+- 2026-10-23 [P7-T12] new TZDate(99,0,1,'UTC'), new Date(99,0,1) and Date.UTC(99,0,1) all read 1999; every Date round-trip check refuses years 0000-0099, so the shared rule documents that range as unsupported.
+- 2026-10-23 [P7-T12] `export type { X } from ...` does not bring X into local scope; a module that uses and re-exports a type also needs its own `import { type X }`.

@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import type { Calendar, ID, ISODate } from "@/types";
 import * as api from "@/lib/api";
 import { ApiError, apiNow, useAction, useResource } from "@/lib/api";
+import { isCalendarDay } from "@/lib/dates";
 import {
   bookingFormSchema,
   type BookingFormValues,
@@ -51,7 +52,6 @@ import { calendarDaysFor, slotsOnLocalDay } from "./booking-slots";
 import { CalendarName } from "./calendar-name";
 import {
   dayStart,
-  isCalendarDay,
   localDay,
   zoneLabel,
   type CalendarDay,

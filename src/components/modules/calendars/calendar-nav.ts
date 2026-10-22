@@ -9,7 +9,10 @@ import {
   startOfWeek,
 } from "date-fns";
 
+import { isCalendarDay, parseCalendarDay, type CalendarDay } from "@/lib/dates";
 import type { ISODate } from "@/types";
+
+export type { CalendarDay } from "@/lib/dates";
 
 /**
  * Where the calendars page is looking: a view and a day, both kept in the URL
@@ -35,9 +38,6 @@ export const VIEW_LABELS: Record<CalendarView, string> = {
   day: "Day",
 };
 
-/** A viewer-local calendar day, "YYYY-MM-DD". */
-export type CalendarDay = string;
-
 export interface CalendarPosition {
   view: CalendarView;
   date: CalendarDay;
@@ -49,37 +49,17 @@ export interface DayRange {
   endExclusive: CalendarDay;
 }
 
-const DAY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const EN_DASH = "–";
 
 /**
- * `day` as local midnight, or null unless it is a real "YYYY-MM-DD" day.
- * Round-trips through the Date so an overflow (2026-02-30 becoming 2 March)
- * or a two-digit year (`new Date(99, 0, 1)` is 1999) is rejected rather than
- * silently moved.
+ * `day` (a viewer-local day) as local midnight. Throws a `RangeError` unless
+ * it is a real "YYYY-MM-DD" day, by the shared rule in `@/lib/dates`.
  */
-function parseDay(day: string): Date | null {
-  const match = DAY_PATTERN.exec(day);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const date = Number(match[3]);
-  const local = new Date(year, month, date);
-  return local.getFullYear() === year &&
-    local.getMonth() === month &&
-    local.getDate() === date
-    ? local
-    : null;
-}
-
 function mustParseDay(day: CalendarDay): Date {
-  const local = parseDay(day);
-  if (!local) throw new RangeError(`Not a calendar day: ${day}`);
-  return local;
-}
-
-export function isCalendarDay(value: string): value is CalendarDay {
-  return parseDay(value) !== null;
+  const { year, month, day: date } = parseCalendarDay(day);
+  // `parseCalendarDay` refuses years 0000-0099, so `new Date` cannot read a
+  // two-digit year here as 1900-1999.
+  return new Date(year, month - 1, date);
 }
 
 export function isCalendarView(value: string | null): value is CalendarView {

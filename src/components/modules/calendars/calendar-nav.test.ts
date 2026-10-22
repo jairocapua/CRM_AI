@@ -4,7 +4,6 @@ import {
   CALENDAR_VIEWS,
   calendarSearch,
   historyMethod,
-  isCalendarDay,
   localDay,
   parseCalendarParams,
   rangeLabel,
@@ -102,22 +101,6 @@ describe("parseCalendarParams", () => {
         TODAY,
       ),
     ).toEqual({ view: "day", date: "2026-01-02" });
-  });
-});
-
-describe("isCalendarDay", () => {
-  it("accepts real YYYY-MM-DD days, leap days included", () => {
-    expect(isCalendarDay("2026-09-08")).toBe(true);
-    expect(isCalendarDay("2028-02-29")).toBe(true);
-    expect(isCalendarDay("2026-12-31")).toBe(true);
-  });
-
-  it("rejects overflowing and malformed days", () => {
-    expect(isCalendarDay("2026-02-29")).toBe(false);
-    expect(isCalendarDay("2026-04-31")).toBe(false);
-    expect(isCalendarDay("2026-9-8")).toBe(false);
-    // `new Date(99, 0, 1)` is 1999: a two-digit year must not alias.
-    expect(isCalendarDay("0099-01-01")).toBe(false);
   });
 });
 

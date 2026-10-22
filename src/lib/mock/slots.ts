@@ -1,6 +1,9 @@
 import { TZDate } from "@date-fns/tz";
 
+import { parseCalendarDay, type CalendarDay } from "@/lib/dates";
 import type { Appointment, AvailabilityRule, Calendar } from "@/types";
+
+export type { CalendarDay } from "@/lib/dates";
 
 /**
  * The booking engine: which start times a calendar offers on a given day.
@@ -28,9 +31,6 @@ import type { Appointment, AvailabilityRule, Calendar } from "@/types";
  * pass "now" in.
  */
 
-/** A calendar date, "YYYY-MM-DD". */
-export type CalendarDay = string;
-
 /** A half-open span of instants, `[start, end)`, in epoch milliseconds. */
 export interface Interval {
   start: number;
@@ -39,48 +39,9 @@ export interface Interval {
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
-const DAY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const TIME_PATTERN = /^(\d{2}):(\d{2})$/;
 
 const toIso = (ms: number) => new Date(ms).toISOString();
-
-interface DayParts {
-  year: number;
-  /** 1-12. */
-  month: number;
-  day: number;
-}
-
-/**
- * `day` split into numbers, or null unless it is a real "YYYY-MM-DD" date.
- * Round-trips through a date so that an overflow such as 2026-02-30 is
- * rejected rather than quietly read as 2 March.
- */
-function parseDay(day: string): DayParts | null {
-  const match = DAY_PATTERN.exec(day);
-  if (!match) return null;
-  const [year, month, date] = [match[1], match[2], match[3]].map(Number) as [
-    number,
-    number,
-    number,
-  ];
-  const probe = new TZDate(year, month - 1, date, "UTC");
-  return probe.getFullYear() === year &&
-    probe.getMonth() === month - 1 &&
-    probe.getDate() === date
-    ? { year, month, day: date }
-    : null;
-}
-
-export function isCalendarDay(day: string): boolean {
-  return parseDay(day) !== null;
-}
-
-function mustParseDay(day: CalendarDay): DayParts {
-  const parts = parseDay(day);
-  if (!parts) throw new RangeError(`Not a calendar day: ${day}`);
-  return parts;
-}
 
 const pad = (n: number, width = 2) => String(n).padStart(width, "0");
 
@@ -95,13 +56,13 @@ export function zonedDay(ms: number, timeZone: string): CalendarDay {
 
 /** `day` moved by `days` calendar days. Zone-free date arithmetic. */
 export function addDays(day: CalendarDay, days: number): CalendarDay {
-  const { year, month, day: date } = mustParseDay(day);
+  const { year, month, day: date } = parseCalendarDay(day);
   return formatDay(new TZDate(year, month - 1, date + days, "UTC"));
 }
 
 /** 0 = Sunday. The weekday of a calendar date does not depend on a zone. */
 export function weekdayOf(day: CalendarDay): AvailabilityRule["weekday"] {
-  const { year, month, day: date } = mustParseDay(day);
+  const { year, month, day: date } = parseCalendarDay(day);
   return new TZDate(
     year,
     month - 1,
@@ -116,7 +77,7 @@ export function zonedTime(
   time: string,
   timeZone: string,
 ): number {
-  const { year, month, day: date } = mustParseDay(day);
+  const { year, month, day: date } = parseCalendarDay(day);
   const match = TIME_PATTERN.exec(time);
   if (!match) throw new RangeError(`Not a wall-clock time: ${time}`);
   // Built from components: `new TZDate("YYYY-MM-DD", zone)` would parse the
@@ -271,7 +232,7 @@ export function liveBookings(
  * `isBlocked`), minus the minimum scheduling notice, and nothing past
  * `dateRangeDays` calendar days after today (both read in the calendar's zone;
  * the last day is included). `day` must be a valid "YYYY-MM-DD"; check it with
- * `isCalendarDay` first.
+ * `isCalendarDay` from `@/lib/dates` first.
  */
 export function freeSlots(input: {
   calendar: Calendar;
