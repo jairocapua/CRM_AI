@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 13/47 tasks done (28%) · **Current phase:** P7 · **Next agent task:** P7-T13 · **Awaiting review:** P7-T12 · **Blocked:** none · **Waiting on you:** P7-H3
+**Overall:** 14/47 tasks done (30%) · **Current phase:** P7 · **Next agent task:** P7-T13 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** P7-H3
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 13/26 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 14/26 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -30,7 +30,7 @@ Status: active · Progress: 13/26 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T10 | Harness polish: browser install and smoke content checks | agent | done | — | cc010f3 | 2026-10-22 | e2e:install script; smoke tests assert each route's h1 (proven red on blank page); CLAUDE.md lists e2e commands |
 | P7-T11 | Guard bookings: inactive calendars, unknown contacts, bad windows | agent | done | — | 7563e09 | 2026-10-23 | API guards: inactive calendar 409, unknown contact 404, strict startAt 422, update() validates settings 422; slot grid dedupes |
 | P7-H2 | Decide symmetric buffer semantics | human | done | — |  | 2026-10-21 | Decided in review: symmetric buffers (order-independent); fixed in P7-T03 rework |
-| P7-T12 | Merge duplicate day validators into a shared non-mock module | agent | review | — |  | 2026-10-23 | Shared src/lib/dates.ts (isCalendarDay/parseCalendarDay); nav, slots, API, booking form use it; form now refuses 0099 |
+| P7-T12 | Merge duplicate day validators into a shared non-mock module | agent | done | — | 476ce90 | 2026-10-23 | One shared YYYY-MM-DD rule in src/lib/dates.ts; booking form, nav, slots and API agree; check + e2e green |
 | P7-T13 | Calendars: error state and retry when appointments fail to load | agent | todo | — |  |  |  |
 | P7-T14 | Larger tap target for month chips on mobile | agent | todo | — |  |  |  |
 | P7-T15 | Show end date when an appointment crosses midnight | agent | todo | — |  |  |  |

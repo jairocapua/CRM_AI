@@ -5,7 +5,7 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T12 in review.
+- **Status:** P7-T07–T12 approved (Autopilot review, 2026-10-22/23); P7-T13 is next. Session handed off to a fresh one after 6 approvals, per CLAUDE.md.
 
 ## Last change
 - P7-T12: new zone-free `src/lib/dates.ts` (CalendarDay, DayParts, isCalendarDay, parseCalendarDay) is the one YYYY-MM-DD rule; years 0000-0099 refused.
@@ -14,10 +14,9 @@
 - New task P7-T23: deal form Expected close to use isCalendarDay.
 
 ## Next up
-- **Agent:** P7-T13 Calendars: error state and retry when appointments fail to load (once P7-T12 is approved).
+- **Agent:** P7-T13 Calendars: error state and retry when appointments fail to load.
 
 ## Waiting on you
-- Review of P7-T12 (and earlier tasks if not yet approved).
 - P7-H3: decide whether past appointments can be cancelled or re-statused.
 
 ## Open suggestions (non-blocking review notes)
