@@ -284,10 +284,36 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T11 — Guard bookings: inactive calendars, unknown contacts, bad windows
 - **Owner:** agent · **Depends:** —
+- **Skills:** `tdd`, `vitest`
 - **Scope:** book()/availableSlots() reject isActive:false calendars and missing contactIds; reject startAt without Z/offset (422 INVALID_START); map invalid HH:mm or IANA zone RangeErrors to 422 ApiError (or validate in calendars.update); dedupe slotGrid output for overlapping windows; add a dateRangeDays test at now=2026-10-27T03:00Z proving 'today' is read in the calendar zone.
   - From the P7-T09 review: the availability editor's zod schema is the only guard on `calendars.update` today. The API must reject, on its own, malformed "HH:mm" windows, reversed or overlapping windows on an enabled day, and negative or fractional numbers (422), so a `fetch()` backend keeps the same rules.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] `book()` and `availableSlots()` reject an inactive calendar with 409
+        `CALENDAR_INACTIVE` and write nothing; once the calendar is made
+        active the same start is offered and booked.
+  - [ ] `book()` with a `contactId` that does not exist rejects with 404
+        `NOT_FOUND` and writes no appointment or activity.
+  - [ ] `book()` rejects a `startAt` without `Z` or a `±HH:mm` offset
+        (zone-less date-time, date only, impossible date or hour, free text)
+        with 422 `INVALID_START` in both runtime zones and writes nothing;
+        offset and seconds-less spellings of a slot are still accepted and
+        stored as UTC ISO.
+  - [ ] `calendars.update()` rejects, on its own, with 422 `INVALID_CALENDAR`
+        and leaves the calendar unchanged: malformed "HH:mm", reversed,
+        zero-length, overlapping or nested windows on an enabled day;
+        duplicate or out-of-range weekday rules; zero, negative or fractional
+        slot duration/interval, buffers, notice, date range and
+        `maxBookingsPerDay`; an unknown time zone.
+  - [ ] Valid settings still save: touching windows, the existing test
+        patches, and every seeded calendar's own settings.
+  - [ ] `slotGrid()` (and so `freeSlots()`/`availableSlots()`) lists each
+        start once, in order, when windows overlap or nest.
+  - [ ] At demo now 2026-10-27T03:00Z (20:00 PDT on Oct 26), Discovery offers
+        slots on 2026-11-25 and none on 2026-11-26 in both runtime zones,
+        proving `dateRangeDays` reads "today" in the calendar's zone.
+  - [ ] No seed or UI behaviour change: `SEED_VERSION` stays 4; `npm run
+        check` and `npm run e2e` are green; the availability editor's doc
+        comment no longer claims the form is the only guard.
 - **Refs:** added by `progress.mjs add` on 2026-10-21
 
 ### P7-H2 — Decide symmetric buffer semantics
@@ -381,6 +407,13 @@ hours land around midnight–08:00 local; that is expected.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-22
+
+### P7-T22 — Calendar update: reject explicit undefined keys and use a plain-language 422 message
+- **Owner:** agent · **Depends:** —
+- **Scope:** calendars.update(): {timezone: undefined} passes .partial() and erases the stored value; drop undefined keys or validate merged record. Keep zod path off the toast-facing message (separate field).
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact

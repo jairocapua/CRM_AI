@@ -9,6 +9,7 @@ import {
   liveBookings,
   zonedDay,
 } from "@/lib/mock/slots";
+import { calendarSettingsSchema } from "@/lib/validation/availability";
 import { invalidate } from "./cache";
 import { ApiError, apiNowMs, notFound, nowIso, simulate } from "./http";
 
@@ -29,12 +30,31 @@ export async function get(id: ID): Promise<Calendar> {
   );
 }
 
+/**
+ * Applies `patch` to a calendar. Its booking settings must pass
+ * `calendarSettingsSchema`, the availability editor's own rules ("HH:mm"
+ * windows that end after they start and do not overlap, on an enabled day;
+ * one rule per weekday; whole numbers in range; a known time zone), or the
+ * call is a 422 `INVALID_CALENDAR`, its message naming the first bad field,
+ * and nothing is saved. An unknown id is a 404.
+ */
 export async function update(
   id: ID,
   patch: Partial<Calendar>,
 ): Promise<Calendar> {
   const calendar = await simulate(() => {
     const prev = db.getState().calendars[id] ?? notFound("Calendar", id);
+    const checked = calendarSettingsSchema.safeParse(patch);
+    if (!checked.success) {
+      const [issue] = checked.error.issues;
+      throw new ApiError(
+        issue
+          ? `${issue.path.join(".")}: ${issue.message}`
+          : "Those calendar settings are not valid.",
+        422,
+        "INVALID_CALENDAR",
+      );
+    }
     const next: Calendar = { ...prev, ...patch, id, updatedAt: nowIso() };
     db.setState((s) => ({ calendars: { ...s.calendars, [id]: next } }));
     return next;
@@ -132,11 +152,50 @@ export type AppointmentDraft = Pick<
   >;
 
 /**
+ * An ISO date-time that names one instant on its own: "YYYY-MM-DD", a 24-hour
+ * time (seconds and up to three fraction digits optional), and `Z` or a
+ * `±HH:mm` offset. Whether the date is real is checked separately.
+ */
+const INSTANT =
+  /^(\d{4}-\d{2}-\d{2})T([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,3})?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
+
+/**
+ * `value` as epoch milliseconds, or null unless it matches `INSTANT`. Without
+ * a zone `Date.parse` reads a date-time in the runtime's own zone, so the
+ * same string would be a different instant on every machine; it also reads
+ * 2026-02-30 as 2 March.
+ */
+function parseStart(value: string): number | null {
+  const match = INSTANT.exec(value);
+  if (!match || !isCalendarDay(match[1]!)) return null;
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? null : ms;
+}
+
+/** A 409 unless `calendar` is active: an inactive one neither offers nor books. */
+function assertTakesBookings(calendar: Calendar): void {
+  if (!calendar.isActive) {
+    throw new ApiError(
+      "This calendar is not taking bookings.",
+      409,
+      "CALENDAR_INACTIVE",
+    );
+  }
+}
+
+/**
  * Books one of the calendar's free slots. `startAt` must be exactly one of
  * the instants `availableSlots()` offers for that day (any ISO spelling of
- * it); anything else is a 409. With the matching check in `setStatus()`, a
+ * it, with `Z` or an offset). With the matching check in `setStatus()`, a
  * double booking cannot happen through the API, and neither can a booking
  * inside another's buffers, in whichever order the two were made.
+ *
+ * Errors, checked in this order, and nothing is written on any of them:
+ * - 404 `NOT_FOUND`: no such calendar;
+ * - 422 `INVALID_START`: `startAt` is not an instant (see `parseStart`);
+ * - 404 `NOT_FOUND`: no such contact;
+ * - 409 `CALENDAR_INACTIVE`: the calendar is not taking bookings;
+ * - 409 `SLOT_UNAVAILABLE`: `startAt` is not an open slot.
  */
 export async function book(draft: AppointmentDraft): Promise<Appointment> {
   const appointment = await simulate(
@@ -146,15 +205,20 @@ export async function book(draft: AppointmentDraft): Promise<Appointment> {
         state.calendars[draft.calendarId] ??
         notFound("Calendar", draft.calendarId);
 
-      const startMs = Date.parse(draft.startAt);
-      if (Number.isNaN(startMs)) {
+      const startMs = parseStart(draft.startAt);
+      if (startMs === null) {
         throw new ApiError(
-          `"${draft.startAt}" is not a date and time.`,
+          `"${draft.startAt}" is not a date and time with a time zone (end it with Z or an offset such as -07:00).`,
           422,
           "INVALID_START",
         );
       }
       const startAt = new Date(startMs).toISOString();
+
+      const contact =
+        state.contacts[draft.contactId] ?? notFound("Contact", draft.contactId);
+
+      assertTakesBookings(calendar);
 
       // The check and the write below run in one synchronous block, so two
       // bookings racing for the same slot cannot both pass it.
@@ -172,7 +236,6 @@ export async function book(draft: AppointmentDraft): Promise<Appointment> {
         );
       }
 
-      const contact = state.contacts[draft.contactId];
       const at = nowIso();
 
       // Field by field, never a spread of the draft: a caller must not be able
@@ -187,7 +250,7 @@ export async function book(draft: AppointmentDraft): Promise<Appointment> {
           state.currentUserId,
         title:
           draft.title ??
-          `${calendar.name} - ${contact?.firstName ?? ""} ${contact?.lastName ?? ""}`.trim(),
+          `${calendar.name} - ${contact.firstName} ${contact.lastName}`.trim(),
         ...(draft.notes ? { notes: draft.notes } : {}),
         startAt,
         endAt: new Date(
@@ -295,8 +358,12 @@ export async function cancel(id: ID): Promise<Appointment> {
  *
  * `day` is a calendar date, "YYYY-MM-DD", in the calendar's own timezone, not
  * the viewer's: from Asia one local day spans two Los Angeles dates, so the
- * caller maps the day it shows onto the calendar's dates. Anything that is not
- * a real "YYYY-MM-DD" date is rejected with a 422.
+ * caller maps the day it shows onto the calendar's dates.
+ *
+ * Errors, checked in this order: 404 `NOT_FOUND` for no such calendar; 422
+ * `INVALID_DAY` when `day` is not a real "YYYY-MM-DD" date; 409
+ * `CALENDAR_INACTIVE` when the calendar is not taking bookings, which
+ * `book()` refuses too, so the two still agree.
  */
 export async function availableSlots(
   calendarId: ID,
@@ -314,6 +381,7 @@ export async function availableSlots(
           "INVALID_DAY",
         );
       }
+      assertTakesBookings(calendar);
 
       return freeSlots({
         calendar,

@@ -79,9 +79,9 @@ const TIME_INPUT_CLASSES =
  * - A day switched off is saved with no windows, and its windows are not
  *   checked, so a hidden error can never block Save. Switching a day on with
  *   no windows starts it at 09:00–17:00.
- * - The form (`availabilitySchema`) is the only guard on these values for
- *   now: `calendars.update` takes its patch as given until P7-T11 adds the
- *   API's own checks.
+ * - `calendars.update` checks these same rules itself (a 422
+ *   `INVALID_CALENDAR`), so the form's checks are there to put each message
+ *   beside its field before anything is sent.
  *
  * After a failed save, an edit to a day re-checks that whole day, so an
  * overlap error moves or clears as the windows change rather than waiting

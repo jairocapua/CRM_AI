@@ -139,7 +139,10 @@ export function dayInterval(day: CalendarDay, timeZone: string): Interval {
   };
 }
 
-/** Every slot the calendar's hours allow on `day`, ignoring bookings. */
+/**
+ * Every slot the calendar's hours allow on `day`, ignoring bookings, in start
+ * order. Windows that overlap or nest offer each start once.
+ */
 export function slotGrid(calendar: Calendar, day: CalendarDay): Interval[] {
   const weekday = weekdayOf(day);
   const rule = calendar.availability.find((r) => r.weekday === weekday);
@@ -158,7 +161,12 @@ export function slotGrid(calendar: Calendar, day: CalendarDay): Interval[] {
       grid.push({ start, end: start + duration });
     }
   }
-  return grid.sort((a, b) => a.start - b.start);
+  // Every slot has the same length, so an equal start is an equal slot.
+  return grid
+    .sort((a, b) => a.start - b.start)
+    .filter(
+      (slot, i, sorted) => i === 0 || slot.start !== sorted[i - 1]!.start,
+    );
 }
 
 /**

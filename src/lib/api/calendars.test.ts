@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { Calendar } from "@/types";
+import type { AvailabilityRule, Calendar } from "@/types";
 import {
   seededWorld,
   setDemoNow,
@@ -131,10 +131,30 @@ async function loadWorld(zone: Zone, now = DEMO_NOW) {
     contactId,
     discovery: bySlug("discovery"),
     strategy: bySlug("strategy"),
+    /** Monthly Review: seeded inactive (`isActive: false`). */
+    review: bySlug("review"),
     slots: (calendar: Calendar, day: string) =>
       settle(api.availableSlots(calendar.id, day)),
     book: (calendar: Calendar, startAt: string) =>
       settle(api.book({ calendarId: calendar.id, contactId, startAt })),
+  };
+}
+
+type World = Awaited<ReturnType<typeof loadWorld>>;
+
+/**
+ * What a rejected booking must leave as it was: every appointment from
+ * Oct 20 to Dec 1, and the booking contact's timeline.
+ */
+async function snapshot({ api, activities, contactId }: World) {
+  return {
+    appointments: await settle(
+      api.listAppointments({
+        from: "2026-10-20T00:00:00.000Z",
+        to: "2026-12-01T00:00:00.000Z",
+      }),
+    ),
+    timeline: await settle(activities.listForContact(contactId)),
   };
 }
 
@@ -249,6 +269,26 @@ describe.each(ZONES)("availableSlots() with the runtime in $zone", (zone) => {
     const { discovery, slots } = await loadWorld(zone);
     expect(await slots(discovery, "2026-11-25")).toEqual(DISCOVERY_LAST_DAY);
     expect(await slots(discovery, "2026-11-26")).toEqual([]);
+  });
+
+  it("reads 'today' in the calendar's zone for dateRangeDays", async () => {
+    // 03:00Z on Tue 10-27 is still Mon 10-26, 20:00, in Los Angeles, so the
+    // 30-day range still ends on Wed 11-25. Counted from the UTC date (or
+    // Singapore's, 11:00 on 10-27) it would run to Thu 11-26, an open day.
+    const { discovery, slots } = await loadWorld(
+      zone,
+      "2026-10-27T03:00:00.000Z",
+    );
+    expect(await slots(discovery, "2026-11-25")).toEqual(DISCOVERY_LAST_DAY);
+    expect(await slots(discovery, "2026-11-26")).toEqual([]);
+  });
+
+  it("rejects an inactive calendar with a 409", async () => {
+    const { review, slots } = await loadWorld(zone);
+    await expect(slots(review, "2026-10-28")).rejects.toMatchObject({
+      status: 409,
+      code: "CALENDAR_INACTIVE",
+    });
   });
 
   it("applies the minimum scheduling notice", async () => {
@@ -518,12 +558,15 @@ describe.each(ZONES)("book() with the runtime in $zone", (zone) => {
     },
   );
 
-  it("stores any spelling of a slot's instant as UTC ISO", async () => {
-    const { discovery, book } = await loadWorld(zone);
-    const booked = await book(discovery, "2026-10-27T10:00:00-07:00");
-    expect(booked.startAt).toBe("2026-10-27T17:00:00.000Z");
-    expect(booked.endAt).toBe("2026-10-27T17:30:00.000Z");
-  });
+  it.each(["2026-10-27T10:00:00-07:00", "2026-10-27T17:00Z"])(
+    "stores any spelling of a slot's instant as UTC ISO: %s",
+    async (spelling) => {
+      const { discovery, book } = await loadWorld(zone);
+      const booked = await book(discovery, spelling);
+      expect(booked.startAt).toBe("2026-10-27T17:00:00.000Z");
+      expect(booked.endAt).toBe("2026-10-27T17:30:00.000Z");
+    },
+  );
 
   const REJECTED: {
     name: string;
@@ -560,34 +603,84 @@ describe.each(ZONES)("book() with the runtime in $zone", (zone) => {
   it.each(REJECTED)(
     "rejects $name with a 409 and writes nothing",
     async (c) => {
-      const { api, activities, contactId, discovery, book } =
-        await loadWorld(zone);
+      const world = await loadWorld(zone);
+      const { discovery, book } = world;
       for (const startAt of c.before ?? []) await book(discovery, startAt);
-
-      const snapshot = async () => ({
-        appointments: await settle(
-          api.listAppointments({
-            from: "2026-10-20T00:00:00.000Z",
-            to: "2026-12-01T00:00:00.000Z",
-          }),
-        ),
-        timeline: await settle(activities.listForContact(contactId)),
-      });
-      const before = await snapshot();
+      const before = await snapshot(world);
 
       await expect(book(discovery, c.startAt)).rejects.toMatchObject({
         status: 409,
         code: "SLOT_UNAVAILABLE",
       });
-      expect(await snapshot()).toEqual(before);
+      expect(await snapshot(world)).toEqual(before);
     },
   );
 
-  it("rejects a start that is not an instant with a 422", async () => {
-    const { discovery, book } = await loadWorld(zone);
-    await expect(book(discovery, "next tuesday")).rejects.toMatchObject({
-      status: 422,
-      code: "INVALID_START",
+  /**
+   * A start must name one instant on its own: an ISO date-time ending in `Z`
+   * or an offset. Read without one, "17:00" would mean a different instant in
+   * every runtime zone (it is 17:00Z, an open slot, in UTC).
+   */
+  it.each([
+    { name: "free text", startAt: "next tuesday" },
+    { name: "a time with no zone", startAt: "2026-10-27T17:00:00" },
+    { name: "a date with no time", startAt: "2026-10-27" },
+    // `Date.parse` reads this one as 2 March.
+    { name: "an impossible date", startAt: "2026-02-30T17:00:00.000Z" },
+    { name: "an impossible hour", startAt: "2026-10-27T25:00:00Z" },
+  ])(
+    "rejects $name as a start with a 422 and writes nothing",
+    async ({ startAt }) => {
+      const world = await loadWorld(zone);
+      const before = await snapshot(world);
+
+      await expect(world.book(world.discovery, startAt)).rejects.toMatchObject({
+        status: 422,
+        code: "INVALID_START",
+      });
+      expect(await snapshot(world)).toEqual(before);
+    },
+  );
+
+  it("rejects an unknown contact with a 404 and writes nothing", async () => {
+    const world = await loadWorld(zone);
+    const { api, activities, discovery } = world;
+    const before = await snapshot(world);
+
+    await expect(
+      settle(
+        api.book({
+          calendarId: discovery.id,
+          contactId: "contact_missing",
+          startAt: "2026-10-27T17:00:00.000Z",
+        }),
+      ),
+    ).rejects.toMatchObject({ status: 404, code: "NOT_FOUND" });
+    expect(await snapshot(world)).toEqual(before);
+    expect(await settle(activities.listForContact("contact_missing"))).toEqual(
+      [],
+    );
+  });
+
+  it("rejects an inactive calendar with a 409 and writes nothing, until it is made active", async () => {
+    const world = await loadWorld(zone);
+    const { api, review, slots, book } = world;
+    // Wed 09:00 PDT, past Monthly Review's 48 hours of notice from DEMO_NOW.
+    const startAt = "2026-10-28T16:00:00.000Z";
+    const before = await snapshot(world);
+
+    await expect(book(review, startAt)).rejects.toMatchObject({
+      status: 409,
+      code: "CALENDAR_INACTIVE",
+    });
+    expect(await snapshot(world)).toEqual(before);
+
+    // Positive control: being inactive is all that stood in the way.
+    await settle(api.update(review.id, { isActive: true }));
+    expect(await slots(review, "2026-10-28")).toContain(startAt);
+    await expect(book(review, startAt)).resolves.toMatchObject({
+      calendarId: review.id,
+      startAt,
     });
   });
 
@@ -620,6 +713,190 @@ describe.each(ZONES)("book() with the runtime in $zone", (zone) => {
       }),
     );
     expect(rows.map((r) => r.startAt)).toEqual(["2026-10-27T17:00:00.000Z"]);
+  });
+});
+
+/**
+ * `update()` enforces the availability editor's rules itself, so a caller
+ * that skips the form (a `fetch()` client, a script) cannot save settings the
+ * slot engine would misread or throw on.
+ */
+describe("update() checks the settings it is given", () => {
+  /** A patch that opens Tuesday (weekday 2) with exactly these windows. */
+  const tuesday =
+    (...windows: [string, string][]) =>
+    (calendar: Calendar): Partial<Calendar> => ({
+      availability: calendar.availability.map((rule) =>
+        rule.weekday === 2
+          ? {
+              ...rule,
+              enabled: true,
+              windows: windows.map(([start, end]) => ({ start, end })),
+            }
+          : rule,
+      ),
+    });
+
+  /**
+   * Each patch breaks one rule, built on Discovery's own (valid) settings, so
+   * `at` (where the API says the problem is) proves which rule caught it.
+   * Discovery has one rule per weekday, so Tuesday's is availability.2 and an
+   * extra rule is availability.7.
+   */
+  const BAD_PATCHES: {
+    name: string;
+    patch: (calendar: Calendar) => Partial<Calendar>;
+    at: string;
+  }[] = [
+    {
+      name: "a time that is not HH:mm",
+      patch: tuesday(["9:00", "17:00"]),
+      at: "availability.2.windows.0.start",
+    },
+    {
+      name: "an hour past 23",
+      patch: tuesday(["09:00", "24:00"]),
+      at: "availability.2.windows.0.end",
+    },
+    {
+      name: "a reversed window",
+      patch: tuesday(["17:00", "09:00"]),
+      at: "availability.2.windows.0.end",
+    },
+    {
+      name: "a zero-length window",
+      patch: tuesday(["09:00", "09:00"]),
+      at: "availability.2.windows.0.end",
+    },
+    {
+      name: "overlapping windows",
+      patch: tuesday(["09:00", "12:00"], ["11:00", "14:00"]),
+      at: "availability.2.windows.1.start",
+    },
+    {
+      name: "a window nested in another",
+      patch: tuesday(["09:00", "17:00"], ["10:00", "11:00"]),
+      at: "availability.2.windows.1.start",
+    },
+    {
+      name: "two rules for one weekday",
+      patch: (c) => ({
+        availability: [
+          ...c.availability,
+          { weekday: 2, enabled: false, windows: [] },
+        ],
+      }),
+      at: "availability.7.weekday",
+    },
+    {
+      name: "a weekday past Saturday",
+      patch: (c) => ({
+        availability: [
+          ...c.availability,
+          {
+            weekday: 7 as AvailabilityRule["weekday"],
+            enabled: false,
+            windows: [],
+          },
+        ],
+      }),
+      at: "availability.7.weekday",
+    },
+    {
+      name: "a zero slot length",
+      patch: () => ({ slotDurationMin: 0 }),
+      at: "slotDurationMin",
+    },
+    {
+      name: "a negative slot length",
+      patch: () => ({ slotDurationMin: -30 }),
+      at: "slotDurationMin",
+    },
+    {
+      name: "a fractional slot interval",
+      patch: () => ({ slotIntervalMin: 7.5 }),
+      at: "slotIntervalMin",
+    },
+    {
+      name: "a negative buffer before",
+      patch: () => ({ bufferBeforeMin: -5 }),
+      at: "bufferBeforeMin",
+    },
+    {
+      name: "a fractional buffer after",
+      patch: () => ({ bufferAfterMin: 2.5 }),
+      at: "bufferAfterMin",
+    },
+    {
+      name: "a negative notice",
+      patch: () => ({ minSchedulingNoticeHours: -1 }),
+      at: "minSchedulingNoticeHours",
+    },
+    {
+      name: "a fractional date range",
+      patch: () => ({ dateRangeDays: 1.5 }),
+      at: "dateRangeDays",
+    },
+    {
+      name: "a daily cap of zero",
+      patch: () => ({ maxBookingsPerDay: 0 }),
+      at: "maxBookingsPerDay",
+    },
+    {
+      name: "a fractional daily cap",
+      patch: () => ({ maxBookingsPerDay: 2.5 }),
+      at: "maxBookingsPerDay",
+    },
+    {
+      name: "an unknown time zone",
+      patch: () => ({ timezone: "Mars/Olympus" }),
+      at: "timezone",
+    },
+    {
+      name: "an empty time zone",
+      patch: () => ({ timezone: "" }),
+      at: "timezone",
+    },
+  ];
+
+  it.each(BAD_PATCHES)(
+    "rejects $name with a 422 and leaves the calendar unchanged",
+    async ({ patch, at }) => {
+      const { api, discovery } = await loadWorld(ZONES[0]!);
+      const before = await settle(api.get(discovery.id));
+
+      await expect(
+        settle(api.update(discovery.id, patch(discovery))),
+      ).rejects.toMatchObject({
+        status: 422,
+        code: "INVALID_CALENDAR",
+        message: expect.stringContaining(`${at}: `),
+      });
+      expect(await settle(api.get(discovery.id))).toEqual(before);
+    },
+  );
+
+  it("saves touching windows", async () => {
+    // The slot engine reads windows half-open, so 12:00 belongs to the second.
+    const { api, discovery, slots } = await loadWorld(ZONES[0]!);
+    await settle(
+      api.update(
+        discovery.id,
+        tuesday(["09:00", "12:00"], ["12:00", "17:00"])(discovery),
+      ),
+    );
+    expect(await slots(discovery, "2026-10-27")).toEqual(DISCOVERY_TUESDAY);
+  });
+
+  it("re-saves every seeded calendar's own settings", async () => {
+    // Every field at once, as a client that round-trips the whole record
+    // would send it: the fields the rules do not cover pass through too.
+    const { api } = await loadWorld(ZONES[0]!);
+    for (const calendar of await settle(api.list())) {
+      await expect(
+        settle(api.update(calendar.id, calendar)),
+      ).resolves.toMatchObject({ ...calendar, updatedAt: expect.any(String) });
+    }
   });
 });
 

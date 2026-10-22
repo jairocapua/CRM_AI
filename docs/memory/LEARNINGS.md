@@ -90,3 +90,7 @@
 - 2026-10-22 [P7-T10] First Chromium launch from a fresh cache with 8 workers pushed calendars-booking flows (spec :152, ~30 s normally) past the 30 s default timeout.
 - 2026-10-22 [P7-T10] Git Bash passes PLAYWRIGHT_BROWSERS_PATH=C:/... to Node fine; set it on each command since Bash calls don't keep env.
 - 2026-10-22 [P7-T10] `playwright install chromium` on Windows downloads chromium-*, chromium_headless_shell-*, ffmpeg-* and winldd-*.
+- 2026-10-23 [P7-T11] V8 Date.parse is lenient: '2026-02-30T..Z' rolls to Mar 2, 'T24:00:00Z' is next midnight, zone-less date-time is local, date-only is UTC midnight. Never validate an instant with Date.parse alone.
+- 2026-10-23 [P7-T11] Intl.DateTimeFormat accepts offset zones ('+05:30') and case-insensitive aliases ('us/pacific'); throws RangeError for '' and 'Mars/Olympus'. isTimeZone accepts and stores them as given.
+- 2026-10-23 [P7-T11] calendars.ts is the first src/lib/api module importing src/lib/validation; the seam lint rule allows it since validation imports neither @/lib/mock nor faker.
+- 2026-10-23 [P7-T11] zod 4: schema.extend({...}).partial() works; shape.availability.superRefine adds array rules keeping per-item checks. Parsed output drops unknown keys, so an API saving the raw patch uses safeParse only to validate.

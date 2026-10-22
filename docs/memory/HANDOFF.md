@@ -5,27 +5,27 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T10 in review.
+- **Status:** P7-T11 in review.
 
 ## Last change
-- P7-T10: `npm run e2e:install` (playwright install chromium); verified on an empty browser cache, 49/49 e2e.
-- Smoke spec asserts each route's own h1 inside `<main>`; a blank-render mutant failed all 8 tests.
-- CLAUDE.md Commands lists e2e commands; e2e is outside `check` and must not run alongside it (shared `.next`).
-- New task P7-T21: raise timeout on long calendars-booking e2e flows (one flaky timeout seen).
+- P7-T11: `book()`/`availableSlots()` reject inactive calendars (409 CALENDAR_INACTIVE); `book()` rejects unknown contacts (404) and zone-less/impossible starts (422 INVALID_START).
+- `calendars.update()` validates patches with new `calendarSettingsSchema` (422 INVALID_CALENDAR, nothing saved); `slotGrid()` dedupes overlapping windows.
+- 34 new tests, written red first; mutation proofs for every new rule. No seed/UI change (SEED_VERSION 4); check + e2e (49) green.
+- New task P7-T22: update() undefined-key erase + plain-language 422 message.
 
 ## Next up
-- **Agent:** P7-T11 Guard bookings: inactive calendars, unknown contacts, bad windows (once P7-T10 is approved).
+- **Agent:** P7-T12 Merge duplicate day validators into a shared non-mock module (once P7-T11 is approved).
 
 ## Waiting on you
-- Review of P7-T10 (run `npm run e2e:install` then `npm run e2e`).
-- P7-H3: decide whether past appointments can be cancelled or re-statused.
+- Review of P7-T11 (and P7-T10 if not yet approved).
+- P7-H3: decide whether past appointments can be cancelled or re-statused (also: should Undo/restore work on a calendar switched off after booking?).
 
 ## Open suggestions (non-blocking review notes)
-- Smoke: per-route content landmark (table, board columns) beyond the PageHeader h1.
-- smoke.spec.ts:35 hardcodes "Dashboard"; use `findNavItem("/dashboard")!.title`.
-- Comment at inbox-list.tsx:118 h1 and PageHeader noting the smoke spec depends on the title.
-- Linux CI `--with-deps` note: now in docs/BACKLOG.md (CI job row).
-- Earlier: time-grid.test literal pins; FieldGroup / isSubmitting cosmetics; pre-existing lint warnings.
+- `maxBookingsPerDay` min 1: a fetch() client cannot clear a cap; consider null/0 = no cap.
+- `setStatus()` can restore onto an inactive calendar; details dialog SlotAvailability would show "Could not check..." on 409. Unreachable today; handle in a future deactivate feature.
+- Timezone aliases/offsets stored as given; canonicalise via resolvedOptions().timeZone if needed.
+- 'impossible hour' test row passes without the fix (not a regression guard). Move `isTimeZone` into P7-T12's shared module.
+- Earlier: smoke per-route landmarks; smoke.spec.ts:35 hardcoded "Dashboard"; time-grid literal pins; lint warnings.
 
 ## Blockers
 - None.

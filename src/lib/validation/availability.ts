@@ -140,6 +140,51 @@ export const availabilitySchema = z.object({
 
 export type AvailabilityFormValues = z.infer<typeof availabilitySchema>;
 
+/** Whether `zone` is a time zone this runtime knows, such as an IANA name. */
+export function isTimeZone(zone: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: zone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * What `calendars.update` accepts: the editor's rules, every key optional,
+ * plus the settings the editor does not show (time zone and daily cap) and
+ * at most one rule per weekday. Keys it does not name (name, colour,
+ * `isActive` ...) pass through unchecked.
+ *
+ * As in the editor, a disabled day's windows are not checked. That is no gap:
+ * `availability` is replaced whole, so re-enabling a day means sending the
+ * array again, and its windows are checked then.
+ */
+export const calendarSettingsSchema = availabilitySchema
+  .extend({
+    availability: availabilitySchema.shape.availability.superRefine(
+      (rules, ctx) => {
+        const seen = new Set<number>();
+        rules.forEach(({ weekday }, index) => {
+          if (seen.has(weekday)) {
+            ctx.addIssue({
+              code: "custom",
+              path: [index, "weekday"],
+              message: "Only one rule per weekday.",
+            });
+          }
+          seen.add(weekday);
+        });
+      },
+    ),
+    timezone: z.string().refine(isTimeZone, "Not a known time zone."),
+    maxBookingsPerDay: wholeNumber(
+      [1, "Must be at least 1."],
+      [1440, "Can't be more than 1,440."],
+    ),
+  })
+  .partial();
+
 /**
  * A calendar's settings as the editor loads them: always seven rules, one per
  * weekday from Sunday (index = weekday), so the form can address a day by its
