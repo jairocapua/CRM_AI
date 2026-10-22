@@ -34,6 +34,12 @@ left for a cleanup pass).
   never `isRefreshing`). Route error boundaries; `ApiError` toasts on failed
   mutations. Reads keep `canFail: false` unless the audit shows a screen
   needs otherwise; record any change in DECISIONS.
+  - Reuse `src/components/common/load-error.tsx` (P7-T13, the shared read
+    error with Retry); do not build a second one.
+  - From the P7-T13 review: after a successful Retry the focused button
+    unmounts and focus drops to `<body>`; move it to the loaded region. A
+    Retry that fails again is not announced (same alert text); add an sr-only
+    live line such as "Still could not load".
 - **Acceptance:**
   - [ ] e2e per module, using the tuning controls: error state at failure 1.0
         for mutations, skeleton at 2000 ms latency.
