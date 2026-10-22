@@ -153,3 +153,9 @@
 - 2026-10-23 [P7-T16] Inputs ignored for any reason other than their own aria-hidden count as problems.
 - 2026-10-23 [P7-T16] CLAUDE.md note placed after the "So: prefer read_page..." paragraph; spelled "artifact".
 - 2026-10-23 [P7-T16] Add contact test checks six Selects by exact name plus trigger count 6; seed field changes fail loudly.
+- 2026-10-23 [P7-T17] Contact SEARCH_FIELDS = [fullName, email, phone, companyName, jobTitle] (`SearchField<Contact>[]`), shared by list() and exportCsv(); first `@/lib/format` import under src/lib/api (pure module).
+- 2026-10-23 [P7-T17] query-engine exports `SearchField<T> = string | ((row: T) => unknown)`; matching unchanged (trimmed lower-case substring).
+- 2026-10-23 [P7-T17] ContactPicker uses `filter={null}`; selected contact merged only when debounced term is empty or equals its full name. inputValue stays uncontrolled.
+- 2026-10-23 [P7-T17] e2e (3) waits for A's aria-selected=true before typing; product race left for a follow-up task.
+- 2026-10-23 [P7-T17] e2e picks are stricter: C's company unique across name/email/company; B's email unique among emails. SeededContact gains email/companyName (`string | null`).
+- 2026-10-23 [P7-T17] Booking spec's uniqueContact selection unchanged; only comment and chooseContact's typed text changed.

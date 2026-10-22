@@ -5,26 +5,28 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T16 in review.
+- **Status:** P7-T17 in review.
 
 ## Last change
-- P7-T16: not a bug. Chromium ignores every Base UI Select hidden input (ariaHiddenElement); triggers are exposed comboboxes.
-- New e2e/select-a11y.spec.ts (9 tests: 5 routes, Add contact sheet, 2 self-tests, focus). CLAUDE.md notes the read_page artifact.
-- check + e2e (66) green; no src change, SEED_VERSION 4. Added P7-T28 (name unlabelled Select triggers).
+- P7-T17: contacts search `fullName` (new `SearchField<T>` function fields in applyQuery); list and exportCsv share it.
+- ContactPicker `filter={null}`; selected contact pinned only for empty/own-name term.
+- New e2e/contact-picker.spec.ts + contacts.test.ts; check (484) + e2e (72) green; SEED_VERSION 4.
+- Added P7-T29 (picker selection race after a pick).
 
 ## Next up
-- **Agent:** P7-T17 (next by tracker).
+- **Agent:** P7-T18 (next by tracker).
 
 ## Waiting on you
-- Review of P7-T16 (deep review).
+- Review of P7-T17 (deep review).
 
 ## Open suggestions (non-blocking review notes)
-- CLAUDE.md note claims Combobox too; spec covers Select only. Add a TagPicker case or narrow wording.
-- select-a11y.spec.ts:228 pure self-test: comment that the fixture page is irrelevant.
-- Interaction-only Selects (composer, booking/details dialogs, opportunity sheet, bulk bar) not covered.
-- Route tests could pin expected trigger count/names per route.
-- Recurring cross-route toHaveURL flake (P7-T27).
-- Earlier: P7-T15 notes (Kolkata e2e find, runtime-zone loops, DST offset, focus-fallback unit test, Asia/Calcutta label).
+- new-conversation-dialog.tsx also uses ContactPicker; add it to SURFACES or name it in docs.
+- pickContacts uniqueness check ignores phone/jobTitle the server searches.
+- query-engine test: note the first assertion proves function support.
+- Collapse inner whitespace in search term ("ana  garcia").
+- Picker popup shows stale results ~250ms per keystroke; consider a "Searching..." state.
+- Skills line for UI tasks should include vercel-react-best-practices / shadcn.
+- Earlier: P7-T16 notes (Combobox wording, interaction-only Selects, P7-T27 flake).
 
 ## Blockers
 - None.

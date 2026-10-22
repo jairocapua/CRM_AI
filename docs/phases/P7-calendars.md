@@ -486,9 +486,39 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T17 — ContactPicker search: full-name match and no client re-filter
 - **Owner:** agent · **Depends:** —
+- **Skills:** `tdd`, `vitest`, `playwright-cli`
 - **Scope:** contact-picker.tsx: pass filter={null} so server results show as returned; api.contacts.list q matches 'first last'. Affects deal sheet and booking dialog.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. `api.contacts.list({ q })` matches a contact's full name "First
+        Last", ignoring case and outer spaces, including a partly typed full
+        name ("ana gar"). A first name, last name, email, phone, company or
+        job title alone still matches as before.
+  - [ ] A2. CSV export applies the same search as the list:
+        `exportCsv({ q: "First Last" })` exports the matching contacts.
+  - [ ] A3. `applyQuery` accepts a function of the row as a search field next
+        to dotted paths. Its existing filter, search, sort and paginate
+        behaviour is unchanged.
+  - [ ] A4. In the deal sheet ("New deal") and the booking dialog, typing a
+        contact's full name lists that contact, and choosing it fills the
+        Contact input with the name.
+  - [ ] A5. The picker shows the server's results as returned
+        (`filter={null}`): an email search lists exactly that contact, and a
+        company-name search lists that company's contact.
+  - [ ] A6. With a contact selected, a search that does not match it lists
+        only the server's results, without the selected contact pinned above
+        them. A search that matches nothing shows "No contacts found." with
+        no options.
+  - [ ] A7. A contact set from outside the picker still shows its name in the
+        input: the booking dialog opened from a contact panel shows that
+        contact. `inputValue` stays uncontrolled.
+  - [ ] A8. Comments match the code. The contact-picker.tsx doc comment
+        explains `filter={null}` and when the selected contact is added. The
+        `uniqueContact` comment in calendars-booking.spec.ts no longer says
+        the query matches one field at a time or that the combobox
+        re-filters by label.
+  - [ ] A9. No seed change and no regression: `SEED_VERSION` stays 4 and
+        nothing under src/lib/mock/seed changes. `npm run check` is green and
+        the full `npm run e2e` suite passes.
 - **Refs:** added by `progress.mjs add` on 2026-10-22
 
 ### P7-T18 — Booking dialog: slot-load error with Retry, ids from formId, fresh form per open
@@ -571,6 +601,13 @@ hours land around midnight–08:00 local; that is expected.
 - **Scope:** Add aria-label to SelectTriggers in contacts-toolbar.tsx:52, board-toolbar.tsx:43, bulk-actions-bar.tsx:102; add non-empty-name check in e2e/select-a11y.spec.ts
   - From the P7-T16 review: CLAUDE.md's read_page note says Chromium ignores the hidden input behind every Select *and Combobox*, citing e2e/select-a11y.spec.ts, but the spec checks only Selects. Add one Combobox case (the TagPicker in the Add contact sheet) so the note is proven, or narrow the note to Select.
   - Also from P7-T16: the per-route tests wait only for the first trigger, so a Select that mounts after the skeletons clear would go unchecked; pin the expected trigger count (or names) per route, as the Add contact test already does.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T29 — Fix ContactPicker selection race after a pick
+- **Owner:** agent · **Depends:** —
+- **Scope:** Keep picked Contact in local state as value immediately; use selected.data only when id matches. Add e2e typing right after a pick without aria-selected wait.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

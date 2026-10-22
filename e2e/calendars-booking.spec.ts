@@ -56,11 +56,11 @@ const byStart = (rows: readonly SeededAppointment[]) =>
   [...rows].sort((a, b) => a.startAt.localeCompare(b.startAt));
 
 /**
- * A contact the picker finds as one option: a name and a last name no other
- * contact shares. The picker searches by last name: its server-side query
- * matches one field at a time (first name, last name, email …), never
- * "First Last", and the combobox then keeps only the results whose label
- * (the full name) contains what was typed, so an email finds nothing.
+ * A contact no other contact shares a name with, for `chooseContact`. The
+ * picker searches the full name as a substring, so typing "Ana Garcia" may
+ * also list "Diana Garcia"; the option is then clicked by its exact name. The
+ * unique last name is no longer needed for the search, but the rule stays so
+ * these specs keep picking the same seeded contacts as before.
  */
 function uniqueContact(
   contacts: readonly SeededContact[],
@@ -84,7 +84,8 @@ async function chooseContact(
   contact: SeededContact,
 ) {
   const input = dialog.getByRole("combobox", { name: "Contact" });
-  await input.fill(contact.lastName);
+  // The full name, so every booking flow searches by it.
+  await input.fill(contact.name);
   await page
     .getByRole("option")
     .filter({ has: page.getByText(contact.name, { exact: true }) })

@@ -95,7 +95,15 @@ interface PersistedDb {
         availability: PersistedAvailabilityRule[];
       }
     >;
-    contacts: Record<string, { firstName: string; lastName: string }>;
+    contacts: Record<
+      string,
+      {
+        firstName: string;
+        lastName: string;
+        email?: string;
+        companyName?: string;
+      }
+    >;
     activities: Record<string, { contactId?: string; summary: string }>;
   };
 }
@@ -168,6 +176,8 @@ export interface SeededContact {
   /** "First Last", as the contact picker and the app print it. */
   name: string;
   lastName: string;
+  email: string | null;
+  companyName: string | null;
 }
 
 /** Every contact in the persisted database, in the store's own order. */
@@ -177,6 +187,8 @@ export async function readContacts(page: Page): Promise<SeededContact[]> {
     id,
     name: `${contact.firstName} ${contact.lastName}`,
     lastName: contact.lastName,
+    email: contact.email ?? null,
+    companyName: contact.companyName ?? null,
   }));
   expect(rows.length, "the seed has contacts").toBeGreaterThan(0);
   return rows;

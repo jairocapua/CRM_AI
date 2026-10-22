@@ -119,3 +119,10 @@
 - 2026-10-23 [P7-T16] The P7-T15 cross-route toHaveURL flake recurred (calendars-details.spec.ts:413); rerun passed 66/66.
 - 2026-10-23 [P7-T16] expect.poll cannot catch late-mounting Selects: trigger and hidden input mount in the same commit, so counts always agree. Wait for every Select before polling.
 - 2026-10-23 [P7-T16] ContactFormSheet's custom fields load via their own useResource; the sheet can open with only Status/Source/Owner for ~165–275ms.
+- 2026-10-23 [P7-T17] Base UI Combobox 1.8.0 `filter={null}` becomes `() => true`; the default filter matches only itemToStringLabel, dropping email/phone/company/job-title hits.
+- 2026-10-23 [P7-T17] Base UI writes the selected label back into the input (fires onInputValueChange) on value change, popup close, or new `items` identity/label while queryChangedAfterOpen is false; inline `[current, ...rows]` can trigger it.
+- 2026-10-23 [P7-T17] useResource keeps the previous key's data, so ContactPicker's value stays null until contacts.get resolves (~110-330ms) and then overwrites typed text. In e2e wait for aria-selected=true before typing.
+- 2026-10-23 [P7-T17] The selected label comes from value via itemToStringLabel, not `items`; omitting the selected contact from results does not blank the input.
+- 2026-10-23 [P7-T17] Playwright fill() sends one insertText input event; Base UI treats it as typing (opens popup, sets queryChangedAfterOpen).
+- 2026-10-23 [P7-T17] On Windows, TaskStop on a background `npx next start` can leave node holding port 3100; find it with Get-NetTCPConnection -LocalPort 3100 and stop it.
+- 2026-10-23 [P7-T17] A temporary `true || ...` edit fails next build's typecheck so the e2e webServer won't start; prove tests red with type-clean edits.

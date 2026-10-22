@@ -21,6 +21,14 @@ const PAGE_SIZE = 20;
 /**
  * Single-select contact search. The list is server-queried rather than loaded
  * whole — there are hundreds of contacts and only the matches are needed.
+ *
+ * Results are shown as the server returns them (`filter={null}`): the server
+ * has already matched the full name, email, phone, company and job title, and
+ * Base UI's default filter would match those rows again against their label
+ * (the name) alone, dropping every hit by email, phone, company or title.
+ *
+ * The selected contact is added to the list only while the input is empty or
+ * shows that contact's name; see `showCurrent` below.
  */
 export function ContactPicker({
   id,
@@ -47,8 +55,7 @@ export function ContactPicker({
   );
 
   // The selected contact may not be in the current result page, so it is
-  // fetched on its own and merged in — otherwise the input would blank out
-  // as soon as the search narrowed past it.
+  // fetched on its own and handed to the combobox as its value.
   const selected = useResource(
     "contacts",
     () => (value ? api.contacts.get(value) : Promise.resolve(undefined)),
@@ -57,14 +64,24 @@ export function ContactPicker({
 
   const rows = results.data?.rows ?? [];
   const current = selected.data;
+  // It is added to the list only while the input is empty or shows its name,
+  // so it can be found there, ticked, when it is not on this page of results.
+  // Under any other search it would sit above the server's results and hide
+  // "No contacts found." when nothing matched.
+  const term = debounced.trim();
+  const showCurrent =
+    current !== undefined &&
+    (term === "" || term.toLowerCase() === fullName(current).toLowerCase());
   const items: Contact[] =
-    current && !rows.some((row) => row.id === current.id)
+    showCurrent && !rows.some((row) => row.id === current.id)
       ? [current, ...rows]
       : rows;
 
   return (
     <Combobox<Contact, false>
       items={items}
+      // The server has already searched; show its rows as returned.
+      filter={null}
       disabled={disabled}
       value={current ?? null}
       isItemEqualToValue={(a, b) => a.id === b.id}

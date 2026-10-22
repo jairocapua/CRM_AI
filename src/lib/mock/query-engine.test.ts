@@ -179,6 +179,33 @@ describe("applyQuery: search", () => {
     ).toEqual(["a", "b", "c"]);
   });
 
+  it("accepts a function of the row as a search field, so a derived value is searchable", () => {
+    const nameAndCompany = (r: Row) => `${r.name} ${r.company ?? ""}`;
+    // "item 2 acme" spans two fields, so only the derived text holds it.
+    expect(
+      idsOf(applyQuery(ROWS, { q: "item 2 acme" }, { searchFields: ["name"] })),
+    ).toEqual([]);
+    expect(
+      idsOf(
+        applyQuery(
+          ROWS,
+          { q: "item 2 acme" },
+          { searchFields: [nameAndCompany] },
+        ),
+      ),
+    ).toEqual(["a"]);
+    // A path still matches alongside a function.
+    expect(
+      idsOf(
+        applyQuery(
+          ROWS,
+          { q: "globex" },
+          { searchFields: ["company", (r: Row) => r.status] },
+        ),
+      ),
+    ).toEqual(["b"]);
+  });
+
   it("is ignored when there are no search fields or the term is blank", () => {
     const everyone = ["a", "b", "c", "d", "e"];
     expect(idsOf(applyQuery(ROWS, { q: "acme" }))).toEqual(everyone);

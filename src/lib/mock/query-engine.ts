@@ -176,10 +176,19 @@ export interface Page<T> {
   pageCount: number;
 }
 
+/**
+ * What `q` is matched against: a dotted path ("customFields.budget_range"), or
+ * a function deriving searchable text from the row, such as a full name.
+ */
+export type SearchField<T> = string | ((row: T) => unknown);
+
 export function applyQuery<T>(
   source: T[],
   query: ListQuery,
-  opts: { searchFields?: string[]; defaultSort?: SortSpec[] } = {},
+  opts: {
+    searchFields?: readonly SearchField<T>[];
+    defaultSort?: SortSpec[];
+  } = {},
 ): Page<T> {
   let rows = source;
 
@@ -196,7 +205,9 @@ export function applyQuery<T>(
   if (term && opts.searchFields?.length) {
     rows = rows.filter((row) =>
       opts.searchFields!.some((field) =>
-        asText(getPath(row, field)).toLowerCase().includes(term),
+        asText(typeof field === "function" ? field(row) : getPath(row, field))
+          .toLowerCase()
+          .includes(term),
       ),
     );
   }
