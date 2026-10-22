@@ -5,26 +5,27 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T07–T12 approved (Autopilot review, 2026-10-22/23); P7-T13 is next. Session handed off to a fresh one after 6 approvals, per CLAUDE.md.
+- **Status:** P7-T13 in review.
 
 ## Last change
-- P7-T12: new zone-free `src/lib/dates.ts` (CalendarDay, DayParts, isCalendarDay, parseCalendarDay) is the one YYYY-MM-DD rule; years 0000-0099 refused.
-- calendar-nav.ts, mock/slots.ts, api/calendars.ts, booking-dialog.tsx and bookingFormSchema now use it; CalendarDay re-exported type-only.
-- Booking form now refuses '0099-01-01' ("Pick a day."), matching page and API. No seed/UI change (SEED_VERSION 4); check + e2e (49) green.
-- New task P7-T23: deal form Expected close to use isCalendarDay.
+- P7-T13: new shared `LoadError` (src/components/common/load-error.tsx) alert with Retry; shows only when a read failed and no data exists.
+- Used by calendars page appointments (first load + step), contact Appointments tab, availability calendar list.
+- e2e fault helpers failReads/restoreReads in e2e/calendar-helpers.ts; new e2e/calendars-load-errors.spec.ts (4 tests). check + e2e (53) green; no src/lib change, SEED_VERSION 4.
+- New tasks P7-T24 (sidebar calendars.list error) and P7-T25 (contact detail non-404 error).
 
 ## Next up
-- **Agent:** P7-T13 Calendars: error state and retry when appointments fail to load.
+- **Agent:** P7-T14 Larger tap target for month chips on mobile.
 
 ## Waiting on you
+- Review of P7-T13.
 - P7-H3: decide whether past appointments can be cancelled or re-statused.
 
 ## Open suggestions (non-blocking review notes)
-- CalendarDay reachable from three paths; point importers at `@/lib/dates` and drop re-exports.
-- Consider renaming dates.ts to calendar-day.ts or a header note vs format.ts.
-- Accepted edge: a zone-skipped day (2011-12-30 Pacific/Apia) is now accepted; dayStart returns next local midnight.
-- Move `isTimeZone` into the shared module (from P7-T11 review). No committed test for slots.ts RangeError path.
-- Earlier: setStatus() onto inactive calendar; timezone alias canonicalisation; smoke landmarks; lint warnings.
+- Focus falls to <body> after successful Retry; no announcement when Retry fails again (P10-T02 audit).
+- Point P10-T02 at LoadError; dashboard Upcoming appointments card has no error state.
+- failReads also breaks mutations reading the same table; restoreReads leaves wrapper installed. Document in helper Limits.
+- Consider capping Playwright workers if first-batch timeouts recur.
+- Earlier: CalendarDay re-export paths; isTimeZone to shared module; setStatus() onto inactive calendar.
 
 ## Blockers
 - None.

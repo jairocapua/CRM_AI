@@ -8,6 +8,7 @@ import { CalendarPlusIcon, ClockIcon } from "lucide-react";
 import type { ID } from "@/types";
 import * as api from "@/lib/api";
 import { apiNow, useResource, type AppointmentRow } from "@/lib/api";
+import { LoadError } from "@/components/common/load-error";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppointmentDetailsDialog } from "./appointment-details-dialog";
@@ -52,6 +53,13 @@ const NONE_HIDDEN: ReadonlySet<ID> = new Set();
  * `isLoading`, and the fetcher returns the position it was asked for, so the
  * old rows are never drawn on the new range's grid. `isRefreshing` (a refetch
  * after a mutation) changes nothing here.
+ *
+ * When the appointments fail to load and there are no rows to draw (the first
+ * load, or a step to a range that failed: `useResource` drops the previous
+ * query's data then, so the old grid is never left under the new label), the
+ * view area shows a `LoadError` whose Retry calls `refetch()`. While that
+ * retry runs, the alert stays with its button busy, never a skeleton. A
+ * refetch that fails while rows are on screen keeps them there.
  *
  * Which calendars are hidden is component state: a way of looking, not a
  * change to any calendar, so it never reaches the store. Seeded ids also
@@ -123,6 +131,9 @@ export function CalendarsWorkspace() {
           // position (a view or date change within the same range refetches
           // nothing).
           { view, date, rows: settled.rows };
+  // Nothing to draw because the read failed: the first load, or a step to a
+  // range that failed. With rows on screen, a failed refetch keeps them.
+  const loadError = shown === null ? appointments.error : null;
 
   const [hidden, setHidden] = useState<ReadonlySet<ID>>(NONE_HIDDEN);
   const toggleCalendar = useCallback((id: ID, visible: boolean) => {
@@ -195,7 +206,14 @@ export function CalendarsWorkspace() {
           )}
         </div>
         <div className="min-w-0">
-          {calendars.isLoading || shown === null ? (
+          {loadError && !calendars.isLoading ? (
+            <LoadError
+              title="Could not load appointments"
+              message={loadError.message}
+              onRetry={appointments.refetch}
+              retrying={appointments.isRefreshing}
+            />
+          ) : calendars.isLoading || shown === null ? (
             <Skeleton className="h-80 w-full rounded-xl" />
           ) : (
             <section

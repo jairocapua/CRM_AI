@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 14/47 tasks done (30%) · **Current phase:** P7 · **Next agent task:** P7-T13 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** P7-H3
+**Overall:** 14/49 tasks done (29%) · **Current phase:** P7 · **Next agent task:** P7-T14 · **Awaiting review:** P7-T13 · **Blocked:** none · **Waiting on you:** P7-H3
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 14/26 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 14/28 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -31,7 +31,7 @@ Status: active · Progress: 14/26 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T11 | Guard bookings: inactive calendars, unknown contacts, bad windows | agent | done | — | 7563e09 | 2026-10-23 | API guards: inactive calendar 409, unknown contact 404, strict startAt 422, update() validates settings 422; slot grid dedupes |
 | P7-H2 | Decide symmetric buffer semantics | human | done | — |  | 2026-10-21 | Decided in review: symmetric buffers (order-independent); fixed in P7-T03 rework |
 | P7-T12 | Merge duplicate day validators into a shared non-mock module | agent | done | — | 476ce90 | 2026-10-23 | One shared YYYY-MM-DD rule in src/lib/dates.ts; booking form, nav, slots and API agree; check + e2e green |
-| P7-T13 | Calendars: error state and retry when appointments fail to load | agent | todo | — |  |  |  |
+| P7-T13 | Calendars: error state and retry when appointments fail to load | agent | review | — |  | 2026-10-23 | LoadError alert + Retry for calendars appointments, contact Appointments tab, availability list; 4 e2e specs |
 | P7-T14 | Larger tap target for month chips on mobile | agent | todo | — |  |  |  |
 | P7-T15 | Show end date when an appointment crosses midnight | agent | todo | — |  |  |  |
 | P7-H3 | Decide: can past appointments be cancelled or re-statused? | human | todo | — |  |  |  |
@@ -43,6 +43,8 @@ Status: active · Progress: 14/26 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T21 | Raise timeout on long calendars-booking e2e flows | agent | todo | — |  |  |  |
 | P7-T22 | Calendar update: reject explicit undefined keys and use a plain-language 422 message | agent | todo | — |  |  |  |
 | P7-T23 | Deal form Expected close uses shared isCalendarDay | agent | todo | — |  |  |  |
+| P7-T24 | Calendars sidebar: error state and Retry when calendars.list fails | agent | todo | — |  |  |  |
+| P7-T25 | Contact detail: error state instead of endless skeleton on non-404 load failure | agent | todo | — |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md

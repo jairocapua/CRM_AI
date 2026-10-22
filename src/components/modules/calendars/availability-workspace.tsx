@@ -7,6 +7,7 @@ import { ArrowLeftIcon, CalendarXIcon } from "lucide-react";
 import * as api from "@/lib/api";
 import { useResource } from "@/lib/api";
 import { EmptyState } from "@/components/common/empty-state";
+import { LoadError } from "@/components/common/load-error";
 import { buttonVariants } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import {
@@ -40,6 +41,12 @@ const SELECT_ID = "availability-calendar";
  * from that calendar's saved values (unsaved edits to the previous one are
  * dropped). A skeleton shows only on the first load, never while a save's
  * invalidation refetches the list.
+ *
+ * When the list fails to load and there is none to show, the page keeps its
+ * way back and shows a `LoadError` whose Retry calls `refetch()`; while that
+ * retry runs, the alert stays with its button busy. A refetch that fails
+ * while the editor is open keeps the editor. "No calendars" is only for a
+ * list that loaded empty.
  */
 export function AvailabilityWorkspace() {
   const searchParams = useSearchParams();
@@ -47,6 +54,22 @@ export function AvailabilityWorkspace() {
   const calendars = useResource("calendars", () => api.calendars.list());
 
   if (calendars.isLoading) return <AvailabilityWorkspaceSkeleton />;
+
+  if (calendars.data === undefined && calendars.error) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <BackLink />
+        </div>
+        <LoadError
+          title="Could not load calendars"
+          message={calendars.error.message}
+          onRetry={calendars.refetch}
+          retrying={calendars.isRefreshing}
+        />
+      </div>
+    );
+  }
 
   // Sorted by name by the API.
   const list = calendars.data ?? [];
@@ -56,12 +79,8 @@ export function AvailabilityWorkspace() {
     return (
       <EmptyState
         icon={CalendarXIcon}
-        title={calendars.error ? "Could not load calendars" : "No calendars"}
-        description={
-          calendars.error
-            ? calendars.error.message
-            : "There is no calendar to set hours for."
-        }
+        title="No calendars"
+        description="There is no calendar to set hours for."
       />
     );
   }
@@ -69,15 +88,7 @@ export function AvailabilityWorkspace() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        {/* A link styled as a button: Base UI's Button would give it
-            role="button". */}
-        <Link
-          href="/calendars"
-          className={buttonVariants({ variant: "outline" })}
-        >
-          <ArrowLeftIcon data-icon="inline-start" />
-          Back to calendars
-        </Link>
+        <BackLink />
         <Field orientation="horizontal" className="w-auto">
           <FieldLabel htmlFor={SELECT_ID}>Calendar</FieldLabel>
           <Select
@@ -114,6 +125,17 @@ export function AvailabilityWorkspace() {
       </div>
       <AvailabilityForm key={selected.id} calendar={selected} />
     </div>
+  );
+}
+
+/** The way back to the calendars page, shown above the editor or the error. */
+function BackLink() {
+  // A link styled as a button: Base UI's Button would give it role="button".
+  return (
+    <Link href="/calendars" className={buttonVariants({ variant: "outline" })}>
+      <ArrowLeftIcon data-icon="inline-start" />
+      Back to calendars
+    </Link>
   );
 }
 

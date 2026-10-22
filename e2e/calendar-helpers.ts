@@ -379,3 +379,87 @@ export async function openTimes(
 
 export const timeRadio = (dialog: Locator, label: string) =>
   timeGroup(dialog).getByRole("radio", { name: label, exact: true });
+
+/** A store table whose reads `failReads` can make fail. */
+export type FaultTable = "appointments" | "calendars";
+
+/**
+ * Keys every record of the table has and no record of another table has all
+ * of. An appointment also has a `timezone`, so the calendar shape needs more
+ * than that one key.
+ */
+const TABLE_SHAPES: Record<FaultTable, readonly string[]> = {
+  appointments: ["calendarId", "contactId", "startAt", "endAt"],
+  calendars: ["availability", "slotDurationMin", "timezone"],
+};
+
+interface ReadFaultWindow {
+  /** The table whose reads fail now, or null when none does. */
+  __e2eReadFault?: { table: FaultTable; keys: readonly string[] } | null;
+  /** Set once `Object.values` has been wrapped in this document. */
+  __e2eReadFaultInstalled?: boolean;
+}
+
+/**
+ * Makes every read of one store table fail until `restoreReads`, so a spec can
+ * drive a load error and its Retry.
+ *
+ * Why: reads keep `canFail: false` (DECISIONS, P6; P10-T02 owns any change),
+ * so the mock never fails a read, and there is no production fault switch.
+ * This stands in for `page.route(...).abort()` until `http.ts` moves to
+ * `fetch()`, when a spec should switch to that.
+ *
+ * How: it wraps the page's built-in `Object.values`, which the API uses to
+ * read a table (`Object.values(db.getState().appointments)`). The wrapper
+ * calls the real one, then throws when the fault is on and the first value
+ * holds every key of the table's record shape, so other objects pass
+ * through. The throw happens inside `simulate()`, so the read rejects with a
+ * plain Error, and `useResource` reports it as "Something went wrong.".
+ *
+ * Limits: the wrapper lives in the current document only. It survives
+ * client-side navigation but not `goto` or a reload, so install it after
+ * `gotoApp` and trigger the read by a sidebar link, a step, a tab or a link.
+ * If the API stops reading tables through `Object.values`, the error never
+ * appears and the specs fail loudly; they cannot pass vacuously.
+ */
+export async function failReads(page: Page, table: FaultTable): Promise<void> {
+  await page.evaluate(
+    ({ table, keys }) => {
+      const w = window as unknown as ReadFaultWindow;
+      if (!w.__e2eReadFaultInstalled) {
+        const real = Object.values;
+        Object.values = function values(o: object) {
+          const result = real(o);
+          const fault = w.__e2eReadFault;
+          const first: unknown = result[0];
+          if (
+            fault &&
+            typeof first === "object" &&
+            first !== null &&
+            fault.keys.every((key) => key in first)
+          ) {
+            throw new Error(`e2e: reading ${fault.table} failed`);
+          }
+          return result;
+        } as typeof Object.values;
+        w.__e2eReadFaultInstalled = true;
+      }
+      w.__e2eReadFault = { table, keys };
+    },
+    { table, keys: TABLE_SHAPES[table] },
+  );
+}
+
+/** Ends the fault `failReads` started: reads succeed again. */
+export async function restoreReads(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    (window as unknown as ReadFaultWindow).__e2eReadFault = null;
+  });
+}
+
+/**
+ * The `LoadError` alert with this title. Filtered by text because Next's
+ * route announcer also has role="alert".
+ */
+export const loadErrorAlert = (page: Page, title: string) =>
+  page.getByRole("alert").filter({ hasText: title });

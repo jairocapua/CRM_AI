@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { APPOINTMENT_STATUS_LABELS, type AppointmentStatus } from "@/types";
 import * as api from "@/lib/api";
 import { apiNow, useResource } from "@/lib/api";
+import { LoadError } from "@/components/common/load-error";
 import { BookingDialog } from "@/components/modules/calendars/booking-dialog";
 import {
   calendarSearch,
@@ -41,6 +42,8 @@ const STATUS_VARIANTS: Record<
  * A contact's appointments, newest first as the API lists them, each linking
  * to its day on the calendar, and a Book button that opens the booking dialog
  * with this contact filled in. Times are the viewer's, like everywhere else.
+ * A failed load with nothing listed shows a `LoadError` with Retry, never
+ * "No appointments yet."; a failed refetch keeps the rows already listed.
  */
 export function ContactAppointmentsPanel({ contactId }: { contactId: string }) {
   const appointments = useResource(
@@ -62,6 +65,13 @@ export function ContactAppointmentsPanel({ contactId }: { contactId: string }) {
 
       {appointments.isLoading ? (
         <Skeleton className="h-16 w-full" />
+      ) : appointments.error && appointments.data === undefined ? (
+        <LoadError
+          title="Could not load appointments"
+          message={appointments.error.message}
+          onRetry={appointments.refetch}
+          retrying={appointments.isRefreshing}
+        />
       ) : rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">No appointments yet.</p>
       ) : (

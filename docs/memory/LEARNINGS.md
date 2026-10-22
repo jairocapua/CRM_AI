@@ -97,3 +97,10 @@
 - 2026-10-23 [P7-T12] date-fns parse(value,'yyyy-MM-dd') rejects year '0000' but accepts '0099' as year 99; only the 0099 row was a real red for the old isDayInput.
 - 2026-10-23 [P7-T12] new TZDate(99,0,1,'UTC'), new Date(99,0,1) and Date.UTC(99,0,1) all read 1999; every Date round-trip check refuses years 0000-0099, so the shared rule documents that range as unsupported.
 - 2026-10-23 [P7-T12] `export type { X } from ...` does not bring X into local scope; a module that uses and re-exports a type also needs its own `import { type X }`.
+- 2026-10-23 [P7-T13] useResource: while isLoading it returns the previous query's data; if the new query fails it drops it (data undefined, error set). During Retry error stays and isRefreshing is true, so a `data === undefined && error` view stays up without a skeleton flash.
+- 2026-10-23 [P7-T13] Wrapping window.Object.values via page.evaluate works on the production build: bundled API code looks it up at call time, so a table read rejects inside simulate() and useResource reports 'Something went wrong.'.
+- 2026-10-23 [P7-T13] Next's route announcer (role=alert) lives in a shadow root: getByRole pierces it (filter alerts by text), document.querySelector does not (use data-slot selectors in MutationObservers).
+- 2026-10-23 [P7-T13] el.querySelector(':scope') returns null (descendants only); measure the element itself.
+- 2026-10-23 [P7-T13] shadcn base-nova Alert keeps only pr-18 (4.5rem) clear for AlertAction; an outline sm Button with icon is wider, overlapping the description ~5px at 375px.
+- 2026-10-23 [P7-T13] October 2026 month grid (Sunday-first) runs 2026-09-27 to 2026-10-31, 35 cells.
+- 2026-10-23 [P7-T13] A full npm run e2e on a loaded machine (16 workers, another dev server running) can time out the whole first batch at 30s; a plain rerun passed all 53.

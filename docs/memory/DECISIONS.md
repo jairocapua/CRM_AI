@@ -132,3 +132,9 @@
 - 2026-10-23 [P7-T12] calendar-nav.test.ts isCalendarDay block moved to src/lib/dates.test.ts with all cases kept; parseCalendarParams fallback tests unchanged.
 - 2026-10-23 [P7-T12] zod 4 .refine(isCalendarDay, ...) takes the type predicate directly; BookingFormValues.day stays string.
 - 2026-10-23 [P7-T12] No SEED_VERSION bump: slots.ts accepts the same days as before (old TZDate probe already refused 0099); no faker call touched.
+- 2026-10-23 [P7-T13] A load error shows only when the read failed and there is no data; shared LoadError (src/components/common/load-error.tsx) on shadcn Alert. A failed refetch with data on screen keeps the data.
+- 2026-10-23 [P7-T13] Reads keep canFail:false (P6 decision; changes belong to P10-T02). Nothing under src/lib/api or src/lib/mock changed.
+- 2026-10-23 [P7-T13] e2e read fault = Object.values wrapper in e2e/calendar-helpers.ts (failReads/restoreReads), matching tables by record shape. No production fault switch; stands in for page.route().abort() until http.ts uses fetch().
+- 2026-10-23 [P7-T13] Retry spinner is aria-hidden (avoids 'Loading Retry'); button stays focusable while busy (focusableWhenDisabled); alert carries aria-busy.
+- 2026-10-23 [P7-T13] Calendars page: skeleton still wins while calendars.list loads; the error shows once the calendar list has loaded.
+- 2026-10-23 [P7-T13] LoadError widens alert action space pr-18 -> pr-22 (has-data-[slot=alert-action]:pr-22) since the sm Retry button exceeds 4.5rem.

@@ -363,7 +363,13 @@ hours land around midnight–08:00 local; that is expected.
   - From the P7-T08 review: `contact-appointments-panel.tsx` has the same gap: a failed `listForContact` reads as "No appointments yet." Give it an error branch with Retry too.
   - From the P7-T09 review: `availability-workspace.tsx` shows a calendars load error as an EmptyState with no Retry; add one there too.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] Calendars page, first load: when listAppointments fails, the view area shows a 'Could not load appointments' alert with the error message and a Retry button, not a skeleton or a view. After the fault clears, clicking Retry shows the month view.
+  - [ ] While a Retry is in flight, the alert stays on screen with its Retry button busy and no skeleton appears. A Retry that fails again leaves the alert with Retry enabled.
+  - [ ] Calendars page, stepping: when the next range fails to load, the alert replaces the view, so the previous range's grid is not left on screen under the new label. Retry loads the new range's grid.
+  - [ ] Contact Appointments tab: a failed listForContact shows the alert with Retry instead of 'No appointments yet.'. Retry after the fault clears lists the contact's appointment.
+  - [ ] Availability page: a failed calendars.list shows 'Could not load calendars' with Retry and the 'Back to calendars' link, not the 'No calendars' empty state. Retry after the fault clears opens the editor on the first calendar.
+  - [ ] The fault is test-only. No production code gains a fault switch, reads keep canFail:false, and nothing under src/lib/api or src/lib/mock changes.
+  - [ ] No regression and no seed change: SEED_VERSION stays 4, `npm run check` is green, and the full `npm run e2e` suite (existing calendars, booking, availability and smoke specs plus the new spec) passes.
 - **Refs:** added by `progress.mjs add` on 2026-10-21
 
 ### P7-T14 — Larger tap target for month chips on mobile
@@ -445,6 +451,20 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T23 — Deal form Expected close uses shared isCalendarDay
 - **Owner:** agent · **Depends:** —
 - **Scope:** validation/opportunity.ts dateInputToIso uses date-fns parse and accepts '0099-01-01'; switch to @/lib/dates isCalendarDay/parseCalendarDay with a red-first test.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T24 — Calendars sidebar: error state and Retry when calendars.list fails
+- **Owner:** agent · **Depends:** —
+- **Scope:** calendars-workspace renders calendars.data ?? [] so a failed list reads empty; reuse LoadError.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T25 — Contact detail: error state instead of endless skeleton on non-404 load failure
+- **Owner:** agent · **Depends:** —
+- **Scope:** contact-detail.tsx shows a skeleton forever on non-404 errors; reuse LoadError with Retry.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
