@@ -24,7 +24,7 @@
 - Smoke: per-route content landmark (table, board columns) beyond the PageHeader h1.
 - smoke.spec.ts:35 hardcodes "Dashboard"; use `findNavItem("/dashboard")!.title`.
 - Comment at inbox-list.tsx:118 h1 and PageHeader noting the smoke spec depends on the title.
-- Linux CI would need `playwright install --with-deps` (BACKLOG if CI is added).
+- Linux CI `--with-deps` note: now in docs/BACKLOG.md (CI job row).
 - Earlier: time-grid.test literal pins; FieldGroup / isSubmitting cosmetics; pre-existing lint warnings.
 
 ## Blockers

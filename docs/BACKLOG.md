@@ -12,4 +12,5 @@
 | React view transitions | Smoother page and panel changes | `vercel-react-view-transitions` skill; overlaps `review-animations` |
 | `impeccable` UI audit skill | Scores accessibility, performance, theming and responsiveness | Downloads and runs a binary on first use: ask the owner first (P10) |
 | Next.js bundle optimizer skill | Bundle analysis beyond P10-T06's lazy seed | `vercel/next.js@next-bundle-optimizer` |
+| CI job for `check` + `e2e` | Runs the gate on every push instead of only locally | From the P7-T10 review: on Linux, `e2e:install` needs `playwright install --with-deps chromium` (or a separate `install-deps` step) for Chromium's system libraries |
 | Availability windows that run to midnight | A calendar open late loses its last slot: "24:00" is not a valid time, so a window stops at 23:59 and a 23:30 half-hour slot never fits | From the P7-T09 review; needs an "end of day" representation in `AvailabilityWindow` and the slot engine |
