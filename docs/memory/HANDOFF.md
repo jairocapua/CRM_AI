@@ -5,29 +5,29 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T08 in review.
+- **Status:** P7-T09 in review.
 
 ## Last change
-- P7-T08: booking dialog (booking-dialog.tsx; RHF + zod via Field*): calendar → ContactPicker → day → time cards from availableSlots; book() errors show as alert and refetch slots.
-- Entry points: Calendars toolbar Book button; new contact Appointments tab (contact-appointments-panel.tsx) with pre-filled Book.
-- Pure helpers booking-slots.ts (11 tests) + bookingFormSchema (8 tests); e2e calendars-booking.spec.ts covers the phase exit check. Check and e2e green.
-- New tasks: P7-T17 ContactPicker search, P7-T18 booking-dialog slot-error Retry / ids / fresh form.
+- P7-T09: availability editor at `/calendars/availability?calendar=<slug>` (weekly hours + booking rules), saves via `api.calendars.update`; linked from the Calendars toolbar.
+- zod schema `src/lib/validation/availability.ts` (34 tests) rejects reversed, overlapping and malformed windows on enabled days.
+- time-grid packing fix: blocks pack on `max(end, start + 25 min)`, so back-to-back 15-min bookings sit side by side.
+- e2e `calendars-availability.spec.ts`: shortening Tuesday removes the later booking slots. New tasks P7-T19 (Link-as-button), P7-T20 (unsaved guard / empty open day).
 
 ## Next up
-- **Agent:** P7-T09 Availability editor (once P7-T08 is approved).
+- **Agent:** P7-T10 Harness polish: browser install and smoke content checks (once P7-T09 is approved).
 
 ## Waiting on you
-- Review of P7-T08 (look at time cards, calendar colour dots, cancelled rows in the browser).
+- Review of P7-T09 (open /calendars/availability, try overlap errors, 375px layout).
 - P7-H3: decide whether past appointments can be cancelled or re-statused.
-- Note: one test appointment was booked in the dev workspace (Discovery Call, Amber Mosciski, 9 Sep); reseed in Settings → Demo Data clears it.
 
 ## Open suggestions (non-blocking review notes)
-- Folded into tasks (P7-T08 review): isDayInput merge → P7-T12; contact panel error branch → P7-T13; time cards wrapping at phone width → P7-T18.
-- STATUS_VARIANTS duplicates details-dialog status display; consider shared AppointmentStatusBadge.
-- e2e: use stable descending sort instead of .reverse(); Upcoming tripwire should filter on demo-now after load.
-- Calendar Select hidden input a11y is covered by P7-T16; inactive calendars/unknown contacts at API level by P7-T11.
-- Booking into a hidden calendar gives no hint in dialog or toast.
-- Carried from P7-T07 and earlier: see git history of this file.
+- Calendars load error without Retry in the editor: fold into P7-T13.
+- time-grid.test pins MIN_BLOCK_PX/HOUR_HEIGHT_PX literals; better invariant `minutesToPx(MIN_BLOCK_MINUTES) === MIN_BLOCK_PX`.
+- Windows can't reach midnight ('24:00' rejected), so the last late slot is lost.
+- Cosmetic: wrap day FieldSets in FieldGroup; use `isSubmitting` instead of a separate `saving` guard.
+- P7-T11 acceptance must cover API-side HH:mm, overlap and non-negative checks for `calendars.update`.
+- ui/pagination.tsx Link-as-button is generated shadcn code (left out of P7-T19).
+- Pre-existing lint warnings "Compilation Skipped" in data-table, contact-form-sheet, opportunity-form-sheet.
 
 ## Blockers
 - None.

@@ -79,3 +79,11 @@
 - 2026-10-22 [P7-T08] Seed facts (Singapore, demo clock 2026-09-08T09:00Z): Discovery Call offers 16 slots on LA Sep 8 (16:00Z-23:30Z) and 16 on LA Sep 9; first upcoming confirmed is 2026-09-08T17:00Z, so a 16:00Z Discovery booking heads Upcoming. SGT Sep 9 and 10 hold 2 appointments each; each contact has at most 1 seeded appointment; SGT Sep 8 has no open Discovery slots.
 - 2026-10-22 [P7-T08] e2e mutants: apply a string replacement, run `npx playwright test <spec>`, restore in finally. Each run rebuilds .next from mutated source, so rerun check and e2e after restoring.
 - 2026-10-22 [P7-T08] Browser pane screenshots can lag the DOM (showed a dialog already closed); confirm state with get_page_text or javascript_tool.
+- 2026-10-22 [P7-T09] Base UI Button with nativeButton={false} always adds role="button", even on `<a href>`; for navigation use `<Link className={buttonVariants(...)}>`.
+- 2026-10-22 [P7-T09] Base UI Switch gets aria-labelledby from an associated native `<label>`, overriding aria-label; put sr-only text inside the label for a longer name.
+- 2026-10-22 [P7-T09] `<fieldset>` defaults to min-width: min-content, so a FieldSet in a narrow card overflows; add min-w-0.
+- 2026-10-22 [P7-T09] Chromium input[type=time] at 16px needs ~140px for '09:00 AM' plus icon; hiding ::-webkit-calendar-picker-indicator saves ~24px.
+- 2026-10-22 [P7-T09] zod 4.5: z.number({ error }) covers NaN/Infinity/undefined, .int(msg) fractions; z.literal([0..6]) works; object superRefine still runs after a nested regex failure, but not after invalid_type.
+- 2026-10-22 [P7-T09] RHF with a resolver re-validates only the changed field on onChange and useFieldArray skips nested array errors; cross-item rules need register `deps` plus trigger() after append/remove. `deps` fire only after first submit in onSubmit mode.
+- 2026-10-22 [P7-T09] Seed facts (Singapore, clock 2026-09-08T09:00Z): Discovery Call offers 16 times on SGT 2026-09-09 and 16 on 2026-09-10; ending Tuesday at 12:00 PDT leaves the first 6 (12:00 AM-2:30 AM SGT).
+- 2026-10-22 [P7-T09] A 'X is not defined' console error in the hidden pane can be a transient hot reload between two edits; reopen before chasing it.

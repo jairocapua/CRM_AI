@@ -1,16 +1,21 @@
 import type { Locator, Page } from "@playwright/test";
 
 import {
+  bookingDialog,
+  chooseCalendar,
   expectPosition,
   expectViewLoaded,
   localDayIn,
   localTimeIn,
   longDayLabel,
+  openTimes,
   readAppointmentIds,
   readContacts,
   readPersistedStatus,
   readSeededAppointments,
   readSeededAt,
+  timeGroup,
+  timeRadio,
   viewButton,
   viewRegion,
   type SeededAppointment,
@@ -50,13 +55,6 @@ test.use({ timezoneId: ZONE, locale: "en-US" });
 const byStart = (rows: readonly SeededAppointment[]) =>
   [...rows].sort((a, b) => a.startAt.localeCompare(b.startAt));
 
-const bookingDialog = (page: Page) =>
-  page.getByRole("dialog", { name: "Book appointment" });
-
-/** The dialog's Time fieldset, the group the open times are listed in. */
-const timeGroup = (dialog: Locator) =>
-  dialog.getByRole("group", { name: "Time", exact: true });
-
 /**
  * A contact the picker finds as one option: a name and a last name no other
  * contact shares. The picker searches by last name: its server-side query
@@ -80,15 +78,6 @@ function uniqueContact(
   return found;
 }
 
-async function chooseCalendar(page: Page, dialog: Locator, name: string) {
-  const trigger = dialog.getByRole("combobox", { name: "Calendar" });
-  await trigger.click();
-  await page.getByRole("option", { name, exact: true }).click();
-  // The select's label, not the trigger's whole text: Base UI's select icon
-  // keeps a "▼" text node inside the chevron.
-  await expect(trigger.locator('[data-slot="select-value"]')).toHaveText(name);
-}
-
 async function chooseContact(
   page: Page,
   dialog: Locator,
@@ -102,41 +91,6 @@ async function chooseContact(
     .click();
   await expect(input).toHaveValue(contact.name);
 }
-
-interface OpenTime {
-  /** The radio's name, the viewer's local time: "12:00 AM". */
-  label: string;
-  /** The instant it books, as `availableSlots()` gave it. */
-  start: string;
-}
-
-/**
- * The times the dialog lists once the list has settled for `day`: not busy,
- * at least one time, and every one of them on `day` in the viewer's zone, so
- * it is this day's list and not one still on screen from a previous choice.
- * Only then does an absence mean anything.
- */
-async function openTimes(dialog: Locator, day: string): Promise<OpenTime[]> {
-  const group = timeGroup(dialog);
-  let times: OpenTime[] = [];
-  await expect(async () => {
-    expect(await group.getAttribute("aria-busy")).toBeNull();
-    times = await group.getByRole("radio").evaluateAll((radios) =>
-      radios.map((radio) => ({
-        label: radio.closest("label")?.textContent?.trim() ?? "",
-        start: radio.getAttribute("data-start") ?? "",
-      })),
-    );
-    expect(times.length).toBeGreaterThan(0);
-    expect(new Set(times.map((time) => localDayIn(ZONE, time.start)))).toEqual(
-      new Set([day]),
-    );
-  }).toPass();
-  return times;
-}
-
-const timeRadio = (dialog: Locator, label: string) =>
-  timeGroup(dialog).getByRole("radio", { name: label, exact: true });
 
 /**
  * Fills the open booking dialog, books its first open time and returns the
@@ -161,7 +115,7 @@ async function bookViaDialog(
   }
   await dialog.getByLabel("Day", { exact: true }).fill(options.day);
 
-  const [first] = await openTimes(dialog, options.day);
+  const [first] = await openTimes(dialog, options.day, ZONE);
   if (!first) throw new Error("No open time");
   await timeRadio(dialog, first.label).click();
   await expect(timeRadio(dialog, first.label)).toHaveAttribute(
@@ -250,7 +204,7 @@ test("a booking appears in every view, on the timeline and the dashboard, and it
   const dialog = bookingDialog(page);
   await chooseCalendar(page, dialog, CALENDAR);
   await expect(dialog.getByLabel("Day", { exact: true })).toHaveValue(DAY);
-  const offered = await openTimes(dialog, DAY);
+  const offered = await openTimes(dialog, DAY, ZONE);
   expect(offered.map((time) => time.start)).not.toContain(booked.start);
   await expect(timeRadio(dialog, booked.label)).toHaveCount(0);
   await page.keyboard.press("Escape");
@@ -380,7 +334,7 @@ test("a booked slot is not offered until its appointment is cancelled", async ({
     await expect(dialog.getByLabel("Day", { exact: true })).toHaveValue(
       LATER_DAY,
     );
-    return { dialog, offered: await openTimes(dialog, LATER_DAY) };
+    return { dialog, offered: await openTimes(dialog, LATER_DAY, ZONE) };
   };
 
   await page.getByRole("button", { name: "Book", exact: true }).click();
@@ -448,7 +402,7 @@ test("a slot that stops being offered while the dialog is open shows the API err
   const dialog = bookingDialog(page);
   await chooseCalendar(page, dialog, CALENDAR);
   await chooseContact(page, dialog, contact);
-  const [slot, next] = await openTimes(dialog, DAY);
+  const [slot, next] = await openTimes(dialog, DAY, ZONE);
   if (!slot || !next) throw new Error("Fewer than two open times");
   await timeRadio(dialog, slot.label).click();
 
@@ -473,7 +427,9 @@ test("a slot that stops being offered while the dialog is open shows the API err
   await expect(
     timeGroup(dialog).locator(`[data-start="${slot.start}"]`),
   ).toHaveCount(0);
-  const offered = (await openTimes(dialog, DAY)).map((time) => time.start);
+  const offered = (await openTimes(dialog, DAY, ZONE)).map(
+    (time) => time.start,
+  );
   expect(offered).not.toContain(slot.start);
   expect(offered).toContain(next.start);
   // Nothing was stored.

@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import { expect } from "./fixtures";
 
@@ -62,6 +62,13 @@ export interface SeededAppointment {
   minSchedulingNoticeHours: number;
 }
 
+/** One weekday's hours as the store keeps them: "09:00"-"17:00" windows. */
+export interface PersistedAvailabilityRule {
+  weekday: number;
+  enabled: boolean;
+  windows: { start: string; end: string }[];
+}
+
 interface PersistedDb {
   state: {
     seededAt: string;
@@ -81,7 +88,12 @@ interface PersistedDb {
     >;
     calendars: Record<
       string,
-      { name: string; color: string; minSchedulingNoticeHours: number }
+      {
+        name: string;
+        color: string;
+        minSchedulingNoticeHours: number;
+        availability: PersistedAvailabilityRule[];
+      }
     >;
     contacts: Record<string, { firstName: string; lastName: string }>;
     activities: Record<string, { contactId?: string; summary: string }>;
@@ -168,6 +180,22 @@ export async function readContacts(page: Page): Promise<SeededContact[]> {
   }));
   expect(rows.length, "the seed has contacts").toBeGreaterThan(0);
   return rows;
+}
+
+/**
+ * One calendar's weekly hours as persisted, found by name, in the store's
+ * own order. Throws when no calendar has that name.
+ */
+export async function readCalendarAvailability(
+  page: Page,
+  calendarName: string,
+): Promise<PersistedAvailabilityRule[]> {
+  const { calendars } = await readPersistedDb(page);
+  const calendar = Object.values(calendars).find(
+    (c) => c.name === calendarName,
+  );
+  if (!calendar) throw new Error(`No calendar named ${calendarName}`);
+  return calendar.availability;
 }
 
 /** The ids of every appointment persisted, cancelled ones included. */
@@ -291,3 +319,63 @@ export function dayList(first: string, last: string): string[] {
   }
   return days;
 }
+
+/** The booking dialog, opened from the toolbar or a contact's tab. */
+export const bookingDialog = (page: Page) =>
+  page.getByRole("dialog", { name: "Book appointment" });
+
+/** The dialog's Time fieldset, the group the open times are listed in. */
+export const timeGroup = (dialog: Locator) =>
+  dialog.getByRole("group", { name: "Time", exact: true });
+
+export async function chooseCalendar(
+  page: Page,
+  dialog: Locator,
+  name: string,
+) {
+  const trigger = dialog.getByRole("combobox", { name: "Calendar" });
+  await trigger.click();
+  await page.getByRole("option", { name, exact: true }).click();
+  // The select's label, not the trigger's whole text: Base UI's select icon
+  // keeps a "▼" text node inside the chevron.
+  await expect(trigger.locator('[data-slot="select-value"]')).toHaveText(name);
+}
+
+export interface OpenTime {
+  /** The radio's name, the viewer's local time: "12:00 AM". */
+  label: string;
+  /** The instant it books, as `availableSlots()` gave it. */
+  start: string;
+}
+
+/**
+ * The times the dialog lists once the list has settled for `day`: not busy,
+ * at least one time, and every one of them on `day` in the viewer's `zone`,
+ * so it is this day's list and not one still on screen from a previous
+ * choice. Only then does an absence mean anything.
+ */
+export async function openTimes(
+  dialog: Locator,
+  day: string,
+  zone: string,
+): Promise<OpenTime[]> {
+  const group = timeGroup(dialog);
+  let times: OpenTime[] = [];
+  await expect(async () => {
+    expect(await group.getAttribute("aria-busy")).toBeNull();
+    times = await group.getByRole("radio").evaluateAll((radios) =>
+      radios.map((radio) => ({
+        label: radio.closest("label")?.textContent?.trim() ?? "",
+        start: radio.getAttribute("data-start") ?? "",
+      })),
+    );
+    expect(times.length).toBeGreaterThan(0);
+    expect(new Set(times.map((time) => localDayIn(zone, time.start)))).toEqual(
+      new Set([day]),
+    );
+  }).toPass();
+  return times;
+}
+
+export const timeRadio = (dialog: Locator, label: string) =>
+  timeGroup(dialog).getByRole("radio", { name: label, exact: true });

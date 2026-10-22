@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CalendarPlusIcon } from "lucide-react";
+import { CalendarPlusIcon, ClockIcon } from "lucide-react";
 
 import type { ID } from "@/types";
 import * as api from "@/lib/api";
 import { apiNow, useResource, type AppointmentRow } from "@/lib/api";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppointmentDetailsDialog } from "./appointment-details-dialog";
 import { liveFirst } from "./appointment-display";
@@ -71,6 +72,8 @@ const NONE_HIDDEN: ReadonlySet<ID> = new Set();
  * The toolbar's Book button opens the booking dialog on the day in view, or
  * on today when that day is already past. A booking invalidates
  * "appointments", so the view refetches and shows it without more wiring.
+ * Beside it, Availability links to `/calendars/availability`, the editor for
+ * each calendar's weekly hours and booking rules.
  */
 export function CalendarsWorkspace() {
   const searchParams = useSearchParams();
@@ -165,6 +168,15 @@ export function CalendarsWorkspace() {
         timeZoneLabel={zoneLabel(dayStart(date))}
         onNavigate={navigate}
       >
+        {/* A link styled as a button, not a Button rendering a link: Base UI
+            gives a non-native button role="button", and this navigates. */}
+        <Link
+          href="/calendars/availability"
+          className={buttonVariants({ variant: "outline" })}
+        >
+          <ClockIcon data-icon="inline-start" />
+          Availability
+        </Link>
         <Button onClick={() => setBookOpen(true)}>
           <CalendarPlusIcon data-icon="inline-start" />
           Book

@@ -359,6 +359,20 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-22
 
+### P7-T19 — Link-as-button semantics in modules
+- **Owner:** agent · **Depends:** —
+- **Scope:** Switch Button render={<Link/>} nativeButton={false} to <Link className={buttonVariants(...)}> in conversations/contact-panel.tsx:83, thread-view.tsx:81,:309, dashboard/pipeline-card.tsx:147 (role=button bug)
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-22
+
+### P7-T20 — Availability editor: unsaved-changes guard and empty open day
+- **Owner:** agent · **Depends:** —
+- **Scope:** Confirm when isDirty on calendar Select change / Back link; switch day off (or schema message) when last window removed while enabled
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-22
+
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
       timeline, and in the dashboard Upcoming card, and its slot disappears

@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_SCROLL_MIN,
   HOUR_HEIGHT_PX,
+  MIN_BLOCK_MINUTES,
+  MIN_BLOCK_PX,
   SCROLL_LEAD_MIN,
   daySegments,
   hourLabel,
@@ -219,6 +221,68 @@ describe("layoutDay", () => {
 
   it("is empty for a day with nothing on it", () => {
     expect(layoutDay([], "2026-09-15")).toEqual([]);
+  });
+
+  /** Where a block is drawn: from its start, at least the minimum height. */
+  const drawnSpan = ({ start, end }: { start: number; end: number }) => ({
+    top: start,
+    bottom: Math.max(end, start + MIN_BLOCK_MINUTES),
+  });
+
+  it("two back-to-back 15-minute appointments sit side by side, not overlapping", () => {
+    // 10:00–10:15 and 10:15–10:30: each is drawn 25 minutes tall, so the
+    // first block's box would cover the top of the second.
+    const a = row("a", "2026-09-08T10:00:00.000Z", "2026-09-08T10:15:00.000Z");
+    const b = row("b", "2026-09-08T10:15:00.000Z", "2026-09-08T10:30:00.000Z");
+    const laidOut = layoutDay([a, b], "2026-09-08");
+
+    // The real times are kept for drawing; only the packing is padded.
+    expect(
+      laidOut.map(({ row: { id }, start, end, column, columns }) => ({
+        id,
+        start,
+        end,
+        column,
+        columns,
+      })),
+    ).toEqual([
+      { id: "a", start: 600, end: 615, column: 0, columns: 2 },
+      { id: "b", start: 615, end: 630, column: 1, columns: 2 },
+    ]);
+
+    // The drawn boxes overlap in time, so they must not share a column.
+    const [first, second] = laidOut.map(drawnSpan);
+    expect(first!.bottom).toBeGreaterThan(second!.top);
+    expect(laidOut[0]!.column).not.toBe(laidOut[1]!.column);
+  });
+
+  it("short appointments at least the minimum block apart keep the full width", () => {
+    // 10:00–10:15 is drawn to 10:25, exactly where the next one starts.
+    const a = row("a", "2026-09-08T10:00:00.000Z", "2026-09-08T10:15:00.000Z");
+    const b = row("b", "2026-09-08T10:25:00.000Z", "2026-09-08T10:40:00.000Z");
+    const laidOut = layoutDay([a, b], "2026-09-08");
+
+    expect(
+      laidOut.map(({ row: { id }, column, columns }) => ({
+        id,
+        column,
+        columns,
+      })),
+    ).toEqual([
+      { id: "a", column: 0, columns: 1 },
+      { id: "b", column: 0, columns: 1 },
+    ]);
+    const [first, second] = laidOut.map(drawnSpan);
+    expect(first!.bottom).toBe(second!.top);
+  });
+});
+
+describe("MIN_BLOCK_MINUTES", () => {
+  it("is the minimum block height in minutes: 20px at 48px an hour is 25", () => {
+    expect(MIN_BLOCK_PX).toBe(20);
+    expect(HOUR_HEIGHT_PX).toBe(48);
+    expect(MIN_BLOCK_MINUTES).toBe(25);
+    expect(minutesToPx(MIN_BLOCK_MINUTES)).toBe(MIN_BLOCK_PX);
   });
 });
 

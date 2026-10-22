@@ -46,10 +46,9 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { TAG_DOT_CLASSES } from "@/lib/constants";
-import { cn } from "@/lib/utils";
 import { zonedTimes } from "./appointment-display";
 import { calendarDaysFor, slotsOnLocalDay } from "./booking-slots";
+import { CalendarName } from "./calendar-name";
 import {
   dayStart,
   isCalendarDay,
@@ -332,21 +331,6 @@ function BookingForm({
         </Button>
       </DialogFooter>
     </>
-  );
-}
-
-function CalendarName({ calendar }: { calendar: Calendar }) {
-  return (
-    <span className="flex min-w-0 items-center gap-2">
-      <span
-        aria-hidden
-        className={cn(
-          "size-2 shrink-0 rounded-full",
-          TAG_DOT_CLASSES[calendar.color],
-        )}
-      />
-      <span className="truncate">{calendar.name}</span>
-    </span>
   );
 }
 

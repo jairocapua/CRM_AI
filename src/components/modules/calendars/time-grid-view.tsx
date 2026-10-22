@@ -18,6 +18,7 @@ import { dayStart, rangeLabel, type CalendarDay } from "./calendar-nav";
 import {
   HOUR_HEIGHT_PX,
   MINUTES_PER_DAY,
+  MIN_BLOCK_PX,
   hourLabel,
   layoutDay,
   minutesToPx,
@@ -29,9 +30,6 @@ import {
 
 /** How often the now line moves, in milliseconds. */
 const NOW_TICK_MS = 60_000;
-
-/** The shortest a block is drawn, so a 15-minute booking stays readable. */
-const MIN_BLOCK_PX = 20;
 
 /**
  * Below this height a block has room for one line, so the contact and times
@@ -51,9 +49,9 @@ const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 /**
  * The week and day views: a 24-hour grid with one column per day, each
  * appointment a block at its wall-clock time in the viewer's zone, coloured by
- * calendar. Overlapping appointments sit side by side (`packIntervals`); one
- * that crosses local midnight is drawn on both days, each part showing its
- * real times.
+ * calendar. Overlapping appointments sit side by side (`layoutDay`), and so do
+ * short ones whose minimum-height blocks would overlap; one that crosses
+ * local midnight is drawn on both days, each part showing its real times.
  *
  * A now line marks the demo clock's present (`apiNow()`, never the wall
  * clock) on today's column and moves once a minute. When a range opens, the

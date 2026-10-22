@@ -111,3 +111,12 @@
 - 2026-10-22 [P7-T08] Time card ids = useId + slot ms; radio name is the local time, data-start on the visible span. Appointments tab rows: Item (outline) in li[data-appointment-id][data-status]; status via Badge variants, no new colour constants.
 - 2026-10-22 [P7-T08] Plan deviation: e2e error path installs the fake clock after load (demo time = seededAt + fake now - load time), target = slot - notice + 15 min. e2e picks contacts by unique last name.
 - 2026-10-22 [P7-T08] No seed change: SEED_VERSION stays 4.
+- 2026-10-22 [P7-T09] Availability/Back links are `<Link className={buttonVariants({ variant: 'outline' })}>`, not `<Button render={<Link/>} nativeButton={false}>`, to keep link semantics (Base UI adds role=button).
+- 2026-10-22 [P7-T09] Day switch is named via its label with sr-only "Available on " (aria-label is overridden by Base UI's aria-labelledby); fieldset named by sr-only FieldLegend.
+- 2026-10-22 [P7-T09] Time-format check runs in the enabled-only superRefine so a half-typed time on a disabled day cannot block save; a reversed window is excluded from the overlap sweep.
+- 2026-10-22 [P7-T09] Upper limits: duration/interval/buffers <= 1440 min, notice <= 8760 h, range <= 365 days, each with a pinned message.
+- 2026-10-22 [P7-T09] nextWindow starts at the latest well-formed end (not the last listed); none -> 09:00-17:00; at 23:59 returns zero-length, which the schema flags.
+- 2026-10-22 [P7-T09] After a failed save, edits re-check the whole day (register deps + trigger on add/remove/switch) so partner-window errors don't go stale.
+- 2026-10-22 [P7-T09] Focus: after remove -> day's 'Add hours'; switching a day on appends with shouldFocus:false; 'Add hours' (aria-label 'Add hours on <Day>') focuses the new start input.
+- 2026-10-22 [P7-T09] Picker lists inactive calendars too; unknown/missing slug falls back to first calendar by name without writing the URL.
+- 2026-10-22 [P7-T09] Phone widths hide the time inputs' picker icon; fieldset gets min-w-0. No seed change: SEED_VERSION stays 4.

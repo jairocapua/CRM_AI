@@ -35,6 +35,12 @@ export const MINUTES_PER_DAY = 24 * 60;
 /** The height of one hour row, in CSS pixels. The view and its maths share it. */
 export const HOUR_HEIGHT_PX = 48;
 
+/** The shortest a block is drawn, so a 15-minute booking stays readable. */
+export const MIN_BLOCK_PX = 20;
+
+/** `MIN_BLOCK_PX` in minutes of the day: the shortest span a block covers. */
+export const MIN_BLOCK_MINUTES = (MIN_BLOCK_PX / HOUR_HEIGHT_PX) * 60;
+
 /** How far above the earliest appointment the grid opens, in minutes. */
 export const SCROLL_LEAD_MIN = 30;
 
@@ -131,13 +137,24 @@ export type LaidOutSegment<T> = DaySegment<T> & Placement;
 /**
  * A day's segments with their columns: overlapping ones side by side, as
  * `packIntervals` decides. In input order.
+ *
+ * Packed on the span each block is drawn over, not its real one: a block is
+ * never shorter than `MIN_BLOCK_PX`, so a 15-minute booking covers 25 minutes
+ * of grid, and packing it on its real end would let it cover a back-to-back
+ * neighbour's top. Each segment keeps its real `end`, which the block's
+ * height and label still read.
  */
 export function layoutDay<T extends { startAt: ISODate; endAt: ISODate }>(
   rows: readonly T[],
   day: CalendarDay,
 ): LaidOutSegment<T>[] {
   const segments = daySegments(rows, day);
-  const placements = packIntervals(segments);
+  const placements = packIntervals(
+    segments.map(({ start, end }) => ({
+      start,
+      end: Math.max(end, start + MIN_BLOCK_MINUTES),
+    })),
+  );
   return segments.map((segment, i) => ({
     ...segment,
     ...(placements[i] ?? { column: 0, columns: 1 }),
