@@ -54,18 +54,25 @@ export function isInMonth(day: CalendarDay, date: CalendarDay): boolean {
 }
 
 /**
- * Rows filed under the viewer-local day they start on, in input order (the
- * API already sorts by `startAt`). Never the UTC day or the calendar's own
- * zone: 2026-09-08T17:00Z is 9 September in Singapore and 8 September in Los
- * Angeles. An appointment that crosses local midnight is listed on its start
- * day only.
+ * The viewer-local day an appointment starting at `startAt` is filed under.
+ * Never the UTC day or the calendar's own zone: 2026-09-08T17:00Z is 9
+ * September in Singapore and 8 September in Los Angeles.
+ */
+export function localStartDay(startAt: ISODate): CalendarDay {
+  return localDay(toDate(startAt));
+}
+
+/**
+ * Rows filed under the viewer-local day they start on (`localStartDay`), in
+ * input order (the API already sorts by `startAt`). An appointment that
+ * crosses local midnight is listed on its start day only.
  */
 export function groupByLocalDay<T extends { startAt: ISODate }>(
   rows: readonly T[],
 ): Map<CalendarDay, T[]> {
   const byDay = new Map<CalendarDay, T[]>();
   for (const row of rows) {
-    const day = localDay(toDate(row.startAt));
+    const day = localStartDay(row.startAt);
     const list = byDay.get(day);
     if (list) list.push(row);
     else byDay.set(day, [row]);

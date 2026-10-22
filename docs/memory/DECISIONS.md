@@ -139,3 +139,7 @@
 - 2026-10-23 [P7-T13] Calendars page: skeleton still wins while calendars.list loads; the error shows once the calendar list has loaded.
 - 2026-10-23 [P7-T13] LoadError widens alert action space pr-18 -> pr-22 (has-data-[slot=alert-action]:pr-22) since the sm Retry button exceeds 4.5rem.
 - 2026-10-23 [P7-H3] Owner decision: past appointments (end before the demo now) can only be marked Showed or No-show, or switched between them. Cancel and Confirmed are offered only for future appointments. Applies in the details dialog and at the API seam (setStatus/cancel reject the disallowed moves with a 422).
+- 2026-10-23 [P7-T14] Mobile month chips: CSS-only 24px tap targets (not "open the day on tap"); same DOM and behaviour at every width.
+- 2026-10-23 [P7-T14] Details finalFocus order: connected opener, then the appointment's chip by id (after Undo), then that day's '+N more', then true (Base UI default). No day-number branch (unreachable).
+- 2026-10-23 [P7-T14] appointmentFocusFallback lives in month-view.tsx; the workspace reads refs only at close time.
+- 2026-10-23 [P7-T14] Details e2e locates the grid with includeHidden: true because the page behind the modal is aria-hidden.

@@ -11,6 +11,7 @@ import { dayStart, rangeLabel, type CalendarDay } from "./calendar-nav";
 import {
   groupByLocalDay,
   isInMonth,
+  localStartDay,
   monthWeeks,
   splitOverflow,
 } from "./month-grid";
@@ -21,12 +22,15 @@ import {
  * are given (the workspace puts live ones before cancelled ones); a crowded
  * day shows two chips and "+N more". The day number and "+N more" open that
  * day in day view (through `onOpenDay`), a chip opens that appointment's
- * details (through `onOpenAppointment`), and the rest of the cell is left free
- * for click-to-book.
+ * details (through `onOpenAppointment`, with the chip's button as the opener),
+ * and the rest of the cell is left free for click-to-book.
  *
  * Presentational: the workspace fetches, filters hidden calendars, orders the
- * rows and owns the URL. Below `sm` the same DOM collapses each chip to a thin coloured bar
- * and "+N more" to "+N"; the text stays in the accessibility tree.
+ * rows and owns the URL. Below `sm` the same DOM collapses each chip to a thin
+ * coloured bar and "+N more" to "+N"; the text stays in the accessibility
+ * tree. The bar is only the visible mark: its button is at least 24px tall,
+ * and "+N more" and the day number are 24px square, the WCAG 2.2 minimum
+ * target size (SC 2.5.8), so a cell is still tappable on a phone.
  */
 export function MonthView({
   date,
@@ -39,7 +43,7 @@ export function MonthView({
   today: CalendarDay;
   appointments: readonly AppointmentRow[];
   onOpenDay: (day: CalendarDay) => void;
-  onOpenAppointment: (appointment: AppointmentRow) => void;
+  onOpenAppointment: (appointment: AppointmentRow, opener: HTMLElement) => void;
 }) {
   const weeks = monthWeeks(date);
   const byDay = groupByLocalDay(appointments);
@@ -89,7 +93,7 @@ function DayCell({
   inMonth: boolean;
   appointments: readonly AppointmentRow[];
   onOpenDay: (day: CalendarDay) => void;
-  onOpenAppointment: (appointment: AppointmentRow) => void;
+  onOpenAppointment: (appointment: AppointmentRow, opener: HTMLElement) => void;
 }) {
   const label = rangeLabel("day", day);
   const { visible, more } = splitOverflow(appointments);
@@ -133,8 +137,9 @@ function DayCell({
           variant="ghost"
           size="xs"
           aria-label={`+${more} more`}
+          data-day-more=""
           onClick={() => onOpenDay(day)}
-          className="h-5 self-center px-1 sm:self-start"
+          className="h-6 min-w-6 self-center px-1 sm:h-5 sm:min-w-0 sm:self-start"
         >
           +{more}
           <span className="hidden sm:inline"> more</span>
@@ -145,16 +150,42 @@ function DayCell({
 }
 
 /**
+ * Where focus goes when an appointment's details close and the button that
+ * opened them has left the screen. In month view that happens when a cancel
+ * moves the chip behind "+N more" (live appointments are listed first), and
+ * without somewhere to go focus would fall to `<body>`. In order: the
+ * appointment's own chip or block, if it is back (after Undo, as a new
+ * element); else the "+N more" of the day it is filed under; else null.
+ *
+ * Appointment ids, seeded or booked, are a prefix and a nanoid
+ * (`appt_` + `[0-9a-z]`), so they need no escaping inside a quoted attribute
+ * selector.
+ */
+export function appointmentFocusFallback(
+  root: ParentNode,
+  appointment: Pick<AppointmentRow, "id" | "startAt">,
+): HTMLElement | null {
+  return (
+    root.querySelector<HTMLElement>(
+      `li[data-appointment-id="${appointment.id}"] > button`,
+    ) ??
+    root.querySelector<HTMLElement>(
+      `[data-day="${localStartDay(appointment.startAt)}"] [data-day-more]`,
+    )
+  );
+}
+
+/**
  * One appointment: start time and contact on the calendar's tint, as a button
  * that opens its details. The tint, status and id stay on the list item; the
- * button fills it.
+ * button fills it, and below `sm` is at least 24px tall around the bar.
  */
 function AppointmentChip({
   appointment,
   onOpen,
 }: {
   appointment: AppointmentRow;
-  onOpen: (appointment: AppointmentRow) => void;
+  onOpen: (appointment: AppointmentRow, opener: HTMLElement) => void;
 }) {
   const time = formatClockTime(appointment.startAt);
   const cancelled = appointment.status === "cancelled";
@@ -175,10 +206,12 @@ function AppointmentChip({
       <button
         type="button"
         aria-haspopup="dialog"
-        onClick={() => onOpen(appointment)}
+        // The button itself, not `document.activeElement`: Safari does not
+        // focus a button on click.
+        onClick={(event) => onOpen(appointment, event.currentTarget)}
         // A 1px offset stays inside the cell's padding and clear of the
         // next chip, so the outline is never clipped or covered.
-        className="focus-visible:outline-ring flex w-full min-w-0 cursor-pointer items-center gap-1 rounded-[inherit] text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-solid"
+        className="focus-visible:outline-ring flex min-h-6 w-full min-w-0 cursor-pointer items-center gap-1 rounded-[inherit] px-1 text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-solid sm:min-h-0 sm:px-0"
       >
         {/* A full-width bar below `sm`, a dot beside the text from `sm` up. */}
         <span

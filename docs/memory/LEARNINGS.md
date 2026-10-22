@@ -104,3 +104,8 @@
 - 2026-10-23 [P7-T13] shadcn base-nova Alert keeps only pr-18 (4.5rem) clear for AlertAction; an outline sm Button with icon is wider, overlapping the description ~5px at 375px.
 - 2026-10-23 [P7-T13] October 2026 month grid (Sunday-first) runs 2026-09-27 to 2026-10-31, 35 cells.
 - 2026-10-23 [P7-T13] A full npm run e2e on a loaded machine (16 workers, another dev server running) can time out the whole first batch at 30s; a plain rerun passed all 53.
+- 2026-10-23 [P7-T14] Behind an open Base UI modal the page is aria-hidden; getByRole skips it, so toHaveCount(0) there passes vacuously. Use includeHidden: true or CSS locators.
+- 2026-10-23 [P7-T14] Base UI 1.8.0 reads finalFocus at popup unmount; a function return is honoured even if focus is outside the dialog (e.g. toast Undo). Default: trigger, prior focus, recent list, body.
+- 2026-10-23 [P7-T14] Base UI default already refocuses a day-view block that stays mounted through cancel+Undo; only month-view cases (A5, A6) depend on finalFocus.
+- 2026-10-23 [P7-T14] Hidden browser pane: after resize_window, reload before measuring; some nodes keep stale layout.
+- 2026-10-23 [P7-T14] Seed (Asia/Singapore, Sept): Tue 15 Sept is a future crowded day ('+3 more'). At 375px a chip is 39.9px wide; week rows 114px (was ~64px).

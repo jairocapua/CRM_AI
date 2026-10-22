@@ -4,6 +4,7 @@ import {
   MAX_CHIPS_PER_DAY,
   groupByLocalDay,
   isInMonth,
+  localStartDay,
   monthWeeks,
   splitOverflow,
 } from "./month-grid";
@@ -149,6 +150,36 @@ describe("groupByLocalDay", () => {
 
   it("is empty for no rows", () => {
     expect(groupByLocalDay([]).size).toBe(0);
+  });
+});
+
+describe("localStartDay", () => {
+  // The same instant as above: 01:00 on 9 September in Singapore, 10:00 on 8
+  // September in Los Angeles.
+  const LATE = "2026-09-08T17:00:00.000Z";
+  const rows = [
+    { id: "early", startAt: "2026-09-08T02:00:00.000Z" },
+    { id: "late", startAt: LATE },
+    { id: "next", startAt: "2026-09-09T03:00:00.000Z" },
+  ];
+
+  /** Every row sits under exactly the day `localStartDay` names for it. */
+  function expectFiledByLocalStartDay() {
+    const byDay = groupByLocalDay(rows);
+    for (const row of rows) {
+      expect(byDay.get(localStartDay(row.startAt))).toContain(row);
+    }
+    expect([...byDay.values()].flat()).toHaveLength(rows.length);
+  }
+
+  it("names the viewer's local day, so one instant is two days apart in two zones", () => {
+    inZone("Asia/Singapore", LATE, -480);
+    expect(localStartDay(LATE)).toBe("2026-09-09");
+    expectFiledByLocalStartDay();
+
+    inZone("America/Los_Angeles", LATE, 420);
+    expect(localStartDay(LATE)).toBe("2026-09-08");
+    expectFiledByLocalStartDay();
   });
 });
 

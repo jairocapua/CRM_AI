@@ -61,9 +61,10 @@ const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
  * not when a calendar is hidden, rows refetch or the line moves.
  *
  * Each block is a button that opens the appointment's details (through
- * `onOpenAppointment`). Blocks are listed in the order they are given, which
- * the workspace makes live before cancelled, so a live booking comes first to
- * a screen reader and, sharing a cancelled one's exact slot, sits leftmost.
+ * `onOpenAppointment`, with that button as the opener). Blocks are listed in
+ * the order they are given, which the workspace makes live before cancelled,
+ * so a live booking comes first to a screen reader and, sharing a cancelled
+ * one's exact slot, sits leftmost.
  *
  * Presentational: the workspace fetches, filters hidden calendars, orders the
  * rows and owns the URL. The grid scrolls inside its own card, so on a phone
@@ -80,7 +81,7 @@ export function TimeGridView({
   date: CalendarDay;
   today: CalendarDay;
   appointments: readonly AppointmentRow[];
-  onOpenAppointment: (appointment: AppointmentRow) => void;
+  onOpenAppointment: (appointment: AppointmentRow, opener: HTMLElement) => void;
 }) {
   const days = viewDays(view, date);
   const columns = days.map((day) => ({
@@ -223,7 +224,7 @@ function DayColumn({
   isToday: boolean;
   segments: readonly LaidOutSegment<AppointmentRow>[];
   nowMinutes: number | null;
-  onOpenAppointment: (appointment: AppointmentRow) => void;
+  onOpenAppointment: (appointment: AppointmentRow, opener: HTMLElement) => void;
 }) {
   return (
     <div
@@ -278,7 +279,7 @@ function AppointmentBlock({
   onOpen,
 }: {
   segment: LaidOutSegment<AppointmentRow>;
-  onOpen: (appointment: AppointmentRow) => void;
+  onOpen: (appointment: AppointmentRow, opener: HTMLElement) => void;
 }) {
   const {
     row: appointment,
@@ -312,7 +313,9 @@ function AppointmentBlock({
       <button
         type="button"
         aria-haspopup="dialog"
-        onClick={() => onOpen(appointment)}
+        // This part's button: an appointment that crosses midnight has two,
+        // and focus goes back to the one that was clicked.
+        onClick={(event) => onOpen(appointment, event.currentTarget)}
         className={cn(
           // An inset outline: neighbouring blocks and the column's clip would
           // cover one drawn outside.

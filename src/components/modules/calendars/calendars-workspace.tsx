@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CalendarPlusIcon, ClockIcon } from "lucide-react";
@@ -28,7 +28,7 @@ import {
   type CalendarPosition,
 } from "./calendar-nav";
 import { CalendarToolbar } from "./calendar-toolbar";
-import { MonthView } from "./month-view";
+import { MonthView, appointmentFocusFallback } from "./month-view";
 import { TimeGridView } from "./time-grid-view";
 
 const NONE_HIDDEN: ReadonlySet<ID> = new Set();
@@ -76,6 +76,13 @@ const NONE_HIDDEN: ReadonlySet<ID> = new Set();
  * shows up once the refetch lands; if the row is gone from the range, the
  * snapshot taken on click stands. Closing keeps that row, so the exit
  * animation never draws an empty dialog.
+ *
+ * Closing the details puts focus back on the chip or block that opened them
+ * while it is still on screen. It may not be: in month view a cancel lists the
+ * appointment after the day's live ones (`liveFirst`), which can push its chip
+ * behind "+N more", and Base UI would then drop focus to `<body>`. Focus goes
+ * instead to the appointment's chip if it has come back (after Undo), else to
+ * that day's "+N more" (`appointmentFocusFallback`).
  *
  * The toolbar's Book button opens the booking dialog on the day in view, or
  * on today when that day is already past. A booking invalidates
@@ -159,10 +166,30 @@ export function CalendarsWorkspace() {
     row: AppointmentRow;
     open: boolean;
   } | null>(null);
+  // The button that opened the details, and for which row: read only when
+  // the dialog closes, never during render.
+  const openedFrom = useRef<{
+    opener: HTMLElement;
+    row: AppointmentRow;
+  } | null>(null);
+  const viewRef = useRef<HTMLElement>(null);
   const openAppointment = useCallback(
-    (row: AppointmentRow) => setDetail({ row, open: true }),
+    (row: AppointmentRow, opener: HTMLElement) => {
+      openedFrom.current = { opener, row };
+      setDetail({ row, open: true });
+    },
     [],
   );
+  // Base UI calls this as the dialog closes. `true` keeps its own default.
+  const detailsFinalFocus = useCallback((): HTMLElement | true => {
+    const from = openedFrom.current;
+    if (!from) return true;
+    if (from.opener.isConnected) return from.opener;
+    const view = viewRef.current;
+    return (
+      (view?.isConnected && appointmentFocusFallback(view, from.row)) || true
+    );
+  }, []);
   const detailRow = detail
     ? ((shown?.rows ?? []).find((row) => row.id === detail.row.id) ??
       detail.row)
@@ -217,6 +244,7 @@ export function CalendarsWorkspace() {
             <Skeleton className="h-80 w-full rounded-xl" />
           ) : (
             <section
+              ref={viewRef}
               aria-label={`${VIEW_LABELS[shown.view]} view`}
               aria-busy={pending || undefined}
               data-pending={pending || undefined}
@@ -249,6 +277,7 @@ export function CalendarsWorkspace() {
         onOpenChange={(open) =>
           setDetail((prev) => (prev ? { ...prev, open } : prev))
         }
+        finalFocus={detailsFinalFocus}
       />
       <BookingDialog
         open={bookOpen}

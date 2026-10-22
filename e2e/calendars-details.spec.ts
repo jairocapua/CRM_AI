@@ -59,6 +59,82 @@ function liveFirstOrder(rows: readonly SeededAppointment[]) {
   ];
 }
 
+/** The September grid's rows by local day in `ZONE`, in the store's order. */
+function septemberByDay(rows: readonly SeededAppointment[]) {
+  const byDay = new Map<string, SeededAppointment[]>();
+  for (const row of rows) {
+    const day = localDayIn(ZONE, row.startAt);
+    if (day < GRID_FIRST || day > GRID_LAST) continue;
+    byDay.set(day, [...(byDay.get(day) ?? []), row]);
+  }
+  return byDay;
+}
+
+/**
+ * A future live appointment shown as a chip on a crowded day, which a cancel
+ * pushes behind "+N more": its day has four or more rows and three or more
+ * live ones, and it is one of the first two live ones. Future, so its details
+ * offer Cancel. Fails loudly if the seed has none, so no test passes
+ * vacuously.
+ */
+async function chipThatCancelHides(page: Page) {
+  const rows = await readSeededAppointments(page);
+  const seededAt = await readSeededAt(page);
+  for (const [day, dayRows] of septemberByDay(rows)) {
+    const live = byStart(dayRows.filter((row) => !isCancelled(row)));
+    if (dayRows.length < 4 || live.length < 3) continue;
+    const target = live.slice(0, 2).find((row) => row.startAt > seededAt);
+    if (!target) continue;
+
+    // `includeHidden`: while the modal is open the page behind it is
+    // aria-hidden, and a plain role locator would match nothing there, so a
+    // count of 0 would pass vacuously.
+    const grid = page.getByRole("region", {
+      name: "Month view",
+      exact: true,
+      includeHidden: true,
+    });
+    const chip = grid.locator(`li[data-appointment-id="${target.id}"]`);
+    return {
+      target,
+      chip,
+      chipButton: chip.locator("button"),
+      more: grid
+        .getByRole("group", { name: longDayLabel(day), exact: true })
+        .getByRole("button", {
+          name: `+${dayRows.length - 2} more`,
+          exact: true,
+        }),
+    };
+  }
+  throw new Error("No future chip in September that a cancel would hide");
+}
+
+/** Opens the details from a month chip and cancels the appointment. */
+async function cancelFromChip(
+  page: Page,
+  { target, chip, chipButton }: Awaited<ReturnType<typeof chipThatCancelHides>>,
+) {
+  await chipButton.click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading")).toHaveText(target.title);
+  await dialog.getByRole("button", { name: "Cancel appointment" }).click();
+  await expect(
+    page.getByText("Appointment cancelled", { exact: true }),
+  ).toBeVisible();
+  // The refetch has landed: the dialog's row reads cancelled.
+  await expect(
+    dialog.getByRole("button", { name: "Cancel appointment" }),
+  ).toHaveCount(0);
+  await expect
+    .poll(() => readPersistedStatus(page, target.id))
+    .toBe("cancelled");
+  // Listed after the day's live ones now, so behind "+N more": the button
+  // that opened the dialog has left the page.
+  await expect(chip).toHaveCount(0);
+  return dialog;
+}
+
 /** The value next to a term in the details' description list. */
 const detail = (dialog: Locator, term: string) =>
   dialog
@@ -96,12 +172,7 @@ test("live appointments are listed before cancelled ones and stay above +N more"
   await expectViewLoaded(page, "Month");
 
   const rows = await readSeededAppointments(page);
-  const byDay = new Map<string, SeededAppointment[]>();
-  for (const row of rows) {
-    const day = localDayIn(ZONE, row.startAt);
-    if (day < GRID_FIRST || day > GRID_LAST) continue;
-    byDay.set(day, [...(byDay.get(day) ?? []), row]);
-  }
+  const byDay = septemberByDay(rows);
 
   // Never vacuous: a crowded day where start order alone would put a
   // cancelled chip among the two shown while live ones went behind "+N more".
@@ -380,7 +451,61 @@ test("Undo in the toast restores a cancelled appointment", async ({
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
+  const block = viewRegion(page, "Day").locator(
+    `li[data-appointment-id="${target.id}"]`,
+  );
+  await expect(block).toHaveAttribute("data-status", "confirmed");
+  // Focus is back on the block that opened the details.
+  await expect(block.locator("button")).toBeFocused();
+});
+
+test("closing the details returns focus to the chip, or to +N more once a cancel hides it", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp(MONTH_URL);
+  await expectPosition(page, "Month", "September 2026");
+  await expectViewLoaded(page, "Month");
+  const found = await chipThatCancelHides(page);
+  const dialog = page.getByRole("dialog");
+
+  // Nothing changed: focus goes back to the chip that opened the details.
+  await found.chipButton.click();
+  await expect(dialog.getByRole("heading")).toHaveText(found.target.title);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(found.chipButton).toBeFocused();
+
+  // Cancelled, the chip is behind "+N more", and focus goes there instead of
+  // falling to <body>.
+  await cancelFromChip(page, found);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(found.more).toBeFocused();
+});
+
+test("after Undo, closing the details focuses the restored chip", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp(MONTH_URL);
+  await expectPosition(page, "Month", "September 2026");
+  await expectViewLoaded(page, "Month");
+  const found = await chipThatCancelHides(page);
+  const dialog = await cancelFromChip(page, found);
+
+  // Undo with the dialog still open brings the chip back, as a new element.
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(
-    viewRegion(page, "Day").locator(`li[data-appointment-id="${target.id}"]`),
-  ).toHaveAttribute("data-status", "confirmed");
+    page.getByText("Appointment restored", { exact: true }),
+  ).toBeVisible();
+  await expect
+    .poll(() => readPersistedStatus(page, found.target.id))
+    .toBe(found.target.status);
+  await expect(found.chip).toHaveCount(1);
+  await expect(dialog).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(found.chipButton).toBeFocused();
 });

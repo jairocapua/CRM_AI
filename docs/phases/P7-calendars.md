@@ -374,13 +374,31 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T14 — Larger tap target for month chips on mobile
 - **Owner:** agent · **Depends:** —
+- **Skills:** `shadcn`, `playwright-cli`, `web-design-guidelines`
 - **Scope:** Below sm, chips are 6px bars; give the details button a min tap height or open the day on mobile.
   - From the P7-T07 review: after a cancel in month view, `liveFirst` can move
     the cancelled chip behind "+N more", so the button that opened the dialog
     unmounts and focus falls to `<body>` on close. Give the details dialog a
     `finalFocus` that falls back to the day cell or its "+N more" button.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. Below sm (375×812 viewport), every button in a month day cell
+        measures at least 24×24 CSS px: the day number, each appointment chip
+        and "+N more" (WCAG 2.2 SC 2.5.8).
+  - [ ] A2. At 375px, a touch tap on a chip opens that appointment's details
+        dialog.
+  - [ ] A3. From sm up, the month view is unchanged: chips keep their one-line
+        height and every existing month and details spec passes unmodified.
+  - [ ] A4. Closing the details while the element that opened them is still on
+        screen returns focus to it: the chip in month view, the block in day
+        view.
+  - [ ] A5. When a cancel in month view moves the opened chip behind "+N
+        more", closing the details focuses that day's "+N more" button, never
+        `<body>`.
+  - [ ] A6. After Cancel and then Undo with the dialog still open, the chip
+        returns as a new element, and closing the details focuses that chip.
+  - [ ] A7. No seed, API or mock change, and no regression: `SEED_VERSION`
+        stays 4, nothing under `src/lib/api` or `src/lib/mock` changes, `npm
+        run check` is green and the full `npm run e2e` suite passes.
 - **Refs:** added by `progress.mjs add` on 2026-10-22
 
 ### P7-T15 — Show end date when an appointment crosses midnight

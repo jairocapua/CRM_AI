@@ -5,27 +5,27 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T13 in review.
+- **Status:** P7-T14 in review.
 
 ## Last change
-- P7-T13: new shared `LoadError` (src/components/common/load-error.tsx) alert with Retry; shows only when a read failed and no data exists.
-- Used by calendars page appointments (first load + step), contact Appointments tab, availability calendar list.
-- e2e fault helpers failReads/restoreReads in e2e/calendar-helpers.ts; new e2e/calendars-load-errors.spec.ts (4 tests). check + e2e (53) green; no src/lib change, SEED_VERSION 4.
-- New tasks P7-T24 (sidebar calendars.list error) and P7-T25 (contact detail non-404 error).
+- P7-T14: below sm, month chips and '+N more' are at least 24x24 (CSS only); sm and up unchanged.
+- Details dialog finalFocus: opener, else restored chip by id, else that day's '+N more', else Base UI default.
+- `localStartDay` extracted in month-grid.ts (unit-tested). check + e2e (56) green; no src/lib change, SEED_VERSION 4.
 
 ## Next up
-- **Agent:** P7-T14 Larger tap target for month chips on mobile.
+- **Agent:** P7-T15 Show end date when an appointment crosses midnight.
 
 ## Waiting on you
-- Review of P7-T13.
-- P7-H3: decide whether past appointments can be cancelled or re-statused.
+- Review of P7-T14; look at /calendars?view=month&date=2026-09-08 at ~375px, light and dark (week rows grow ~64px to 114px).
 
 ## Open suggestions (non-blocking review notes)
-- Focus falls to <body> after successful Retry; no announcement when Retry fails again (P10-T02 audit).
-- Point P10-T02 at LoadError; dashboard Upcoming appointments card has no error state.
-- failReads also breaks mutations reading the same table; restoreReads leaves wrapper installed. Document in helper Limits.
-- Consider capping Playwright workers if first-batch timeouts recur.
-- Earlier: CalendarDay re-export paths; isTimeZone to shared module; setStatus() onto inactive calendar.
+- month-view.tsx comments and e2e describe say "thin bar"; below sm the chip is a 24px tinted pill. Reword or hide tint below sm.
+- Escape before the cancel refetch lands drops focus to <body> (BACKLOG / P10-T02).
+- A3 wording: "existing assertions intact", not "unmodified".
+- Consider 44px targets or touch-action: manipulation; gap-1 below sm so the focus ring isn't clipped.
+- appointmentFocusFallback also serves day view; move or rename it.
+- e2e flake: contact Appointments tab click lost before hydration (fold into P7-T21).
+- Earlier: focus after Retry; dashboard appointments card error state; failReads helper limits; Playwright workers.
 
 ## Blockers
 - None.

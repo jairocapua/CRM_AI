@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -78,20 +78,25 @@ function errorMessage(error: unknown, fallback: string): string {
  * says why. The dialog stays open after a cancel, so the result is visible:
  * the status reads Cancelled and, for a time still ahead, a line says whether
  * the booking engine offers that time again.
+ *
+ * `finalFocus` says where focus goes on close (Base UI's own prop, read at
+ * close time); the workspace uses it when the opener may have left the screen.
  */
 export function AppointmentDetailsDialog({
   appointment,
   open,
   onOpenChange,
+  finalFocus,
 }: {
   appointment: AppointmentRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  finalFocus?: ComponentProps<typeof DialogContent>["finalFocus"];
 }) {
   return (
     <Dialog open={open && appointment !== null} onOpenChange={onOpenChange}>
       {appointment ? (
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" finalFocus={finalFocus}>
           <AppointmentDetails
             appointment={appointment}
             onNavigate={() => onOpenChange(false)}

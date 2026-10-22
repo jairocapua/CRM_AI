@@ -247,3 +247,78 @@ test.describe("the September grid from Asia/Singapore", () => {
     expect(new Set(colors.values()).size).toBeGreaterThanOrEqual(2);
   });
 });
+
+/**
+ * Below `sm` a chip is a thin coloured bar, but its button, "+N more" and the
+ * day number stay at least 24px square: the WCAG 2.2 minimum target size (SC
+ * 2.5.8). From `sm` up the chips are one line of text again.
+ */
+test.describe("on a phone", () => {
+  test.use({
+    timezoneId: "Asia/Singapore",
+    viewport: { width: 375, height: 812 },
+    hasTouch: true,
+  });
+
+  test("every target in a day cell is at least 24px square, and a tap opens the details", async ({
+    page,
+    gotoApp,
+  }) => {
+    await gotoApp(MONTH_URL);
+    await openSeptember(page);
+    const grid = viewRegion(page, "Month");
+
+    /** Every button in a day cell, its kind and its rendered size. */
+    const measure = () =>
+      grid.locator("[data-day] button").evaluateAll((buttons) =>
+        buttons.map((button) => {
+          const { width, height } = button.getBoundingClientRect();
+          const kind = button.closest("li")
+            ? "chip"
+            : button.hasAttribute("data-day-more")
+              ? "more"
+              : "day";
+          const name =
+            button.getAttribute("aria-label") ??
+            button.closest("li")?.getAttribute("data-appointment-id") ??
+            "";
+          return { kind, name, width, height };
+        }),
+      );
+
+    const onPhone = await measure();
+    const count = (kind: string) =>
+      onPhone.filter((target) => target.kind === kind).length;
+    // Never vacuous: all three kinds are on the grid.
+    expect(count("day")).toBe(35);
+    expect(count("chip")).toBeGreaterThan(0);
+    expect(count("more")).toBeGreaterThan(0);
+    expect(
+      onPhone.filter((target) => target.width < 24 || target.height < 24),
+    ).toEqual([]);
+
+    // A tap on a chip opens that appointment's details.
+    const chip = grid.locator("li[data-appointment-id]").first();
+    const id = await chip.getAttribute("data-appointment-id");
+    const row = (await readSeededAppointments(page)).find(
+      (candidate) => candidate.id === id,
+    );
+    if (!row) throw new Error(`No seeded appointment ${id}`);
+    await chip.locator("button").tap();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole("heading")).toHaveText(row.title);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+
+    // From `sm` up the chips and "+N more" are their one-line height again.
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await expect
+      .poll(async () =>
+        (await measure()).filter(
+          (target) => target.kind !== "day" && target.height >= 24,
+        ),
+      )
+      .toEqual([]);
+  });
+});
