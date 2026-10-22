@@ -22,11 +22,10 @@
 
 ## Open suggestions (non-blocking review notes)
 - Dialog/calendarDayOf use row.timezone; availableSlots reads Calendar.timezone. Equal today; add calendarTimezone to AppointmentRow if calendar zones become editable.
-- Month view: after cancel the chip can drop behind "+N more" and focus goes to <body> on close; add a finalFocus fallback.
 - Rapid back-to-back status changes can flicker; keep busy until row.status === write.status.
 - pack-intervals.test.ts identical-intervals test: give intervals distinguishing ids.
 - e2e hard-codes 'GMT-7'; derive with Intl shortOffset.
-- When P7-T08 lands, add e2e: slot offered in booking dialog only after cancel.
+- Folded into tasks (P7-T07 review): the booking-dialog slot e2e is in P7-T08's acceptance; the focus fallback after cancel is in P7-T14's scope.
 - 3 pre-existing lint warnings (data-table, contact-form-sheet, opportunity-form-sheet), unrelated.
 - Carried from P7-T06 and earlier: see git history of this file.
 

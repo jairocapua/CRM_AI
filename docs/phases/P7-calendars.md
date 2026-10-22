@@ -231,6 +231,9 @@ hours land around midnight–08:00 local; that is expected.
         and day views, on the contact's activity timeline, and in the dashboard
         Upcoming card; the booked slot is no longer offered.
   - [ ] e2e: booking from the contact page pre-fills the contact.
+  - [ ] e2e (from the P7-T07 review): a booked slot is not offered in the
+        booking dialog; after cancelling that appointment it is offered again.
+        P7-T07 proved this only through the details dialog's own line.
 - **Refs:** `src/components/modules/contacts/detail/contact-detail.tsx:97-102`
 
 ### P7-T09 — Availability editor
@@ -310,6 +313,10 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T14 — Larger tap target for month chips on mobile
 - **Owner:** agent · **Depends:** —
 - **Scope:** Below sm, chips are 6px bars; give the details button a min tap height or open the day on mobile.
+  - From the P7-T07 review: after a cancel in month view, `liveFirst` can move
+    the cancelled chip behind "+N more", so the button that opened the dialog
+    unmounts and focus falls to `<body>` on close. Give the details dialog a
+    `finalFocus` that falls back to the day cell or its "+N more" button.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-22
