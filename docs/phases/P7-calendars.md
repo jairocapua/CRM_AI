@@ -285,6 +285,7 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T11 — Guard bookings: inactive calendars, unknown contacts, bad windows
 - **Owner:** agent · **Depends:** —
 - **Scope:** book()/availableSlots() reject isActive:false calendars and missing contactIds; reject startAt without Z/offset (422 INVALID_START); map invalid HH:mm or IANA zone RangeErrors to 422 ApiError (or validate in calendars.update); dedupe slotGrid output for overlapping windows; add a dateRangeDays test at now=2026-10-27T03:00Z proving 'today' is read in the calendar zone.
+  - From the P7-T09 review: the availability editor's zod schema is the only guard on `calendars.update` today. The API must reject, on its own, malformed "HH:mm" windows, reversed or overlapping windows on an enabled day, and negative or fractional numbers (422), so a `fetch()` backend keeps the same rules.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-21
@@ -308,6 +309,7 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** calendars-workspace.tsx: if listAppointments fails with no data shown, the skeleton stays forever. Add an appointments.error branch with refetch(); needed once http.ts moves to fetch().
   - From the P7-T08 review: `contact-appointments-panel.tsx` has the same gap: a failed `listForContact` reads as "No appointments yet." Give it an error branch with Retry too.
+  - From the P7-T09 review: `availability-workspace.tsx` shows a calendars load error as an EmptyState with no Retry; add one there too.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-21

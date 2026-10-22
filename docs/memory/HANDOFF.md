@@ -21,11 +21,9 @@
 - P7-H3: decide whether past appointments can be cancelled or re-statused.
 
 ## Open suggestions (non-blocking review notes)
-- Calendars load error without Retry in the editor: fold into P7-T13.
+- Folded (P7-T09 review): editor load-error Retry → P7-T13; API-side availability checks → P7-T11; windows to midnight → docs/BACKLOG.md.
 - time-grid.test pins MIN_BLOCK_PX/HOUR_HEIGHT_PX literals; better invariant `minutesToPx(MIN_BLOCK_MINUTES) === MIN_BLOCK_PX`.
-- Windows can't reach midnight ('24:00' rejected), so the last late slot is lost.
 - Cosmetic: wrap day FieldSets in FieldGroup; use `isSubmitting` instead of a separate `saving` guard.
-- P7-T11 acceptance must cover API-side HH:mm, overlap and non-negative checks for `calendars.update`.
 - ui/pagination.tsx Link-as-button is generated shadcn code (left out of P7-T19).
 - Pre-existing lint warnings "Compilation Skipped" in data-table, contact-form-sheet, opportunity-form-sheet.
 
