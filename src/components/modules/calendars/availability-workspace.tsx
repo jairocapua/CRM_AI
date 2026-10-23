@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { ArrowLeftIcon, CalendarXIcon } from "lucide-react";
 
 import * as api from "@/lib/api";
-import { useResource } from "@/lib/api";
+import { loadErrorOf, useResource } from "@/lib/api";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { LoadError } from "@/components/common/load-error";
@@ -108,7 +108,8 @@ export function AvailabilityWorkspace() {
 
   if (calendars.isLoading) return <AvailabilityWorkspaceSkeleton />;
 
-  if (calendars.data === undefined && calendars.error) {
+  const loadError = loadErrorOf(calendars);
+  if (loadError) {
     return (
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-3">
@@ -116,7 +117,7 @@ export function AvailabilityWorkspace() {
         </div>
         <LoadError
           title="Could not load calendars"
-          message={calendars.error.message}
+          message={loadError.message}
           onRetry={calendars.refetch}
           retrying={calendars.isRefreshing}
         />

@@ -12,6 +12,7 @@ import {
   loadErrorAlert,
   openTimes,
   readContacts,
+  readFaultThrows,
   readSeededAppointments,
   restoreContactRead,
   restoreReads,
@@ -27,12 +28,16 @@ import { expect, NAVIGATION, test } from "./fixtures";
  * skeleton that stays forever or an empty state that is not true: on the
  * calendars page (the first load, a step to a new range, and its calendar
  * list), on a contact's page and its Appointments tab, on the availability
- * page, and in the booking dialog's calendar list and open times. A contact
- * that does not exist keeps its "Contact not found" state, not the load
- * error. A re-read that fails with a list already on screen keeps the list,
- * with no error in its place (the booking dialog's last test). The dialog's
- * calendar list has no such test: nothing refetches it while the dialog is
- * open, so that case holds by construction (DECISIONS P7-T36).
+ * page, in the booking dialog's calendar list and open times, and on the
+ * contacts list (the first load, a failed page change, and a failed re-read
+ * that keeps the rows on screen; here, like the contact page's tests, because
+ * they share this spec's fault helpers and Retry watch). A contact that does
+ * not exist keeps its "Contact not found" state, not the load error. A
+ * re-read that fails with a list already on screen keeps the list, with no
+ * error in its place (the booking dialog's open-times test and the contacts
+ * list's last test). The dialog's calendar list has no such test: nothing
+ * refetches it while the dialog is open, so that case holds by construction
+ * (DECISIONS P7-T36).
  *
  * The mock never fails a read, so `failReads` makes one fail from the page,
  * and `armContactFault` makes one contact's read fail where `failReads`
@@ -54,6 +59,7 @@ const APPOINTMENTS_ERROR = "Could not load appointments";
 const CALENDARS_ERROR = "Could not load calendars";
 const SLOTS_ERROR = "Could not load the open times";
 const CONTACT_ERROR = "Could not load the contact";
+const CONTACTS_ERROR = "Could not load contacts";
 const FAULT_MESSAGE = "Something went wrong.";
 /** The calendar list's column, tagged by the calendar-list test. */
 const CALENDAR_COLUMN = "[data-e2e-calendar-column]";
@@ -573,6 +579,8 @@ test("booking dialog: a failed calendar list shows the error and Retry lists the
   );
 
   // A Retry that fails again: busy, never a skeleton, then enabled again.
+  // The skeleton watch covers only the dialog: it is modal, and the page
+  // behind it does not refetch while it is open.
   const readWatch = await watchRetry(page, '[data-slot="dialog-content"]');
   await retry.click();
   await expect.poll(async () => (await readWatch()).sawBusy).toBe(true);
@@ -673,6 +681,170 @@ test("booking dialog: a failed re-read of the open times keeps the list on scree
     group.getByRole("alert").filter({ hasText: SLOTS_ERROR }),
   ).toHaveCount(0);
   await expect(dialog).toBeVisible();
+
+  await restoreReads(page);
+});
+
+const PAGE_SIZE = 25;
+
+/** The contacts table's row checkboxes, one per row on screen. */
+const contactRows = (page: Page) =>
+  page.locator("main").getByRole("checkbox", { name: "Select row" });
+
+/** The contacts footer's pager text, "Page 2 of 10". */
+const pagerText = (page: Page) =>
+  page.locator("main").getByText(/^Page \d+ of \d+$/);
+
+test("contacts list: a failed first load shows the error and Retry lists the contacts", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/calendars");
+  await expectViewLoaded(page, "Month");
+  const total = (await readContacts(page)).length;
+  await failReads(page, "contacts");
+  // Client-side navigation, so the fault survives.
+  await page
+    .locator('[data-slot="sidebar"]')
+    .getByRole("link", { name: "Contacts", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/contacts$/, NAVIGATION);
+
+  const main = page.locator("main");
+  const alert = loadErrorAlert(page, CONTACTS_ERROR);
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  // The error stands in for the table and its footer: no table, no empty
+  // state, no skeleton, and no count or pager that would not be true.
+  await expect(main.getByRole("table")).toHaveCount(0);
+  await expect(main.getByText("No contacts found")).toHaveCount(0);
+  await expect(main.locator('[data-slot="skeleton"]')).toHaveCount(0);
+  await expect(main.getByText("0 contacts", { exact: true })).toHaveCount(0);
+  await expect(pagerText(page)).toHaveCount(0);
+  // The toolbar stays.
+  await expect(main.getByPlaceholder("Search contacts…")).toBeVisible();
+  await expect(
+    main.getByRole("button", { name: "Add contact", exact: true }),
+  ).toBeVisible();
+
+  // A Retry that fails again: the button goes busy, and no skeleton appears.
+  // The load error is the only alert in main.
+  const readWatch = await watchRetry(page, "main");
+  const retry = alert.getByRole("button", { name: "Retry", exact: true });
+  await retry.click();
+  await expect.poll(async () => (await readWatch()).sawBusy).toBe(true);
+  await expect(retry).toBeEnabled();
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  expect(await readWatch()).toEqual({
+    sawBusy: true,
+    sawSkeleton: false,
+    sawLabelledSpinner: false,
+  });
+
+  // The fault clears, and Retry lists the first page. Tags are not checked:
+  // the fault failed the tag counts too, and nothing retries them.
+  await restoreReads(page);
+  await retry.click();
+  await expect(contactRows(page)).toHaveCount(PAGE_SIZE);
+  await expect(
+    main.getByText(`${total} contacts`, { exact: true }),
+  ).toBeVisible();
+  await expect(pagerText(page)).toHaveText(
+    `Page 1 of ${Math.ceil(total / PAGE_SIZE)}`,
+  );
+  await expect(alert).toHaveCount(0);
+});
+
+test("contacts list: a failed page change shows the error, not the previous page", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/contacts");
+  const total = (await readContacts(page)).length;
+  expect(total, "the seed has more than one page").toBeGreaterThan(PAGE_SIZE);
+  await expect(contactRows(page)).toHaveCount(PAGE_SIZE);
+  await expect(pagerText(page)).toHaveText(/^Page 1 of /);
+
+  await failReads(page, "contacts");
+  await page
+    .locator("main")
+    .getByRole("button", { name: "Next", exact: true })
+    .click();
+
+  const alert = loadErrorAlert(page, CONTACTS_ERROR);
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  // Page 1's rows are gone, not left under page 2, and so is the pager.
+  await expect(contactRows(page)).toHaveCount(0);
+  await expect(pagerText(page)).toHaveCount(0);
+
+  await restoreReads(page);
+  await alert.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(pagerText(page)).toHaveText(
+    `Page 2 of ${Math.ceil(total / PAGE_SIZE)}`,
+  );
+  await expect(contactRows(page)).toHaveCount(PAGE_SIZE);
+  await expect(alert).toHaveCount(0);
+});
+
+test("contacts list: a failed re-read with rows on screen keeps them", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/contacts");
+  const total = (await readContacts(page)).length;
+  const main = page.locator("main");
+  const count = main.getByText(`${total} contacts`, { exact: true });
+  await expect(contactRows(page)).toHaveCount(PAGE_SIZE);
+  await expect(count).toBeVisible();
+  await contactRows(page).first().check();
+
+  // Notes any alert appearing in main from now on, however briefly, so a
+  // check made after the failed re-read has rendered cannot miss one.
+  await page.evaluate(() => {
+    const w = window as unknown as { __sawContactsAlert?: boolean };
+    w.__sawContactsAlert = false;
+    new MutationObserver(() => {
+      if (document.querySelector('main [data-slot="alert"]')) {
+        w.__sawContactsAlert = true;
+      }
+    }).observe(document.body, { subtree: true, childList: true });
+  });
+
+  // The owner change writes contacts by key, so it succeeds, then invalidates
+  // "contacts": the list's re-read goes through Object.values and fails.
+  await failReads(page, "contacts");
+  const throwsBefore = await readFaultThrows(page);
+  await main.getByRole("button", { name: "Owner", exact: true }).click();
+  await page.getByRole("combobox", { name: "Assign owner" }).click();
+  await page.getByRole("option", { name: "Unassigned", exact: true }).click();
+  await expect(page.getByText("Owner cleared", { exact: true })).toBeVisible();
+  await expect
+    .poll(() => readFaultThrows(page), {
+      message: "the contacts list was never read again under the fault",
+    })
+    .toBeGreaterThan(throwsBefore);
+  // Let React commit the rejected re-read before checking nothing changed.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => setTimeout(resolve, 50)),
+        ),
+      ),
+  );
+
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { __sawContactsAlert?: boolean })
+          .__sawContactsAlert,
+    ),
+  ).toBe(false);
+  await expect(loadErrorAlert(page, CONTACTS_ERROR)).toHaveCount(0);
+  await expect(contactRows(page)).toHaveCount(PAGE_SIZE);
+  await expect(count).toBeVisible();
 
   await restoreReads(page);
 });

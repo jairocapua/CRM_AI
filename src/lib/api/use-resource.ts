@@ -122,6 +122,27 @@ export function useResource<T>(
   } as const;
 }
 
+/**
+ * The error to show in place of a resource's data, or null: LoadError's
+ * contract (DECISIONS P7-T13). An error shows only when there is nothing to
+ * draw.
+ *
+ * - A failed refetch of the same query keeps its data, so this is null and
+ *   the data stays on screen.
+ * - A new query (a page, a filter, an id) that fails has no data, so this is
+ *   the error: the previous query's data never stands in for the new one.
+ * - While `isLoading` the error is null too, so the skeleton still wins.
+ *
+ * The check is `data === undefined`, not a falsy check: `null`, `0`, `""` or
+ * `[]` are loaded data.
+ */
+export function loadErrorOf(resource: {
+  readonly data: unknown;
+  readonly error: ApiError | null;
+}): ApiError | null {
+  return resource.data === undefined ? resource.error : null;
+}
+
 /** Wraps a mutation with a pending flag. Errors propagate to the caller. */
 export function useAction<TArgs extends unknown[], TResult>(
   action: (...args: TArgs) => Promise<TResult>,

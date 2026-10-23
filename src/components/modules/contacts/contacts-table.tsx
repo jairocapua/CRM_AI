@@ -5,10 +5,11 @@ import { UsersIcon } from "lucide-react";
 import type { RowSelectionState, SortingState } from "@tanstack/react-table";
 
 import * as api from "@/lib/api";
-import { useResource } from "@/lib/api";
+import { loadErrorOf, useResource } from "@/lib/api";
 import type { Contact, ContactStatus, FilterCondition } from "@/types";
 import { DataTable } from "@/components/common/data-table";
 import { EmptyState } from "@/components/common/empty-state";
+import { LoadError } from "@/components/common/load-error";
 import { Button } from "@/components/ui/button";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { BulkActionsBar } from "./bulk-actions-bar";
@@ -19,6 +20,24 @@ import { DeleteContactDialog } from "./delete-contact-dialog";
 
 const PAGE_SIZE = 25;
 
+/**
+ * The contacts list: toolbar, bulk actions, a paged table and its count and
+ * pager footer.
+ *
+ * - The first load shows the table's skeleton.
+ * - A failed load with no rows shows a `LoadError` with Retry in place of
+ *   the table, never "No contacts found". While a retry runs, the alert
+ *   stays with its button busy; it never turns into a skeleton. The table
+ *   and the footer ("0 contacts", "Page 1 of 1" would not be true) are
+ *   hidden; the toolbar stays, so search, filters and Add contact still work.
+ * - A failed page, search, status or tag change shows the error too: each is
+ *   a new query (a new `cacheKey`), and `useResource` drops the previous
+ *   query's rows when a new one fails, so the old rows never sit under a new
+ *   page number or filter.
+ * - A refetch of the same query that fails with rows on screen (after any
+ *   contact write invalidates "contacts") keeps the rows and the footer:
+ *   `loadErrorOf` gives no error while there is data.
+ */
 export function ContactsTable() {
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebouncedValue(searchInput, 300);
@@ -99,6 +118,7 @@ export function ContactsTable() {
     [tagsById, usersById],
   );
 
+  const loadError = loadErrorOf(contactsPage);
   const rows = contactsPage.data?.rows ?? [];
   const total = contactsPage.data?.total ?? 0;
   const pageCount = contactsPage.data?.pageCount ?? 1;
@@ -143,54 +163,65 @@ export function ContactsTable() {
         />
       ) : null}
 
-      <DataTable
-        columns={columns}
-        data={rows}
-        getRowId={(row) => row.id}
-        sorting={sorting}
-        onSortingChange={setSorting}
-        rowSelection={rowSelection}
-        onRowSelectionChange={setRowSelection}
-        isLoading={contactsPage.isLoading}
-        emptyState={
-          <EmptyState
-            icon={UsersIcon}
-            title="No contacts found"
-            description={
-              hasActiveFilters
-                ? "Try adjusting your search or filters."
-                : "Add your first contact to get started."
-            }
-          />
-        }
-      />
+      {loadError ? (
+        <LoadError
+          title="Could not load contacts"
+          message={loadError.message}
+          onRetry={contactsPage.refetch}
+          retrying={contactsPage.isRefreshing}
+        />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={rows}
+          getRowId={(row) => row.id}
+          sorting={sorting}
+          onSortingChange={setSorting}
+          rowSelection={rowSelection}
+          onRowSelectionChange={setRowSelection}
+          isLoading={contactsPage.isLoading}
+          emptyState={
+            <EmptyState
+              icon={UsersIcon}
+              title="No contacts found"
+              description={
+                hasActiveFilters
+                  ? "Try adjusting your search or filters."
+                  : "Add your first contact to get started."
+              }
+            />
+          }
+        />
+      )}
 
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>
-          {total} contact{total === 1 ? "" : "s"}
-        </span>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            Previous
-          </Button>
+      {loadError ? null : (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
-            Page {currentPage} of {pageCount}
+            {total} contact{total === 1 ? "" : "s"}
           </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage >= pageCount}
-            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-          >
-            Next
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </Button>
+            <span>
+              Page {currentPage} of {pageCount}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= pageCount}
+              onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+            >
+              Next
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       <ContactFormSheet
         open={formOpen}

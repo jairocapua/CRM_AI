@@ -8,7 +8,13 @@ import { toast } from "sonner";
 
 import type { Calendar, ID, ISODate } from "@/types";
 import * as api from "@/lib/api";
-import { ApiError, apiNow, useAction, useResource } from "@/lib/api";
+import {
+  ApiError,
+  apiNow,
+  loadErrorOf,
+  useAction,
+  useResource,
+} from "@/lib/api";
 import { isCalendarDay } from "@/lib/dates";
 import {
   bookingFormSchema,
@@ -80,8 +86,8 @@ import {
  * While the retry runs, the alert stays with its button busy, never a
  * skeleton. A refetch that fails with the list loaded keeps the list, with no
  * error over it. Nothing in the dialog refetches it then: only a calendar
- * update or a reset invalidates "calendars", and neither can run while the
- * dialog is open.
+ * update or a settings-wide invalidation (settings.ts invalidateAll)
+ * invalidates "calendars", and neither can run while the dialog is open.
  */
 export function BookingDialog({
   open,
@@ -156,9 +162,8 @@ function BookingForm({
   });
 
   const calendars = useResource("calendars", () => api.calendars.list());
-  // The error shows only with no list loaded: a failed refetch keeps the
-  // list, because useResource holds the last good data for the same query.
-  const calendarsError = calendars.data === undefined ? calendars.error : null;
+  // Only with no list loaded: a failed refetch keeps the list (loadErrorOf).
+  const calendarsError = loadErrorOf(calendars);
   // Only active calendars take bookings. `?? []` covers the first load and a
   // failed one.
   const active = (calendars.data ?? []).filter((c) => c.isActive);
@@ -183,6 +188,8 @@ function BookingForm({
     // Strings only: anything read from apiNow() would refetch forever.
     `${calendarId}|${day}`,
   );
+  // Only with nothing listed: a failed refetch keeps the list.
+  const slotsError = loadErrorOf(slots);
 
   const [book, booking] = useAction(api.calendars.book);
 
@@ -331,11 +338,10 @@ function BookingForm({
               <TimesNote>Pick a day to see open times.</TimesNote>
             ) : slots.isLoading ? (
               <SlotsSkeleton />
-            ) : slots.error && slots.data === undefined ? (
-              // Only with nothing listed: a failed refetch keeps the list.
+            ) : slotsError ? (
               <LoadError
                 title="Could not load the open times"
-                message={slots.error.message}
+                message={slotsError.message}
                 onRetry={slots.refetch}
                 retrying={slots.isRefreshing}
               />

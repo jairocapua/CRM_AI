@@ -6,7 +6,12 @@ import { CalendarPlusIcon, ClockIcon } from "lucide-react";
 
 import type { ID } from "@/types";
 import * as api from "@/lib/api";
-import { apiNow, useResource, type AppointmentRow } from "@/lib/api";
+import {
+  apiNow,
+  loadErrorOf,
+  useResource,
+  type AppointmentRow,
+} from "@/lib/api";
 import { LoadError } from "@/components/common/load-error";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -119,6 +124,7 @@ export function CalendarsWorkspace() {
   );
 
   const calendars = useResource("calendars", () => api.calendars.list());
+  const calendarsError = loadErrorOf(calendars);
 
   const range = toInstantRange(visibleDays(view, date));
   const appointments = useResource(
@@ -226,10 +232,10 @@ export function CalendarsWorkspace() {
         <div>
           {calendars.isLoading ? (
             <CalendarListSkeleton />
-          ) : calendars.error && calendars.data === undefined ? (
+          ) : calendarsError ? (
             <LoadError
               title="Could not load calendars"
-              message={calendars.error.message}
+              message={calendarsError.message}
               onRetry={calendars.refetch}
               retrying={calendars.isRefreshing}
             />

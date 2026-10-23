@@ -52,4 +52,4 @@ export type { ListQuery, Page, Tuning } from "./http";
 export { apiNow, nowIso } from "./http";
 export { invalidate, invalidateAll } from "./cache";
 export type { ResourceKey } from "./cache";
-export { useAction, useResource } from "./use-resource";
+export { loadErrorOf, useAction, useResource } from "./use-resource";

@@ -1688,11 +1688,67 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T37 — Contacts list: error state instead of false 'No contacts found' on list failure
 - **Owner:** agent · **Depends:** —
+- **Skills:** `shadcn`, `vitest`, `playwright-cli`
 - **Scope:** contacts-table.tsx renders data?.rows ?? [] on a failed contacts.list; add LoadError + Retry like P7-T24/T25, with e2e red/green.
   - From the P7-T36 review: this is the third surface with the "error only when no data is loaded" guard (calendars-workspace.tsx `calendars.error && calendars.data === undefined`, booking-dialog.tsx `calendarsError`). Consider one small helper next to useResource (e.g. `loadErrorOf(resource)`) and use it in all three. Note: contacts.list is paged and filtered, so a new query has no data yet; say whether a failed page or filter change shows the error.
   - In booking-dialog.tsx's doc (~:78-84), "only a calendar update or a reset invalidates "calendars"" should read "a calendar update or a settings-wide invalidation (settings.ts invalidateAll)". In calendars-load-errors.spec.ts's booking-dialog test, say in one line why the skeleton watch covers only the dialog (it is modal and the page behind it does not refetch).
+  - Decided: while the error shows, both the table and the count/pager
+    footer are hidden. The toolbar stays usable (search, status, tags, Add
+    contact).
+  - Decided: the calendars workspace's appointments `loadError`
+    (`shown === null ? appointments.error : null`) follows a different rule
+    (it keys on the shown range, not on data) and stays as it is.
+  - Decided: the new tests go in calendars-load-errors.spec.ts, as the
+    contact-page tests did in P7-T25.
+  - Decided: failReads gains a "contacts" table and a counter of the
+    failures it caused (`readFaultThrows`).
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. Contacts list, first load: when contacts.list fails, a 'Could
+        not load contacts' alert with the error's message and a Retry button
+        replaces the table. There is no table, no 'No contacts found', no
+        skeleton and no count/pager footer ('0 contacts', 'Page 1 of 1'). The
+        toolbar stays.
+  - [ ] A2. While a Retry is in flight, the alert stays and its Retry is busy
+        (aria-disabled, a spinner with no accessible name); no skeleton
+        appears. A Retry that fails again leaves the alert with Retry
+        enabled. Once the fault clears, Retry lists 25 rows, '<n> contacts'
+        and 'Page 1 of <ceil(n/25)>', and the alert is gone.
+  - [ ] A3. A failed page change shows the error, not the previous page's
+        rows: useResource drops the previous query's data when a new query
+        fails. Search, status and tag changes take the same path (a new
+        cacheKey), and the ContactsTable doc says so. Once the fault clears,
+        Retry lists page 2.
+  - [ ] A4. A refetch that fails with rows on screen keeps the rows: no alert
+        ever appears, and the rows and the count stay.
+  - [ ] A5. `loadErrorOf(resource)` lives in src/lib/api/use-resource.ts, is
+        exported from @/lib/api, and replaces every
+        `error && data === undefined` guard: calendars-workspace (calendar
+        column), booking-dialog (calendar list and open times),
+        availability-workspace, contact-detail, contact-appointments-panel
+        and contacts-table. calendars-workspace's `shown === null`
+        appointments guard stays.
+  - [ ] A6. Every new assertion has been seen failing: T1 and T2 fail on
+        HEAD. Each mutant turns a test red: `retrying={false}` (T1); a
+        skeleton on isLoading||isRefreshing above the error branch (T1);
+        `loadErrorOf` returning `resource.error` (unit (b), T3);
+        `!resource.data` (unit (e)); a footer that is not hidden (T1).
+  - [ ] A7. Comments match the code: the ContactsTable doc (load error,
+        Retry, hidden footer, page and filter failures, a failed refetch
+        keeps the rows); the loadErrorOf doc (LoadError's contract);
+        BookingDialog's doc ('a calendar update or a settings-wide
+        invalidation (settings.ts invalidateAll)'); the booking-dialog
+        calendar-list test's one line on why its skeleton watch covers only
+        the dialog; the spec header; failReads' doc for the contacts table.
+  - [ ] A8. No seed, mock or shared-component change, and no regression.
+        SEED_VERSION stays 4; nothing under src/lib/mock or
+        src/components/common changes; under src/lib/api only use-resource.ts
+        (+ its new test) and index.ts change. `npm run check` is green and
+        the full `npm run e2e` suite passes with existing assertions
+        unchanged.
+  - [ ] A9. e2e helpers: failReads supports 'contacts' (shape
+        firstName/lastName/tagIds/dnd/score) and counts the reads it failed
+        (`readFaultThrows`). Existing 'appointments' and 'calendars' faults
+        behave as before.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T38 — useResource unit test: failed refetch keeps data for same query
@@ -1772,6 +1828,13 @@ hours land around midnight–08:00 local; that is expected.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T47 — Contacts: surface tags.list load failure (tag badges/filter silently empty)
+- **Owner:** agent · **Depends:** —
+- **Scope:** tags.list counts tags via contacts; on failure /contacts tag badges and tag filter show nothing with no error or Retry. Add an error state.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-24
 
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact

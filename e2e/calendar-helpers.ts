@@ -474,16 +474,18 @@ export const timeRadio = (dialog: Locator, label: string) =>
   timeGroup(dialog).getByRole("radio", { name: label, exact: true });
 
 /** A store table whose reads `failReads` can make fail. */
-export type FaultTable = "appointments" | "calendars";
+export type FaultTable = "appointments" | "calendars" | "contacts";
 
 /**
  * Keys every record of the table has and no record of another table has all
  * of. An appointment also has a `timezone`, so the calendar shape needs more
- * than that one key.
+ * than that one key. No other record has `dnd` or `score`, and users have
+ * no `tagIds`.
  */
 const TABLE_SHAPES: Record<FaultTable, readonly string[]> = {
   appointments: ["calendarId", "contactId", "startAt", "endAt"],
   calendars: ["availability", "slotDurationMin", "timezone"],
+  contacts: ["firstName", "lastName", "tagIds", "dnd", "score"],
 };
 
 interface ReadFaultWindow {
@@ -491,6 +493,8 @@ interface ReadFaultWindow {
   __e2eReadFault?: { table: FaultTable; keys: readonly string[] } | null;
   /** Set once `Object.values` has been wrapped in this document. */
   __e2eReadFaultInstalled?: boolean;
+  /** How many reads the fault has failed in this document so far. */
+  __e2eReadFaultThrows?: number;
 }
 
 /**
@@ -526,8 +530,12 @@ interface ReadFaultWindow {
  * template rendering (`render()` in src/lib/api/templates.ts reads
  * appointments and calendars), the dashboard's analytics (`summary()` in
  * analytics.ts reads appointments) and the settings integrity check
- * (`integrityReport()` in settings.ts reads appointments). Restore reads
- * before a step that reaches them.
+ * (`integrityReport()` in settings.ts reads appointments). For contacts it
+ * catches every read of the whole table: the contacts list, the tag counts
+ * (`list()` in tags.ts), the dashboard's analytics (analytics.ts) and the
+ * contacts CSV export (contacts.ts). Contact writes and `contacts.get` read
+ * by key and are unaffected. Restore reads before a step that reaches them.
+ * `readFaultThrows` counts the reads the fault has failed.
  */
 export async function failReads(page: Page, table: FaultTable): Promise<void> {
   await page.evaluate(
@@ -545,6 +553,7 @@ export async function failReads(page: Page, table: FaultTable): Promise<void> {
             first !== null &&
             fault.keys.every((key) => key in first)
           ) {
+            w.__e2eReadFaultThrows = (w.__e2eReadFaultThrows ?? 0) + 1;
             throw new Error(`e2e: reading ${fault.table} failed`);
           }
           return result;
@@ -554,6 +563,18 @@ export async function failReads(page: Page, table: FaultTable): Promise<void> {
       w.__e2eReadFault = { table, keys };
     },
     { table, keys: TABLE_SHAPES[table] },
+  );
+}
+
+/**
+ * How many reads `failReads` has failed in this document so far, 0 before
+ * any. A spec polls it to know a read under a fault has run (and failed)
+ * before it checks that nothing changed on screen, so an absence is not
+ * checked too early to mean anything.
+ */
+export async function readFaultThrows(page: Page): Promise<number> {
+  return page.evaluate(
+    () => (window as unknown as ReadFaultWindow).__e2eReadFaultThrows ?? 0,
   );
 }
 

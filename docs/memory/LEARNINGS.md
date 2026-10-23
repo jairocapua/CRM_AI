@@ -211,3 +211,5 @@
 - 2026-10-24 [P7-T36] Base UI Select given `disabled` satisfies Playwright toBeDisabled() on getByRole('combobox'); no data-disabled fallback needed.
 - 2026-10-24 [P7-T36] A skeleton-on-isRefreshing mutant that replaces the alert fails watchRetry at sawBusy, not sawSkeleton; to prove a wider skeleton scope matters, keep the alert and add a skeleton elsewhere.
 - 2026-10-24 [P7-T36] Python is not installed here (the alias opens the Store); use Edit or sed. A stray `cat > file` with no input in Bash blocks until timeout.
+- 2026-10-24 [P7-T37] Vitest `it.each([..., [], ...])` spreads each array case into arguments, so an empty-array case arrives as `undefined`; wrap each case in a tuple.
+- 2026-10-24 [P7-T37] A bulk owner assignment (api.contacts.assignOwner) writes contacts by key, then invalidates "contacts": under failReads('contacts') the write succeeds and the list refetch fails, a reliable driver for a failed refetch with rows on screen.

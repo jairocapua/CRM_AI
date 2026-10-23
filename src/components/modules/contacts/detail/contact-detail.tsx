@@ -7,7 +7,7 @@ import { ArrowLeftIcon, UserXIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { useAction, useResource } from "@/lib/api";
+import { loadErrorOf, useAction, useResource } from "@/lib/api";
 import { EmptyState } from "@/components/common/empty-state";
 import { LoadError } from "@/components/common/load-error";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,8 +32,8 @@ import { ContactTasksPanel } from "./contact-tasks-panel";
  *   its button busy; it never turns into a skeleton.
  * - A refetch that fails for any other reason with the contact on screen
  *   keeps the contact: `useResource` holds the last good result for the
- *   same id, so the error branch, which needs `data` to be undefined, does
- *   not apply.
+ *   same id, so `loadErrorOf`, which needs `data` to be undefined, gives no
+ *   error.
  */
 export function ContactDetail({ id }: { id: string }) {
   const router = useRouter();
@@ -80,13 +80,14 @@ export function ContactDetail({ id }: { id: string }) {
     );
   }
 
-  if (contact.error && contact.data === undefined) {
+  const loadError = loadErrorOf(contact);
+  if (loadError) {
     return (
       <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
         {backLink}
         <LoadError
           title="Could not load the contact"
-          message={contact.error.message}
+          message={loadError.message}
           onRetry={contact.refetch}
           retrying={contact.isRefreshing}
         />

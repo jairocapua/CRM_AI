@@ -7,7 +7,7 @@ import { format } from "date-fns";
 
 import { APPOINTMENT_STATUS_LABELS, type AppointmentStatus } from "@/types";
 import * as api from "@/lib/api";
-import { apiNow, useResource } from "@/lib/api";
+import { apiNow, loadErrorOf, useResource } from "@/lib/api";
 import { LoadError } from "@/components/common/load-error";
 import { BookingDialog } from "@/components/modules/calendars/booking-dialog";
 import {
@@ -52,6 +52,7 @@ export function ContactAppointmentsPanel({ contactId }: { contactId: string }) {
     contactId,
   );
   const [bookOpen, setBookOpen] = useState(false);
+  const loadError = loadErrorOf(appointments);
   const rows = appointments.data ?? [];
 
   return (
@@ -65,10 +66,10 @@ export function ContactAppointmentsPanel({ contactId }: { contactId: string }) {
 
       {appointments.isLoading ? (
         <Skeleton className="h-16 w-full" />
-      ) : appointments.error && appointments.data === undefined ? (
+      ) : loadError ? (
         <LoadError
           title="Could not load appointments"
-          message={appointments.error.message}
+          message={loadError.message}
           onRetry={appointments.refetch}
           retrying={appointments.isRefreshing}
         />
