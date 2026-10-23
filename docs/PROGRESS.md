@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 20/54 tasks done (37%) · **Current phase:** P7 · **Next agent task:** P7-T19 · **Awaiting review:** P7-T18 · **Blocked:** none · **Waiting on you:** none
+**Overall:** 21/54 tasks done (39%) · **Current phase:** P7 · **Next agent task:** P7-T19 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 20/33 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 21/33 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -37,7 +37,7 @@ Status: active · Progress: 20/33 · Points: 7 (5 for Calendars + 2 for the test
 | P7-H3 | Decide: can past appointments be cancelled or re-statused? | human | done | — |  | 2026-10-23 | Owner: past = Showed/No-show only; Cancel/Confirmed future only |
 | P7-T16 | Check Base UI Select hidden input in the a11y tree | agent | done | — | a983ac9 | 2026-10-23 | Not a bug: Chromium ignores Base UI Select hidden inputs (ariaHiddenElement). New e2e/select-a11y.spec.ts; CLAUDE.md note. |
 | P7-T17 | ContactPicker search: full-name match and no client re-filter | agent | done | — | 3a9c451 | 2026-10-23 | Full-name contact search via function search field; picker filter={null}, selected pinned only on empty/own-name term |
-| P7-T18 | Booking dialog: slot-load error with Retry, ids from formId, fresh form per open | agent | review | — |  | 2026-10-23 | LoadError+Retry for open times, useId-based ids, form keyed per open, 2-col phone grid; 4 new e2e tests |
+| P7-T18 | Booking dialog: slot-load error with Retry, ids from formId, fresh form per open | agent | done | — | af613bf | 2026-10-23 | LoadError+Retry for open times, useId-based ids, form keyed per open, 2-col phone grid; 4 new e2e tests |
 | P7-T19 | Link-as-button semantics in modules | agent | todo | — |  |  |  |
 | P7-T20 | Availability editor: unsaved-changes guard and empty open day | agent | todo | — |  |  |  |
 | P7-T21 | Raise timeout on long calendars-booking e2e flows | agent | todo | — |  |  |  |

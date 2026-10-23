@@ -650,6 +650,7 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T30 — Shared chooseContact e2e helper
 - **Owner:** agent · **Depends:** —
 - **Scope:** Move the three copies of booking-dialog contact pick (fill + option click) into e2e/calendar-helpers.ts chooseContact and use it in calendars-booking, calendars-booking-dialog, calendars-load-errors specs.
+  - From the P7-T18 review, in the same spec files: in calendars-load-errors.spec.ts, the RetryWatch.sawSkeleton doc should say "inside `scope`" (watchRetry now takes a scope), and the aria-busy MutationObserver should read the mutation records (attributeOldValue: true) rather than the live attribute. In calendars-booking-dialog.spec.ts, the header claims sixteen times on both 9 and 10 September but only the 9th is checked: trim the claim or assert it.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
