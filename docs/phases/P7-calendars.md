@@ -1271,6 +1271,8 @@ hours land around midnight–08:00 local; that is expected.
 - **Scope:** From the P7-T19 review (this id was first added by mistake as a duplicate of P7-T31, and was repurposed rather than deleted, since the tracker cannot delete rows).
   - Give the View contact (contact-panel.tsx) and Open board (pipeline-card.tsx) icons `data-icon="inline-start"` / `"inline-end"`, as the calendars links have, so the size's icon padding applies; update the A2 look values in e2e/link-buttons.spec.ts if they change.
   - In e2e/link-buttons.spec.ts (~:163), scope the thread-header contact link lookup to the thread header instead of `main ... .first()`, so it does not depend on DOM order.
+  - From the P7-T31 review, in eslint.config.mjs: the `nativeButton={false}` message speaks only of links, but the ban also fires on a Base UI trigger (Menu, Popover, Dialog, Select) that renders a non-button element; add a clause for that case ("a trigger that renders a non-button element: disable this line with a reason"), and keep scripts/eslint-config.test.mjs's message assertions green. Shrink LINK_BUTTON_RULE's block comment to a pointer to LinkButton's JSDoc in ui/button.tsx, so the two causes are explained once (CLAUDE.md keeps its line).
+  - In src/components/ui/button.test.ts (~:84), drop `expect(VARIANTS).toHaveLength(6)` / `expect(SIZES).toHaveLength(8)`, which check fixed literals and cannot fail; say in the test that the `expectTypeOf` pair is the guard and fails under `npm run typecheck`, not Vitest.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23; repurposed in the P7-T19 review
