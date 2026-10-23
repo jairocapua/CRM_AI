@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import {
   bookingDialog,
@@ -20,9 +20,9 @@ import { expect, test } from "./fixtures";
 /**
  * A read that fails with nothing on screen shows an error with Retry, never a
  * skeleton that stays forever or an empty state that is not true: on the
- * calendars page (the first load and a step to a new range), on a contact's
- * Appointments tab, on the availability page and in the booking dialog's
- * open times. A re-read that fails with a list already on screen keeps the
+ * calendars page (the first load, a step to a new range, and its calendar
+ * list), on a contact's Appointments tab, on the availability page and in the
+ * booking dialog's open times. A re-read that fails with a list already on screen keeps the
  * list, with no error in its place (the booking dialog's last test).
  *
  * The mock never fails a read, so `failReads` makes one fail from the page
@@ -166,6 +166,107 @@ test("calendars page: a step whose range fails shows the error, not the previous
   expect(days).toHaveLength(35);
   expect(days.at(0)).toBe("2026-09-27");
   expect(days.at(-1)).toBe("2026-10-31");
+});
+
+interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** The element's box on the page; throws when it is not laid out. */
+async function boxOf(locator: Locator): Promise<Box> {
+  const box = await locator.boundingBox();
+  if (!box) throw new Error("The element is not laid out");
+  return box;
+}
+
+/** Whether two boxes share any area (touching edges do not count). */
+function intersects(a: Box, b: Box): boolean {
+  return (
+    a.x < b.x + b.width &&
+    b.x < a.x + a.width &&
+    a.y < b.y + b.height &&
+    b.y < a.y + a.height
+  );
+}
+
+test("calendars page: a failed calendar list shows the error in its column and Retry lists the calendars", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/contacts");
+  await failReads(page, "calendars");
+  // Client-side navigation, so the fault survives.
+  await page
+    .locator('[data-slot="sidebar"]')
+    .getByRole("link", { name: "Calendars", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/calendars$/);
+  await expectPosition(page, "Month", "September 2026");
+
+  const alert = loadErrorAlert(page, CALENDARS_ERROR);
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  // The column holds the error: no list drawn empty, no toggles.
+  const list = page.getByRole("group", { name: "Calendars", exact: true });
+  await expect(list).toHaveCount(0);
+  await expect(page.getByRole("checkbox")).toHaveCount(0);
+
+  // The view does not wait on the list: the month draws its appointments (no
+  // skeleton anywhere, which expectViewLoaded checks), and nothing is hidden.
+  await expectViewLoaded(page, "Month");
+  const month = viewRegion(page, "Month");
+  const chips = month.getByRole("listitem");
+  const chipCount = await chips.count();
+  expect(chipCount).toBeGreaterThan(0);
+  await expect(loadErrorAlert(page, APPOINTMENTS_ERROR)).toHaveCount(0);
+
+  // The alert fits its 14rem column: Retry covers neither the title nor the
+  // message, and the alert neither spills into the view nor scrolls sideways.
+  const retry = alert.getByRole("button", { name: "Retry", exact: true });
+  const [titleBox, messageBox, retryBox, alertBox, monthBox] =
+    await Promise.all([
+      boxOf(alert.locator('[data-slot="alert-title"]')),
+      boxOf(alert.locator('[data-slot="alert-description"]')),
+      boxOf(retry),
+      boxOf(alert),
+      boxOf(month),
+    ]);
+  expect(intersects(retryBox, titleBox), "Retry covers the title").toBe(false);
+  expect(intersects(retryBox, messageBox), "Retry covers the message").toBe(
+    false,
+  );
+  expect(alertBox.x + alertBox.width).toBeLessThanOrEqual(monthBox.x);
+  expect(await alert.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
+    true,
+  );
+
+  // A Retry that fails again: the button goes busy, and no skeleton appears.
+  // The calendars alert is the only alert in main.
+  const readWatch = await watchRetry(page, "main");
+  await retry.click();
+  await expect.poll(async () => (await readWatch()).sawBusy).toBe(true);
+  await expect(retry).toBeEnabled();
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  expect(await readWatch()).toEqual({
+    sawBusy: true,
+    sawSkeleton: false,
+    sawLabelledSpinner: false,
+  });
+
+  // The fault clears, and Retry lists the four calendars, all shown: the
+  // month keeps every chip it drew while the list was down.
+  await restoreReads(page);
+  await retry.click();
+  const toggles = list.getByRole("checkbox");
+  await expect(toggles).toHaveCount(4);
+  for (const toggle of await toggles.all()) await expect(toggle).toBeChecked();
+  await expect(alert).toHaveCount(0);
+  await expect(month).toBeVisible();
+  await expect(chips).toHaveCount(chipCount);
 });
 
 test("contact Appointments tab: a failed load shows the error, not an empty list", async ({

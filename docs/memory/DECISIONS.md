@@ -183,3 +183,8 @@
 - 2026-10-23 [P7-T23] Field uses `data-invalid={Boolean(...)}`; Input uses `aria-invalid={Boolean(...) || undefined}` so the attribute is absent (not 'false') when valid; e2e asserts absence.
 - 2026-10-23 [P7-T23] e2e field filter's `has` locator is page-rooted, and the spec asserts the field locator matches exactly one element.
 - 2026-10-23 [P7-T23] 0100-01-01 is asserted only as a round trip (pre-1883 local mean time gives odd seconds); UTC/Singapore midnight tables also pin LA DST days 2026-03-08 and 2026-11-01.
+- 2026-10-23 [P7-T24] Sidebar error branch is `calendars.error && calendars.data === undefined` (shape from P7-T18), skeleton gated on `isLoading` only, so Retry never blanks the column.
+- 2026-10-23 [P7-T24] The view does not wait on the calendar list: appointment rows carry calendar name/colour and `hidden` starts empty, so every appointment still draws while the list is down.
+- 2026-10-23 [P7-T24] e2e records the month chip count while the list is down and checks it unchanged after recovery with all 4 calendars checked, proving the error hid no calendar.
+- 2026-10-23 [P7-T24] Bounding-box helpers (`boxOf`, `intersects`, `Box`) live in the spec, not calendar-helpers.ts; boxes use locator.boundingBox().
+- 2026-10-23 [P7-T24] Not verified in the Browser pane (fault needs the e2e Object.values wrapper); the Playwright test covers behaviour and layout at 1280x720.

@@ -829,9 +829,42 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T24 — Calendars sidebar: error state and Retry when calendars.list fails
 - **Owner:** agent · **Depends:** —
+- **Skills:** `shadcn`, `playwright-cli`
 - **Scope:** calendars-workspace renders calendars.data ?? [] so a failed list reads empty; reuse LoadError.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. Calendars page, first load: when `calendars.list` fails, the
+        calendar column shows a 'Could not load calendars' alert with the
+        error's message and a Retry button. No 'Calendars' group, no calendar
+        checkboxes and no skeleton are shown.
+  - [ ] A2. The failed list does not block the view. The month view still
+        draws the range's appointments with no calendar hidden, and no 'Could
+        not load appointments' alert shows.
+  - [ ] A3. While a Retry is in flight, the alert stays with its Retry busy
+        (aria-disabled, spinner without an accessible name) and no skeleton
+        appears. A Retry that fails again leaves the alert with Retry enabled.
+        Once the fault clears, Retry lists the four calendars, all checked,
+        and the alert is gone.
+  - [ ] A4. In the 14rem column at the default 1280x720 viewport, the Retry
+        button covers neither the alert's title nor its message, and the
+        alert stays inside its column (it does not spill into the view and
+        has no horizontal overflow).
+  - [ ] A5. The error shows only when the read failed and there is no list to
+        draw (LoadError's contract, DECISIONS P7-T13 and P7-T18). A refetch
+        that fails with the list on screen keeps the list.
+  - [ ] A6. Every new assertion has been seen failing. On the current code
+        the new test fails (no alert). The type-clean mutants each turn it
+        red: dropping `retrying` (no busy state), and showing the skeleton
+        while `isRefreshing` (skeleton during Retry).
+  - [ ] A7. Comments match the code. The `CalendarsWorkspace` doc comment
+        describes the calendar-list error, its Retry, that the view still
+        draws, and that a failed refetch keeps the list. The
+        `calendars-load-errors.spec.ts` header lists the calendars page's
+        calendar list.
+  - [ ] A8. No seed, API, mock or shared-component change and no regression.
+        `SEED_VERSION` stays 4; nothing under `src/lib/api`, `src/lib/mock` or
+        `src/components/common` changes; `npm run check` is green; the full
+        `npm run e2e` suite passes with the existing specs' assertions
+        unchanged.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T25 — Contact detail: error state instead of endless skeleton on non-404 load failure
@@ -922,6 +955,13 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** src/lib/api/opportunities.ts accepts any string for expectedCloseAt; reject non-ISO values with a 422 so non-UI callers cannot store junk. Tests first.
   - From the P7-T23 review: e2e/deal-form.spec.ts sets `timezoneId: 'Asia/Singapore'` but no assertion depends on it. Add an edit-deal round trip (open a seeded deal, save, reopen, the Expected close day is unchanged) so the zone covers the local-midnight rule end to end, or drop the setting.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T36 — Booking dialog: error state and Retry when calendars.list fails
+- **Owner:** agent · **Depends:** —
+- **Scope:** booking-dialog.tsx:152 renders calendars.data ?? [], so a failed list leaves the Calendar select empty with no error or Retry; mirror P7-T24.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

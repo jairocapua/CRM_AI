@@ -152,3 +152,6 @@
 - 2026-10-23 [P7-T23] Chromium's `<input type=date>` accepts `fill('0099-01-01')` without a 'Malformed value' error; no `locator.evaluate` fallback needed.
 - 2026-10-23 [P7-T23] A `Date.UTC` mutant still passes the Asia/Singapore round trip (UTC midnight is 08:00 same day); exact-ISO rows and the LA round trip are what catch it.
 - 2026-10-23 [P7-T23] `npx playwright test` (build + start on :3100) runs fine alongside the owner's `next dev` on :3000 in the same folder.
+- 2026-10-23 [P7-T24] Before the fix, a failed calendars.list() rendered the 'Calendars' fieldset with an empty <ul> while the month view drew normally beside it.
+- 2026-10-23 [P7-T24] A mutant showing the skeleton while `isRefreshing` fails at the sawBusy poll, not sawSkeleton: the alert unmounts during Retry, so its button never reaches aria-disabled.
+- 2026-10-23 [P7-T24] With the Turbopack build cached, `npx playwright test <spec> -g ...` rebuilds and starts in ~12s, so running mutants through the real webServer is cheap.

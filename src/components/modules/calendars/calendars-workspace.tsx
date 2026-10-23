@@ -63,6 +63,13 @@ const NONE_HIDDEN: ReadonlySet<ID> = new Set();
  * retry runs, the alert stays with its button busy, never a skeleton. A
  * refetch that fails while rows are on screen keeps them there.
  *
+ * When the calendar list fails to load and none is on screen, its column
+ * shows a `LoadError` whose Retry calls `refetch()`; while that retry runs,
+ * the alert stays with its button busy, never a skeleton. The view still
+ * draws the range's appointments, because each row carries its calendar's
+ * name and colour, and no calendar is hidden. A refetch that fails with the
+ * list on screen keeps the list.
+ *
  * Which calendars are hidden is component state: a way of looking, not a
  * change to any calendar, so it never reaches the store. Seeded ids also
  * change on every reseed, so they would rot in a bookmarked URL. It survives
@@ -228,8 +235,16 @@ export function CalendarsWorkspace() {
         <div>
           {calendars.isLoading ? (
             <CalendarListSkeleton />
+          ) : calendars.error && calendars.data === undefined ? (
+            <LoadError
+              title="Could not load calendars"
+              message={calendars.error.message}
+              onRetry={calendars.refetch}
+              retrying={calendars.isRefreshing}
+            />
           ) : (
             <CalendarList
+              // Loaded here; `?? []` only satisfies the type.
               calendars={calendars.data ?? []}
               hidden={hidden}
               onToggle={toggleCalendar}
