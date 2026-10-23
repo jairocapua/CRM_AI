@@ -5,14 +5,15 @@ import type { Page } from "@playwright/test";
 // has nothing but type imports besides.
 import { APP_NAME } from "../src/lib/constants";
 import { NAV_ITEMS } from "../src/lib/nav";
-import { expect, test } from "./fixtures";
+import { expect, NAVIGATION, test } from "./fixtures";
 
 /**
  * Visits every route in the navigation and checks it boots, renders its own
  * heading, leaves no skeleton behind and stays quiet in the console (the shared
  * fixture fails the test on any console error, page error or hydration
  * message). Built from `NAV_ITEMS`, so a new nav entry is covered without
- * touching this file.
+ * touching this file. The user menu's Team settings link sits outside
+ * `NAV_ITEMS`, so it has a test of its own.
  */
 
 /**
@@ -61,3 +62,24 @@ for (const item of NAV_ITEMS) {
     ).toBeVisible();
   });
 }
+
+// The user menu's links sit outside NAV_ITEMS. The console fixture fails this
+// test on the /settings/team 404 that P7-T33 used to excuse, whether it comes
+// from the menu's prefetch or from the navigation itself.
+test("Team settings in the user menu opens its page cleanly", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/dashboard");
+  await page.getByRole("button", { name: /Jordan Reyes/ }).click();
+  await page
+    .getByRole("menuitem", { name: "Team settings", exact: true })
+    .click();
+
+  await expect(page).toHaveURL(/\/settings\/team$/, NAVIGATION);
+  await expect(page).toHaveTitle(`Team settings · ${APP_NAME}`);
+  await expect(
+    routeHeading(page, "Team settings"),
+    '/settings/team rendered no "Team settings" heading',
+  ).toBeVisible();
+});

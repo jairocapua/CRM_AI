@@ -64,7 +64,8 @@ management notes).
   - [ ] e2e: invite a member, then see them listed as pending.
   - [ ] e2e: removing a member who owns contacts reassigns them and the
         integrity report stays clean.
-- **Refs:** `src/lib/api/users.ts`
+- **Refs:** `src/lib/api/users.ts`; replaces the P7-T42 placeholder at
+  `src/app/(app)/settings/team/page.tsx`
 
 ### P9-T04 — Custom fields manager
 - **Owner:** agent · **Depends:** P9-T01, P9-T02

@@ -267,3 +267,5 @@
 - 2026-10-24 [P7-T40] Today's mock returns store records by reference, so no e2e can show the refetch bug; the happy-dom hook test is the only guard.
 - 2026-10-24 [P7-T41] LinkButton JSDoc names both lint exceptions (non-link real button; Base UI trigger rendering a non-button) with the exact disable directive; each message clause asserted exactly once; link-buttons spec keeps "Two causes" and gives padding's data-icon cause its own sentence.
 - 2026-10-24 [P7-T41] Phase A4 also lists mutant M4, which proves the reworded TRIGGER_DIV_DISABLED comment.
+- 2026-10-24 [P7-T42] /settings/team got a Phase 9 placeholder page instead of prefetch={false}: removes both prefetch and click 404s, no Link prop for P9 to remember; P9-T03 replaces it in place.
+- 2026-10-24 [P7-T42] The Team settings prefetch 404 excuse is removed from the editor e2e; the earlier P7-T33 entries stay as history.

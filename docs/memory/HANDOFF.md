@@ -5,25 +5,26 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T41 in review.
+- **Status:** P7-T42 in review.
 
 ## Last change
-- P7-T41: LinkButton JSDoc (button.tsx) names both nativeButton lint exceptions (non-link real button; Base UI trigger rendering a non-button) with the exact disable directive.
-- scripts/eslint-config.test.mjs asserts each lint-message clause exactly once; mutants M1-M4 all go red.
-- e2e/link-buttons.spec.ts header gives padding its own data-icon cause. Comments/tests only; check green.
+- P7-T42: new placeholder page `src/app/(app)/settings/team/page.tsx` (title/h1 "Team settings", EmptyState pointing to Phase 9); nav-user.tsx unchanged.
+- e2e: `excuseTeamSettingsPrefetch` removed from calendars-availability-editor.spec.ts; smoke.spec.ts gains "Team settings in the user menu opens its page cleanly".
+- P9-T03 Refs name the placeholder it replaces. check and e2e green.
+- New task added: shared `userMenu(page)` e2e helper (P7-T49).
 
 ## Next up
-- **Agent:** P7-T42.
+- **Agent:** P7-T43.
 
 ## Waiting on you
-- Review of P7-T41 (deep review).
+- Review of P7-T42 (deep review).
 - P7-H4: should an ended appointment that is already Cancelled stay frozen? Not blocking.
 
 ## Open suggestions (non-blocking review notes)
-- button.tsx JSDoc: "There role=button is right" reads as trigger-only; say "In both cases ... opens or acts rather than navigating".
-- eslint-config test 1 regex could shorten to /non-link element that really is a button/ to survive small rewording.
-- link-buttons header "sm narrows" must change if other sizes gain the data-icon rule.
-- Earlier P7-T40, select-a11y, P7-T38 and P7-T37 notes still open.
+- team/page.tsx types metadata as `Metadata`; /settings uses an untyped object. Align when P9-T03 replaces it.
+- smoke.spec.ts:66-68 comment: the navigation 404 and heading prove the test; the prefetch 404 is incidental.
+- Header shows "Settings" on /settings/team (prefix match); P9 may want a sub-route title.
+- Earlier P7-T41, P7-T40, select-a11y, P7-T38 and P7-T37 notes still open.
 
 ## Blockers
 - None.

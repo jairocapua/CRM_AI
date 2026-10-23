@@ -325,7 +325,6 @@ test("Back to calendars with unsaved edits asks first, by keyboard and pointer",
 test("every sidebar link asks before dropping unsaved edits", async ({
   page,
   gotoApp,
-  consoleProblems,
 }) => {
   await openEditor(page, gotoApp);
   // Tripwire: Discovery Call's slots are 30 minutes long.
@@ -388,24 +387,7 @@ test("every sidebar link asks before dropping unsaved edits", async ({
   await expect(selectValue(page)).toHaveText(FIRST);
   await expect(slotDuration(page)).toHaveValue("30");
   await expect(anyAlertDialog(page)).toHaveCount(0);
-
-  excuseTeamSettingsPrefetch(consoleProblems);
 });
-
-/**
- * /settings/team has no page until Phase 9, and Next prefetches the user
- * menu's Team settings link as soon as the menu opens, so the browser logs a
- * 404 for its route data. Removes exactly that console problem, and nothing
- * else, from the fixture's list; drop this once the page exists. Called as
- * the test's last step, so a test that fails earlier also lists that 404
- * beside its real failure.
- */
-function excuseTeamSettingsPrefetch(problems: string[]) {
-  const teamPrefetch =
-    /^console\.error: Failed to load resource: the server responded with a status of 404 \(Not Found\) \(https?:\/\/[^/]+\/settings\/team\?_rsc=[^)]*\)$/;
-  const kept = problems.filter((problem) => !teamPrefetch.test(problem));
-  problems.splice(0, problems.length, ...kept);
-}
 
 test("reload and tab close with unsaved edits get the browser's prompt", async ({
   page,

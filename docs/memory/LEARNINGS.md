@@ -223,3 +223,4 @@
 - 2026-10-24 [P7-T40] Python is not on PATH here (the alias opens the Microsoft Store); use `node -` heredoc scripts for scripted multi-line edits.
 - 2026-10-24 [P7-T41] ESLint 9's unused-disable-directive report reaches lintText results with ruleId null; restricted() in scripts/eslint-config.test.mjs relies on it so an empty result proves the disable comment silenced the rule.
 - 2026-10-24 [P7-T41] scripts/eslint-config.test.mjs matches the nativeButton lint message clause by clause; rewording eslint.config.mjs:44 must update the test too (intended coupling).
+- 2026-10-24 [P7-T42] Without the page, a user-menu click logs three 404s: two `?_rsc=` route-data prefetches and the navigation's document 404; Chromium appends `:0` to the URL in the console message.

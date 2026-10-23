@@ -1945,9 +1945,26 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T42 — Team settings link: stop 404 prefetch until P9
 - **Owner:** agent · **Depends:** —
+- **Skills:** `playwright-cli`
 - **Scope:** prefetch={false} on nav-user Team settings Link (or placeholder page); then remove excuseTeamSettingsPrefetch from calendars-availability-editor.spec.ts
+- **Decided:** a placeholder page at /settings/team rather than prefetch={false}. It removes both the prefetch 404 and the 404 on click, leaves nav-user.tsx untouched, and P9-T03 replaces it in place.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. /settings/team exists as a Phase 9 placeholder, written in the
+        style of /settings: document title "Team settings", h1 "Team
+        settings", and an EmptyState naming the team list, roles and invites
+        as coming in Phase 9. No data or api calls.
+  - [ ] A2. Opening the user menu and following Team settings logs no console
+        problem: no 404 from the prefetch and none from the navigation (e2e
+        smoke "Team settings in the user menu opens its page cleanly", red
+        with the page removed).
+  - [ ] A3. `excuseTeamSettingsPrefetch`, its JSDoc and its call are gone from
+        `e2e/calendars-availability-editor.spec.ts`, and "every sidebar link
+        asks before dropping unsaved edits" passes without it (red, with a
+        /settings/team?_rsc 404, when the page is removed).
+  - [ ] A4. The Team settings link itself is unchanged: no prefetch={false},
+        and it is still guarded by onNavigate.
+  - [ ] A5. `npm run check` and `npm run e2e` are green; P9-T03's Refs name
+        the placeholder it replaces.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T43 — Unsaved-changes guard: stable guardLeave, menu focus return, mobile Sheet
@@ -1992,6 +2009,13 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T48 — Bump next to patch npm audit critical findings
 - **Owner:** agent · **Depends:** —
 - **Scope:** npm audit: 9 findings, 2 critical (next 16.3.4 direct, proxy-addr transitive). Patch-bump next, rerun check + e2e.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-24
+
+### P7-T49 — Shared userMenu(page) e2e helper
+- **Owner:** agent · **Depends:** —
+- **Scope:** Move the /Jordan Reyes/ user-menu locator (smoke + calendars-availability-editor specs) into e2e/fixtures.ts so P9-T02's api.users.me() switch updates one place.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-24
