@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, type ComponentProps, type Ref } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeftIcon, CalendarXIcon } from "lucide-react";
 
@@ -10,7 +9,7 @@ import { useResource } from "@/lib/api";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { LoadError } from "@/components/common/load-error";
-import { buttonVariants } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import {
   Select,
@@ -21,7 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import { AvailabilityForm } from "./availability-form";
 import { CalendarName } from "./calendar-name";
 
@@ -227,21 +225,18 @@ function BackLink({
   onNavigate,
 }: {
   ref?: Ref<HTMLAnchorElement>;
-  onNavigate?: ComponentProps<typeof Link>["onNavigate"];
+  onNavigate?: ComponentProps<typeof LinkButton>["onNavigate"];
 }) {
-  // A link styled as a button: Base UI's Button would give it role="button".
-  // cn() merges the variant classes as Button does, or the outline border is
-  // lost.
   return (
-    <Link
+    <LinkButton
       ref={ref}
       href="/calendars"
       onNavigate={onNavigate}
-      className={cn(buttonVariants({ variant: "outline" }))}
+      variant="outline"
     >
       <ArrowLeftIcon data-icon="inline-start" />
       Back to calendars
-    </Link>
+    </LinkButton>
   );
 }
 

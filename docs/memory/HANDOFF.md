@@ -5,22 +5,27 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T25–T30 approved (Autopilot review, 2026-10-23); P7-T30 was approved with `progress.mjs set`, so no task is running. P7-T31 is next. Session handed off to a fresh one after 6 approvals, per CLAUDE.md.
+- **Status:** P7-T31 in review.
 
 ## Last change
-- P7-T30: one shared `chooseContact` (exact-name, no `.first()`), plus `pauseTimers` and `uniquelyNamedContact`, in e2e/calendar-helpers.ts; `NAVIGATION` frozen and typed, with a self-test. e2e 103 passed, 539 Vitest, no src change.
-- P7-T25–T29 in brief: contact page LoadError + Retry; P7-H3 past-appointment rule (API 422 `PAST_APPOINTMENT` + dialog); shared 15s `NAVIGATION` for cross-route e2e waits; named Select triggers and the contact sheet's Tags picker; ContactPicker keeps its pick at once (`pickerValue`).
-- Tasks the runs added: P7-T37 (contacts list error state), P7-T38 (useResource refetch unit test), P7-T39 (remaining TagPickers and contacts search names), P7-T40 (ContactPicker: hold the fetched contact for outside-set values), owner task P7-H4.
-- Review notes from P7-T25–T30 are folded into P7-T36, P7-T39, P7-T40 and docs/BACKLOG.md.
+- P7-T31: `LinkButton` (Link + cn(buttonVariants)) in src/components/ui/button.tsx; the six P7-T19 links use it; PaginationLink is a plain `<a>` with no role.
+- ESLint `no-restricted-syntax` bans `nativeButton={false}` and bare `className={buttonVariants(...)}` outside src/components/ui; CLAUDE.md constraint added.
+- Tests: 8 Vitest (button.test.ts) + 3 node:test (scripts/eslint-config.test.mjs), all seen failing via mutants. check green (547 Vitest), e2e 103 passed.
 
 ## Next up
-- **Agent:** P7-T31 LinkButton helper and nativeButton lint rule.
+- **Agent:** P7-T32 Link-button icon padding and link-buttons spec scoping (unblocked once P7-T31 is approved).
 
 ## Waiting on you
-- P7-H4: should an ended appointment that is already Cancelled stay frozen? Today it can still be marked Showed or No Show (the P7-H3 rule names target statuses only). Not blocking.
+- Review of P7-T31 (Autopilot reviews it).
+- P7-H4: should an ended, already-Cancelled appointment stay frozen? Not blocking.
 
 ## Open suggestions (non-blocking review notes)
-- All folded into later tasks' Scope sub-bullets or the backlog.
+- Lint selector misses template literals, `clsx(buttonVariants())` and stored class strings; broader `:not(cn > call)` selector possible.
+- Lint message for `nativeButton={false}` reads oddly for Menu/Popover/Dialog triggers; add a "trigger: disable with a reason" clause.
+- button.test.ts length checks on literal arrays cannot fail; the real guard is the typecheck `toBeNever()`.
+- The why is repeated in CLAUDE.md, eslint comment and spec header; eslint comment could point to LinkButton's JSDoc.
+- Consider moving LinkButton to a sibling `ui/link-button.tsx` so shadcn overwrites cannot drop it.
+- P7-T32 must still add `data-icon` to View contact / Open board icons.
 
 ## Blockers
 - None.

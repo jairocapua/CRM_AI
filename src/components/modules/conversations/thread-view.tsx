@@ -18,7 +18,7 @@ import { apiNow, useResource } from "@/lib/api";
 import { ChannelIcon, CHANNEL_LABELS } from "@/components/common/channel-icon";
 import { EmptyState } from "@/components/common/empty-state";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import {
   MessageScrollerProvider,
   useMessageScroller,
@@ -75,15 +75,9 @@ export function ThreadView({ id }: { id: string }) {
           title="Conversation not found"
           description="It may have been deleted along with its contact."
           action={
-            // A link styled as a button: Button render={<Link>} would give it
-            // role="button". cn() merges the variant classes as Button does,
-            // or the outline border is lost.
-            <Link
-              href="/conversations"
-              className={cn(buttonVariants({ variant: "outline" }))}
-            >
+            <LinkButton href="/conversations" variant="outline">
               Back to inbox
-            </Link>
+            </LinkButton>
           }
         />
       </div>
@@ -304,16 +298,14 @@ function ThreadHeader({
   return (
     <div className="flex h-14 shrink-0 items-center gap-3 border-b px-3 md:px-4">
       {isMobile ? (
-        // A link styled as a button, as above: Button render={<Link>} would
-        // give it role="button". cn() keeps icon-sm's 8px radius over the
-        // base rounded-lg, as Button does.
-        <Link
+        <LinkButton
           href="/conversations"
           aria-label="Back to inbox"
-          className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
+          variant="ghost"
+          size="icon-sm"
         >
           <ArrowLeftIcon />
-        </Link>
+        </LinkButton>
       ) : null}
       <Avatar>
         <AvatarImage src={contact.avatarUrl} alt="" />

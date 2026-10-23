@@ -1179,11 +1179,91 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T31 — LinkButton helper and nativeButton lint rule
 - **Owner:** agent · **Depends:** —
+- **Skills:** `shadcn`, `vitest`, `writing-for-agents`
 - **Scope:** Export a cn(buttonVariants()) link helper from ui/button.tsx; no-restricted-syntax for nativeButton={false} in modules; fix pagination.tsx PaginationLink
   - From the P7-T19 review: move the six P7-T19 links onto the helper, so no caller can drop `cn()` again.
   - Add a CLAUDE.md "Non-obvious constraints" line: a navigating control is the link helper (or `<Link className={cn(buttonVariants(...))}>`), never `Button render={<Link/>} nativeButton={false}` (role="button") and never a bare `buttonVariants()` string (the outline border is lost in light mode). The shadcn skill recommends `nativeButton={false}`, so agents will keep reaching for it.
+  - Decided: the helper is a component, `LinkButton` (Next's `Link` with
+    `cn(buttonVariants({ variant, size, className }))`), not a class-string
+    function, so callers never handle the class string.
+  - Decided: `PaginationLink` stays a plain `<a>`, because it takes any
+    href (e.g. `?page=2`). Its classes are spelled `cn(buttonVariants(...))`
+    inside ui. It does not move onto Next's Link.
+  - Decided: the lint rule covers all app code (`src/**/*.{ts,tsx}` except
+    `src/components/ui/**`), not only modules, and bans every
+    `nativeButton={false}`. A non-link element that really is a button
+    disables the line with a reason. ui primitives (vendor code) are exempt.
+  - Decided: the same rule also rejects a bare
+    `className={buttonVariants(...)}`, the other half of the CLAUDE.md line.
+  - Decided: LinkButton carries `data-slot="link-button"`, not `"button"`,
+    so `[data-slot="button"]` lookups (such as the Retry lookup in
+    e2e/calendars-load-errors.spec.ts) keep matching buttons only.
+  - Decided: the per-site why-comments from P7-T19 are removed. The why
+    lives once, in LinkButton's JSDoc.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. LinkButton exists and is a plain link with Button's look.
+        src/components/ui/button.tsx exports `LinkButton`: Next's `Link`
+        with `cn(buttonVariants({ variant, size, className }))`, Button's
+        default variant and size, and `data-slot="link-button"`; every other
+        Link prop (href, ref, onNavigate, aria-label) is passed through. It
+        renders an `<a href>` with no role attribute. Its class string equals
+        `<Button>`'s for all 6 variants x 8 sizes, and with a caller
+        className. outline/sm keeps `border-border` and the 8px radius
+        class, without `border-transparent` or `rounded-lg`. A test pins the
+        cause: Base UI's Button rendering an `<a>` with
+        `nativeButton={false}` has role="button".
+  - [ ] A2. The six P7-T19 links are LinkButtons and look and behave as
+        before: View contact (contact-panel, outline sm), Back to inbox in
+        the empty state (thread-view, outline), Back to inbox on a phone
+        (thread-view, ghost icon-sm, aria-label), Open board (pipeline-card,
+        ghost sm), Availability (calendars-workspace, outline) and Back to
+        calendars (availability-workspace BackLink, outline, ref +
+        onNavigate). No `buttonVariants` import is left in app code outside
+        src/components/ui. e2e/link-buttons.spec.ts and the
+        availability-editor Back-link test pass with their assertions
+        unchanged.
+  - [ ] A3. PaginationLink is a link. src/components/ui/pagination.tsx
+        renders `<a>` with
+        `cn(buttonVariants({ variant: isActive ? "outline" : "ghost", size, className }))`,
+        not a Base UI Button. It has no role attribute, aria-current="page"
+        when active, outline/ghost icon parity with Button, and
+        PaginationPrevious/Next keep the default size and their padding
+        override. No `nativeButton=` is left anywhere in src.
+  - [ ] A4. The lint rule. eslint.config.mjs sets `no-restricted-syntax`
+        (error) for `src/**/*.{ts,tsx}` except `src/components/ui/**`. It
+        rejects any `nativeButton={false}` and a bare
+        `className={buttonVariants(...)}`, with messages that name
+        LinkButton and CLAUDE.md. `cn(buttonVariants())`, `<LinkButton>`,
+        `nativeButton` and `nativeButton={true}` pass. ui primitives are
+        exempt. The repo lints clean.
+  - [ ] A5. CLAUDE.md "Non-obvious constraints" has the line: a navigating
+        control is `<LinkButton>` (or `<Link className={cn(buttonVariants(...))}>`);
+        never `Button render={<Link/>} nativeButton={false}`, because of
+        role="button"; never a bare `buttonVariants()` string, because the
+        outline border is lost in light mode; the shadcn skill recommends
+        `nativeButton={false}`, and ESLint rejects both spellings outside
+        src/components/ui.
+  - [ ] A6. Every new test has been seen failing: LinkButton without cn()
+        fails the parity and outline-sm tests; LinkButton as
+        `Button render={<Link/>} nativeButton={false}` fails the no-role
+        test; the old PaginationLink fails both PaginationLink tests; with
+        the eslint block removed, the error cases fail; putting
+        `Button render={<Link/>} nativeButton={false}` or
+        `className={buttonVariants(...)}` back at a module site makes
+        `npx eslint <file>` exit 1.
+  - [ ] A7. Comments and docs match the code: LinkButton's JSDoc gives both
+        causes (role=button; the class merge) and says it is a local
+        addition to keep when updating; PaginationLink has a one-line why;
+        the six sites no longer carry the P7-T19 why-comments; the eslint
+        block comment explains the rule; the link-buttons.spec.ts header
+        names LinkButton; this entry has a Skills line, the Decided lines
+        and this acceptance.
+  - [ ] A8. No seed, API or mock change and no regression. `SEED_VERSION`
+        stays 4, nothing under src/lib changes, `npm run check` is green
+        with the Vitest count up only by the new button.test.ts tests, the
+        full `npm run e2e` passes with 103 tests and the existing specs'
+        assertions unchanged, and `npm ls @tanstack/react-table` prints
+        8.21.3.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T32 — Link-button icon padding and link-buttons spec scoping

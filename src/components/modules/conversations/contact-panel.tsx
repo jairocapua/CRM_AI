@@ -11,12 +11,11 @@ import { Money } from "@/components/common/money";
 import { ContactStatusBadge } from "@/components/modules/contacts/contact-status-badge";
 import { ContactInfoPanel } from "@/components/modules/contacts/detail/contact-info-panel";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { buttonVariants } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fullName, initials, toDate } from "@/lib/format";
-import { cn } from "@/lib/utils";
 
 /**
  * Who you are talking to, beside the thread: identity, the contact's details
@@ -77,16 +76,14 @@ export function ContactPanel({ conversationId }: { conversationId: string }) {
             ) : null}
             <ContactStatusBadge status={record.status} />
           </div>
-          {/* A link styled as a button: Button render={<Link>} would give it
-              role="button". cn() merges the variant classes as Button does,
-              or the outline border and the sm radius and icon size are lost. */}
-          <Link
+          <LinkButton
             href={`/contacts/${record.id}`}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            variant="outline"
+            size="sm"
           >
             <ExternalLinkIcon />
             View contact
-          </Link>
+          </LinkButton>
         </div>
 
         <NextAppointment contactId={record.id} />

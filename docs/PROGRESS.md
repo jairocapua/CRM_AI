@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 33/65 tasks done (51%) · **Current phase:** P7 · **Next agent task:** P7-T31 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** P7-H4
+**Overall:** 33/65 tasks done (51%) · **Current phase:** P7 · **Next agent task:** P7-T33 · **Awaiting review:** P7-T31 · **Blocked:** none · **Waiting on you:** P7-H4
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -50,7 +50,7 @@ Status: active · Progress: 33/44 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T28 | Name the unlabelled Select triggers | agent | done | — | 354e04b | 2026-10-23 | Status/Pipeline/Assign owner Select labels, TagPicker named Tags via htmlFor; select-a11y spec pins names (12 tests) |
 | P7-T29 | Fix ContactPicker selection race after a pick | agent | done | — | c39d93e | 2026-10-23 | Picked contact held locally via pickerValue(); race e2e on 3 surfaces with frozen timers; M1 red 60/60 |
 | P7-T30 | Shared chooseContact e2e helper | agent | done | — | bed1313 | 2026-10-23 | Shared chooseContact/pauseTimers/uniquelyNamedContact in calendar-helpers; review notes folded; NAVIGATION frozen; e2e 103 |
-| P7-T31 | LinkButton helper and nativeButton lint rule | agent | todo | — |  |  |  |
+| P7-T31 | LinkButton helper and nativeButton lint rule | agent | review | — |  | 2026-10-23 | LinkButton in ui/button.tsx, 6 links migrated, PaginationLink plain <a>, lint bans nativeButton={false}/bare buttonVariants |
 | P7-T32 | Link-button icon padding and link-buttons spec scoping | agent | todo | P7-T31 |  | 2026-10-23 | Repurposed from a duplicate of P7-T31 (P7-T19 review) |
 | P7-T33 | App-wide unsaved-changes guard (sidebar links, reload, tab close) | agent | todo | — |  |  |  |
 | P7-T34 | Calendar update: validate or allow-list keys outside the settings schema | agent | todo | — |  |  |  |

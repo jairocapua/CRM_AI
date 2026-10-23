@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CalendarPlusIcon, ClockIcon } from "lucide-react";
 
@@ -9,9 +8,8 @@ import type { ID } from "@/types";
 import * as api from "@/lib/api";
 import { apiNow, useResource, type AppointmentRow } from "@/lib/api";
 import { LoadError } from "@/components/common/load-error";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import { AppointmentDetailsDialog } from "./appointment-details-dialog";
 import { liveFirst } from "./appointment-display";
 import { appointmentFocusFallback } from "./appointment-focus";
@@ -215,17 +213,10 @@ export function CalendarsWorkspace() {
         timeZoneLabel={zoneLabel(dayStart(date))}
         onNavigate={navigate}
       >
-        {/* A link styled as a button, not a Button rendering a link: Base UI
-            gives a non-native button role="button", and this navigates. cn()
-            merges the variant classes as Button does, or the outline border
-            is lost. */}
-        <Link
-          href="/calendars/availability"
-          className={cn(buttonVariants({ variant: "outline" }))}
-        >
+        <LinkButton href="/calendars/availability" variant="outline">
           <ClockIcon data-icon="inline-start" />
           Availability
-        </Link>
+        </LinkButton>
         <Button onClick={() => setBookOpen(true)}>
           <CalendarPlusIcon data-icon="inline-start" />
           Book

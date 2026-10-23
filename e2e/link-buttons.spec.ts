@@ -14,7 +14,8 @@ import { expect, NAVIGATION, test } from "./fixtures";
  *   (node_modules/@base-ui/react/internals/use-button/useButton.mjs, the
  *   `isNativeButton ? { type: 'button' } : { role: 'button' }` branch). So
  *   `<Button render={<Link/>} nativeButton={false}>` is a link announced as a
- *   button. These controls are `<Link className={cn(buttonVariants(...))}>`.
+ *   button. These controls are `<LinkButton>` (src/components/ui/button.tsx):
+ *   Next's Link with the cn()-merged classes.
  * - The look. `Button` passes its cva output through `cn()`, which drops the
  *   earlier of two conflicting classes. A raw `buttonVariants()` string keeps
  *   both, and Tailwind's CSS order picks the winner: `border-transparent`

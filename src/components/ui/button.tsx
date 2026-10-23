@@ -1,3 +1,5 @@
+import type { ComponentProps } from "react"
+import Link from "next/link"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
@@ -54,4 +56,34 @@ function Button({
   )
 }
 
-export { Button, buttonVariants }
+/**
+ * A link drawn as a button: use it for every control that navigates. It is a
+ * plain `<a href>` (Next's `Link`), so a screen reader announces "link" and
+ * open-in-new-tab and copy-address keep working.
+ *
+ * - Not `<Button render={<Link />}>` with `nativeButton` off: Base UI's
+ *   useButton gives any non-native element `role="button"`, even an `<a href>`.
+ * - Not a raw `buttonVariants()` string: only `cn()` drops the earlier of two
+ *   conflicting classes. Without it `border-transparent` beats outline's
+ *   `border-border` (no border in light mode), `rounded-lg` beats sm and
+ *   icon-sm's 8px radius, and the base 16px icon rule beats sm's 14px.
+ *
+ * A local addition, not from the shadcn registry: keep it when this file is
+ * updated from upstream (`shadcn add button --overwrite` would drop it).
+ */
+function LinkButton({
+  className,
+  variant = "default",
+  size = "default",
+  ...props
+}: ComponentProps<typeof Link> & VariantProps<typeof buttonVariants>) {
+  return (
+    <Link
+      data-slot="link-button"
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    />
+  )
+}
+
+export { Button, buttonVariants, LinkButton }

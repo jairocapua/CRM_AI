@@ -180,3 +180,8 @@
 - 2026-10-23 [P7-T30] To scope a page-side watcher to an unhooked part of the page, tag it from the test (el.parentElement.setAttribute('data-e2e-...')); React leaves unmanaged attributes alone. Guard with count 1 plus what must/must not be inside.
 - 2026-10-23 [P7-T30] A MutationObserver catching a short attribute spell should read records with attributeOldValue: true (oldValue 'true' marks a spell's end), not the live attribute, which may already be back.
 - 2026-10-23 [P7-T30] `Object.freeze({ timeout: 15_000 })` keeps literal types (`Readonly<{ timeout: 15000 }>`); annotate the variable to get `Readonly<{ timeout: number }>`.
+- 2026-10-23 [P7-T31] esquery compares attribute-selector literals as strings, so `[value.expression.value=false]` matches boolean `false` (and the string "false"); scripts/eslint-config.test.mjs proves it fires.
+- 2026-10-23 [P7-T31] Vitest can render ui components with react-dom/server `renderToStaticMarkup` in the node env (no jsdom); works for Base UI Button and next/link (real `<a href>`, no router). Use `createElement` in `.test.ts`.
+- 2026-10-23 [P7-T31] An ESLint-API test of eslint.config.mjs must assert no fatal message and a ruleId on every message, or a parse error / 'File ignored' warning passes a 'no error' case.
+- 2026-10-23 [P7-T31] src/components/ui/ is prettier-ignored; format a test file there with `npx prettier --ignore-path ./nonexistent-ignore --write <file>`.
+- 2026-10-23 [P7-T31] Flat config replaces a rule's options per file: a later block setting `no-restricted-syntax` on overlapping src files silently drops LINK_BUTTON_RULE; merge selectors into one array.

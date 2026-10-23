@@ -27,6 +27,34 @@ const SEAM_RULE = [
   },
 ];
 
+/**
+ * A navigating control is `<LinkButton>` from `@/components/ui/button`. Two
+ * spellings break it, and shadcn docs and examples show both:
+ *
+ * - `nativeButton={false}`: Base UI then gives the element `role="button"`,
+ *   even an `<a href>`, so a link is announced as a button.
+ * - a bare `className={buttonVariants(...)}`: without `cn()` the conflicting
+ *   classes survive, and `border-transparent` hides the outline border.
+ *
+ * ui primitives (shadcn vendor code) are exempt. scripts/eslint-config.test.mjs
+ * lints snippets through this config to prove the selectors fire.
+ */
+const LINK_BUTTON_RULE = [
+  "error",
+  {
+    selector:
+      'JSXAttribute[name.name="nativeButton"][value.expression.value=false]',
+    message:
+      'nativeButton={false} makes Base UI add role="button", so a link is announced as a button. A navigating control is <LinkButton> from @/components/ui/button. Only a non-link element that really is a button may disable this line, with a reason. See CLAUDE.md.',
+  },
+  {
+    selector:
+      'JSXAttribute[name.name="className"] > JSXExpressionContainer > CallExpression[callee.name="buttonVariants"]',
+    message:
+      "Wrap buttonVariants() in cn(), or use <LinkButton>: the raw string keeps conflicting classes (border-transparent hides the outline border in light mode). See CLAUDE.md.",
+  },
+];
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -56,6 +84,13 @@ const eslintConfig = defineConfig([
   {
     files: ["src/lib/mock/seed/**"],
     rules: { "no-restricted-imports": "off" },
+  },
+
+  // Links drawn as buttons are <LinkButton> (see LINK_BUTTON_RULE).
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/components/ui/**"],
+    rules: { "no-restricted-syntax": LINK_BUTTON_RULE },
   },
 
   // Playwright fixtures hand each setup callback a `use(value)` function, which

@@ -67,6 +67,16 @@ directly. The mock database lives in `src/lib/mock/` behind `src/lib/api/`.
   `render` prop, not `asChild`: `<Trigger render={<Button />}>label</Trigger>`.
   Menu labels must sit inside a `DropdownMenuGroup` — a bare
   `DropdownMenuLabel` throws `MenuGroupContext is missing` at runtime.
+- **A navigating control is a link, never a `Button`.** Use
+  `<LinkButton href variant size>` from `ui/button.tsx` (or
+  `<Link className={cn(buttonVariants(...))}>`). Never
+  `<Button render={<Link />} nativeButton={false}>`: Base UI gives any
+  non-native button `role="button"`, even an `<a href>`, so screen readers
+  announce a button. Never a bare `buttonVariants()` string either: without
+  `cn()` the conflicting classes survive, and `border-transparent` hides the
+  outline border in light mode. The shadcn skill recommends
+  `nativeButton={false}`, so expect to reach for it; ESLint
+  (`no-restricted-syntax`) rejects both spellings outside `src/components/ui/`.
 - **`form` is not used.** react-hook-form integrates through the `Field*`
   components; `FieldError` accepts RHF's errors array directly.
 - **Tailwind v4**: no config file, dark mode needs `@custom-variant`, and the

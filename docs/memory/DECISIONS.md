@@ -215,3 +215,8 @@
 - 2026-10-23 [P7-T30] Fixture self-test only reads NAVIGATION (never writes), so a broken freeze cannot leak a changed timeout to other tests in the worker.
 - 2026-10-23 [P7-T30] Fixed A9 by annotating `NAVIGATION: Readonly<{ timeout: number }>` rather than rewording acceptance; the literal 15000 type gave callers nothing.
 - 2026-10-23 [P7-T30] Decided lines sit in the P7-T30 scope list as '- Decided:' bullets, matching P7-T29; A1-A10 copied from the planner's map.
+- 2026-10-23 [P7-T31] The helper is a component, `LinkButton` (Link + cn(buttonVariants(...))), not a class-string function, so callers never handle the class string.
+- 2026-10-23 [P7-T31] PaginationLink stays a plain `<a>` (any href, e.g. `?page=2`) with cn(buttonVariants(...)); its `size` type comes from `typeof Button` via a type-only import.
+- 2026-10-23 [P7-T31] Lint rule covers src/**/*.{ts,tsx} except src/components/ui/**: bans every `nativeButton={false}` and a bare `className={buttonVariants(...)}`; a real non-link exception disables the line with a reason.
+- 2026-10-23 [P7-T31] LinkButton uses `data-slot="link-button"` so `[data-slot="button"]` lookups match buttons only; per-site P7-T19 why-comments removed, the why lives in LinkButton's JSDoc.
+- 2026-10-23 [P7-T31] JSDoc spells the banned pattern without `nativeButton=` so `git grep "nativeButton=" -- src` stays empty; a typecheck `expectTypeOf<Exclude<...>>().toBeNever()` guards 6x8 parity coverage.
