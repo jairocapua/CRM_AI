@@ -1689,6 +1689,8 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T37 — Contacts list: error state instead of false 'No contacts found' on list failure
 - **Owner:** agent · **Depends:** —
 - **Scope:** contacts-table.tsx renders data?.rows ?? [] on a failed contacts.list; add LoadError + Retry like P7-T24/T25, with e2e red/green.
+  - From the P7-T36 review: this is the third surface with the "error only when no data is loaded" guard (calendars-workspace.tsx `calendars.error && calendars.data === undefined`, booking-dialog.tsx `calendarsError`). Consider one small helper next to useResource (e.g. `loadErrorOf(resource)`) and use it in all three. Note: contacts.list is paged and filtered, so a new query has no data yet; say whether a failed page or filter change shows the error.
+  - In booking-dialog.tsx's doc (~:78-84), "only a calendar update or a reset invalidates "calendars"" should read "a calendar update or a settings-wide invalidation (settings.ts invalidateAll)". In calendars-load-errors.spec.ts's booking-dialog test, say in one line why the skeleton watch covers only the dialog (it is modal and the page behind it does not refetch).
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

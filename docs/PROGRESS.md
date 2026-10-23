@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 38/71 tasks done (54%) · **Current phase:** P7 · **Next agent task:** P7-T37 · **Awaiting review:** P7-T36 · **Blocked:** none · **Waiting on you:** P7-H4
+**Overall:** 39/71 tasks done (55%) · **Current phase:** P7 · **Next agent task:** P7-T37 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** P7-H4
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 38/50 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 39/50 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -55,7 +55,7 @@ Status: active · Progress: 38/50 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T33 | App-wide unsaved-changes guard (sidebar links, reload, tab close) | agent | done | — | ab8154c | 2026-10-23 | UnsavedChangesProvider guards sidebar/user-menu/Back links + beforeunload; e2e T-A..T-E, mutants seen red |
 | P7-T34 | Calendar update: validate or allow-list keys outside the settings schema | agent | done | — | 1278157 | 2026-10-23 | update() saves parsed allow-list; name/colour/team/active/description checked; null patch 422; +13 tests |
 | P7-T35 | Validate expectedCloseAt in api.opportunities create/update | agent | done | — | 9a47e88 | 2026-10-23 | parseInstant shared in dates.ts; deal API 422s bad expectedCloseAt, stores UTC; +79 tests, +1 e2e |
-| P7-T36 | Booking dialog: error state and Retry when calendars.list fails | agent | review | — |  | 2026-10-24 | Calendar field LoadError + busy Retry, disabled select; e2e red on 3 mutants; P7-T30 e2e cleanups |
+| P7-T36 | Booking dialog: error state and Retry when calendars.list fails | agent | done | — | 3e7c603 | 2026-10-24 | Calendar field LoadError + busy Retry, disabled select; e2e red on 3 mutants; P7-T30 e2e cleanups |
 | P7-T37 | Contacts list: error state instead of false 'No contacts found' on list failure | agent | todo | — |  |  |  |
 | P7-T38 | useResource unit test: failed refetch keeps data for same query | agent | todo | — |  |  |  |
 | P7-H4 | Decide: should an ended, already-Cancelled appointment stay frozen? | human | todo | — |  |  |  |
