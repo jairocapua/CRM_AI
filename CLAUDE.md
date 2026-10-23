@@ -167,9 +167,18 @@ on a product question, a phase gate passed (they merge), or anything would be
 pushed.
 
 **Fresh session:** after about 6 approved tasks in one session, or right after
-a phase gate, start a new session (`start_session`: context `fresh`, this
-folder, no worktree) with the brief "Autopilot: continue the build per
-CLAUDE.md", then stop work in the old one.
+a phase gate, hand off and stop:
+1. Approve the last task with `node scripts/progress.mjs set <ID> done --commit
+   <sha>` (the workflow's approve would start the next task).
+2. Rewrite `docs/memory/HANDOFF.md` (read it first: the recorder rewrites it
+   every run) and commit.
+3. Ask the owner to open a new top-level session in this folder and type
+   "Autopilot: continue the build per CLAUDE.md". The SessionStart brief and
+   HANDOFF.md carry everything it needs.
+
+Do not call `start_session` for this. A session started by another nests under
+it, reports back up the chain and wakes the older sessions, and still needs the
+owner's click.
 
 ## Subagents (`.claude/agents/`)
 
