@@ -772,6 +772,9 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T33 — App-wide unsaved-changes guard (sidebar links, reload, tab close)
 - **Owner:** agent · **Depends:** —
 - **Scope:** Extend the availability guard via Next Link onNavigate + context blocker (link.md 'Blocking navigation') and a beforeunload handler while dirty.
+  - From the P7-T20 review: in calendars-availability-editor.spec.ts ("a clean editor switches and leaves without asking"), cover the two missing clean cases, a calendar switch right after Save and Back right after load, so each control is proven unguarded after load, Discard and Save.
+  - In availability-workspace.tsx, call `setDirty(false)` before `router.push("/calendars")` on Discard, so a second Back click during a slow push does not ask again.
+  - availability-form.tsx reports `isDirty` through an effect that re-fires when `onDirtyChange` changes identity: say in the prop doc that it must be stable (as `setDirty` is), or report through RHF's `form.subscribe({ formState: { isDirty: true } })`, which the app-wide blocker will need anyway.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
