@@ -194,7 +194,10 @@ describe("applyQuery: search", () => {
         ),
       ),
     ).toEqual(["a"]);
-    // A path still matches alongside a function.
+    // A path still matches alongside a function. This assertion alone would
+    // pass even if function fields were skipped (it matches on "company"):
+    // the `nameAndCompany` assertion above is the one proving a function
+    // field is searched.
     expect(
       idsOf(
         applyQuery(

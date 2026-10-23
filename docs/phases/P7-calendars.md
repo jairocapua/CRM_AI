@@ -1045,10 +1045,63 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T29 — Fix ContactPicker selection race after a pick
 - **Owner:** agent · **Depends:** —
+- **Skills:** `tdd`, `vitest`, `playwright-cli`, `vercel-react-best-practices`
 - **Scope:** Keep picked Contact in local state as value immediately; use selected.data only when id matches. Add e2e typing right after a pick without aria-selected wait.
   - From the P7-T17 review: new-conversation-dialog.tsx is a third ContactPicker consumer; add it as a third entry in SURFACES in e2e/contact-picker.spec.ts (and name it in that file's header) so its behaviour is pinned too. In pickContacts, make the uniqueness check cover phone and jobTitle as well (add them to SeededContact in calendar-helpers.ts), since the server searches those. In query-engine.test.ts, note on the mixed-fields case that its first assertion is the one proving function fields work.
+  - Decided: the value rule is a pure helper, `pickerValue` in
+    `contact-picker-value.ts`, unit-tested next to the component like the
+    calendars helpers (`booking-slots.ts` and the rest).
+  - Decided: the picked object wins over a fetched contact with the same id,
+    because Base UI compares the value by reference and writes its label into
+    the input whenever it changes.
+  - Decided: the "does not pin" test drops its aria-selected wait, and a
+    separate per-surface test proves that text typed right after a pick
+    stays.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. A pick is the combobox value at once. ContactPicker keeps the
+        picked Contact in local state and passes it as `value` in the same
+        handler that calls `onChange(id)`, without waiting for
+        `contacts.get`. In the deal sheet, the booking dialog and the
+        new-conversation dialog, text typed right after a pick (no
+        aria-selected wait) stays in the input and the list shows the
+        server's results for it. The picked contact stays selected.
+  - [ ] A2. The fetched contact (`selected.data`) is used only when its id
+        equals `value`, and the picked object wins over a fetched one with
+        the same id. A value set from outside still shows its name once
+        fetched. A cleared value shows nothing, even while `useResource`
+        still holds the previous contact.
+  - [ ] A3. The P7-T17 workaround is gone. The "does not pin the selected
+        contact above an unrelated search" test types right after the pick,
+        with no ArrowDown press, no aria-selected wait and no comment about
+        the overwrite race.
+  - [ ] A4. The new-conversation dialog is the third entry in SURFACES:
+        /conversations, then the "New" button, then the "New conversation"
+        dialog's "Contact" combobox. The spec header names all three forms,
+        and every picker test runs for it.
+  - [ ] A5. pickContacts' uniqueness check covers every field the server
+        searches: name, email, phone, company and job title, matching
+        `SEARCH_FIELDS` in src/lib/api/contacts.ts. `SeededContact` gains
+        `phone` and `jobTitle` (`string | null`), read from the persisted
+        database by `readContacts`. The pickContacts doc comment lists the
+        fields.
+  - [ ] A6. In query-engine.test.ts, the mixed-fields assertion carries a
+        comment saying that it alone would pass even if function fields were
+        skipped, and that the `nameAndCompany` assertion above is the one
+        proving function fields are searched. No assertion changes.
+  - [ ] A7. Comments match the code. contact-picker.tsx's doc comment and the
+        comment above `selected` say that a pick is held locally and is the
+        value at once, that the fetched contact is used only when its id
+        matches, and that it serves a value set from outside.
+        contact-picker-value.ts explains why the picked object wins: Base UI
+        compares the value by reference and writes the label into the input
+        when it changes.
+  - [ ] A8. No seed, API or mock change, and no regression. Under `src/lib`,
+        only a comment in query-engine.test.ts changes. `SEED_VERSION` stays
+        4. `npm run check` is green with 4 more Vitest cases. The full
+        `npm run e2e` passes with 102 tests (96 + 6). A `--repeat-each=3` run
+        of contact-picker.spec.ts passes.
+  - [ ] A9. This entry carries a Skills line, this acceptance and the three
+        decisions.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T30 — Shared chooseContact e2e helper
@@ -1139,6 +1192,13 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** Deal sheet TagPicker: id + FieldLabel htmlFor (opportunity-form-sheet.tsx ~499); contacts-toolbar and bulk Tags popover TagPickers need an aria-label prop; contacts search Input (contacts-toolbar.tsx:38) needs aria-label; extend select-a11y.spec.ts
   - From the P7-T28 review, in e2e/select-a11y.spec.ts: retitle the per-route tests (~:240) from "Chromium ignores every Select's hidden input" to say they also pin the names (e.g. "every Select is named and its hidden input ignored", as the Owner-popover test reads). In `expectNamedControls`' doc, say the count is checked once the named triggers are present, so a Select that mounts later is not caught. Cite the TAG_COMBOBOX source as AriaCombobox.mjs's `${id}-hidden-input` expression, not a line range, so a Base UI patch bump does not stale it.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T40 — ContactPicker: hold fetched contact for outside-set values
+- **Owner:** agent · **Depends:** —
+- **Scope:** Edit path still uses each refetch's object; after fetch() swap an invalidation rewrites typed text. Keep first fetched copy per id (contact-picker-value.ts) + unit test.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

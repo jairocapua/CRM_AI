@@ -168,3 +168,11 @@
 - 2026-10-23 [P7-T28] With aria-label removed, a Base UI Select trigger's Chromium name is "" (no fallback to the selected value), so the empty-name rule catches it.
 - 2026-10-23 [P7-T28] The bulk-actions PopoverContent is role=dialog, so [role="dialog"] also matches an open popover; scope popover tests to [data-slot="popover-content"].
 - 2026-10-23 [P7-T28] The Contacts table's Owner header is plain text (enableSorting: false), so getByRole('button', { name: 'Owner', exact: true }) on /contacts finds only the bulk bar's button.
+- 2026-10-23 [P7-T29] Supersedes the P7-T17 aria-selected advice: a ContactPicker pick is now the combobox value at once, so e2e need not wait for aria-selected (or press ArrowDown) before typing after a pick.
+- 2026-10-23 [P7-T29] The mock's simulate() returns store objects by reference: contacts.list rows and contacts.get(id) are the same object until written. E2e cannot catch reference-identity regressions; guard them with unit tests.
+- 2026-10-23 [P7-T29] Base UI 1.8.0 AriaCombobox re-syncs the input on `items` change only while queryChangedAfterOpen is false; typing with the popup open sets it, so typed text survives new result pages.
+- 2026-10-23 [P7-T29] Any expect wait between a pick and a fill (e.g. toHaveValue) can push past contacts.get's 165-275ms window and let a race test pass vacuously; freeze timers instead.
+- 2026-10-23 [P7-T29] Mutant e2e loops without rebuilds: run npx playwright test once, then `npm run start -- -p 3100 -H 127.0.0.1` in background with E2E_REUSE_SERVER=1; kill the leftover node.exe on 3100 by PID afterwards.
+- 2026-10-23 [P7-T29] Back-to-back --repeat-each runs on Windows can fail page.goto with net::ERR_NO_BUFFER_SPACE (sockets exhausted): the machine, not the test.
+- 2026-10-23 [P7-T29] page.clock.pauseAt(t) throws 'Cannot fast-forward to the past' if t is behind the fake now; after install() the clock keeps wall pace, so pause at page Date.now() + a margin.
+- 2026-10-23 [P7-T29] page.clock install-after-load + pauseAt + act + resume makes mock-latency races deterministic: simulate()'s sleep and useDebouncedValue freeze; React's MessageChannel scheduler and Playwright actionability keep working.

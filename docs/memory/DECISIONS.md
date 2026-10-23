@@ -206,3 +206,7 @@
 - 2026-10-23 [P7-T28] CLAUDE.md read_page note keeps "Select and Combobox"; the new TagPicker test backs it.
 - 2026-10-23 [P7-T28] Names are pinned twice in e2e: waited for by role (catches late mounts) and compared to Chromium CDP names in page order.
 - 2026-10-23 [P7-T28] Pure self-test also asserts TAG_COMBOBOX's zero-trigger message says "found no Combobox triggers"; both Add contact tests first wait for the "Add contact" dialog.
+- 2026-10-23 [P7-T29] ContactPicker value comes from pure `pickerValue(value, picked, fetched)` in contact-picker-value.ts (unit-tested): id-matched picked wins over fetched, because Base UI compares value by reference and rewrites the uncontrolled input on change.
+- 2026-10-23 [P7-T29] Mutant M2 (fetched first) is invisible to e2e while the mock returns records by reference; unit case 2 is its only guard. No e2e workaround added.
+- 2026-10-23 [P7-T29] Race test freezes page timers with page.clock (installed after load, never before: @date-fns/tz, P7-T08), pausing 1s ahead of page Date.now(); chosen over raising Demo Data latency, whose jitter could reorder responses.
+- 2026-10-23 [P7-T29] New-conversation dialog is the third picker surface (/conversations, 'New' button exact). Race test skips chooseByName; 'finds a contact by its full name' covers the label.

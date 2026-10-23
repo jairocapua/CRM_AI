@@ -8,12 +8,13 @@ import {
 import { expect, test } from "./fixtures";
 
 /**
- * The contact picker, in the two forms that book against a contact: the deal
- * sheet ("New deal") and the booking dialog. It lists what the server's
- * search found (full name, email, phone, company, job title) as the server
- * returned it, with no second filter by label in the browser, and it adds
- * the selected contact to the list only while the input is empty or shows
- * that contact's name.
+ * The contact picker, in the three forms that pick a contact: the deal sheet
+ * ("New deal"), the booking dialog and the new-conversation dialog. It lists
+ * what the server's search found (full name, email, phone, company, job
+ * title) as the server returned it, with no second filter by label in the
+ * browser, and it adds the selected contact to the list only while the input
+ * is empty or shows that contact's name. A pick is the value at once, so text
+ * typed straight after it stays in the input.
  *
  * Contacts are chosen from the persisted database, an oracle the UI does not
  * share, so that each search below has exactly one possible answer.
@@ -57,6 +58,17 @@ const SURFACES: Surface[] = [
       return bookingDialog(page).getByRole("combobox", { name: "Contact" });
     },
   },
+  {
+    name: "new-conversation dialog",
+    open: async (page, gotoApp) => {
+      await gotoApp("/conversations");
+      await expect(page.locator(SKELETON)).toHaveCount(0, { timeout: 15_000 });
+      await page.getByRole("button", { name: "New", exact: true }).click();
+      return page
+        .getByRole("dialog", { name: "New conversation" })
+        .getByRole("combobox", { name: "Contact" });
+    },
+  },
 ];
 
 const lower = (text: string | null) => (text ?? "").toLowerCase();
@@ -75,45 +87,66 @@ const optionFor = (page: Page, contact: SeededContact) =>
     .filter({ has: page.getByText(contact.name, { exact: true }) });
 
 /**
- * A: a full name no one else has, and an email no other contact's email
- * contains, so searching it finds A alone.
+ * The fields the server's search looks in. Mirrors `SEARCH_FIELDS` in
+ * src/lib/api/contacts.ts: the full name, email, phone, company and job title.
+ */
+const searched = (contact: SeededContact) => [
+  contact.name,
+  contact.email,
+  contact.phone,
+  contact.companyName,
+  contact.jobTitle,
+];
+
+/**
+ * Three contacts, each checked against every field the server searches (the
+ * full name, email, phone, company and job title):
+ * A: a full name no one else has, and an email no other contact's searched
+ * fields contain, so searching it finds A alone.
  * B: another contact whose email is likewise found alone.
- * C: a company name that is not part of any other contact's name, email or
- * company, so searching it finds C alone.
+ * C: a company name no other contact's searched fields contain, so searching
+ * it finds C alone.
  */
 function pickContacts(contacts: readonly SeededContact[]) {
   const others = (contact: SeededContact) =>
     contacts.filter((other) => other.id !== contact.id);
-  const emailAlone = (contact: SeededContact) =>
-    contact.email !== null &&
+  /** Searching `term` can find this contact and no other. */
+  const foundAlone = (contact: SeededContact, term: string | null) =>
+    term !== null &&
     !others(contact).some((other) =>
-      lower(other.email).includes(lower(contact.email)),
+      searched(other).some((field) => lower(field).includes(lower(term))),
     );
 
   const a = contacts.find(
     (contact) =>
-      emailAlone(contact) &&
+      foundAlone(contact, contact.email) &&
       !others(contact).some((other) => other.name === contact.name),
   );
   if (!a) throw new Error("No contact with a unique name and email");
 
   const b = contacts.find(
-    (contact) => contact.id !== a.id && emailAlone(contact),
+    (contact) => contact.id !== a.id && foundAlone(contact, contact.email),
   );
   if (!b) throw new Error("No second contact with a unique email");
 
-  const c = contacts.find(
-    (contact) =>
-      contact.companyName !== null &&
-      !others(contact).some((other) =>
-        [other.name, other.email, other.companyName].some((field) =>
-          lower(field).includes(lower(contact.companyName)),
-        ),
-      ),
+  const c = contacts.find((contact) =>
+    foundAlone(contact, contact.companyName),
   );
   if (!c) throw new Error("No contact with a company of its own");
 
   return { a, b, c };
+}
+
+/**
+ * Stops the page's timers (`setTimeout`, `requestAnimationFrame`, `Date`)
+ * until `page.clock.resume()`, after `page.clock.install()`. `pauseAt` cannot
+ * move the clock back, and until paused the clock keeps running, so it pauses
+ * a second ahead of the page's "now": a timer due within that second fires at
+ * once, and nothing else changes.
+ */
+async function pauseTimers(page: Page) {
+  const now = await page.evaluate(() => Date.now());
+  await page.clock.pauseAt(now + 1_000);
 }
 
 /** Types the full name, picks the option and checks the input shows it. */
@@ -163,11 +196,6 @@ for (const surface of SURFACES) {
     const { a, b } = pickContacts(await readContacts(page));
 
     await chooseByName(page, input, a);
-    // The chosen contact is fetched after the click, and when it lands Base UI
-    // writes its name back into the input, over anything typed meanwhile. So
-    // first reopen the list and wait until A is ticked as selected.
-    await input.press("ArrowDown");
-    await expect(optionFor(page, a)).toHaveAttribute("aria-selected", "true");
 
     // A is selected, but this search finds only B.
     await input.fill(b.email ?? "");
@@ -177,5 +205,43 @@ for (const surface of SURFACES) {
     await input.fill("zzqx no such contact");
     await expect(page.getByText("No contacts found.")).toBeVisible();
     await expect(page.getByRole("option")).toHaveCount(0);
+  });
+
+  test(`${surface.name}: keeps what is typed right after a pick`, async ({
+    page,
+    gotoApp,
+  }) => {
+    const input = await surface.open(page, gotoApp);
+    const { a, b } = pickContacts(await readContacts(page));
+    // Installed only now that the app has loaded: installed before, it breaks
+    // @date-fns/tz (LEARNINGS P7-T08). Until paused it keeps the wall
+    // clock's pace, so the app runs as usual.
+    await page.clock.install();
+
+    await input.fill(a.name);
+    await expect(optionFor(page, a)).toBeVisible();
+    // The old picker took its value only from A's own fetch, `contacts.get`,
+    // which lands one simulated round trip after the click (165-275ms at the
+    // default latency, http.ts). When it landed, the picker wrote A's name
+    // back over the input. So this test catches the old picker only if the
+    // typing happens before that fetch lands. Left to the wall clock, a busy
+    // machine (every worker running) sometimes took longer than that between
+    // the click and the fill, and the old picker passed.
+    //
+    // So the page's timers stop across the click and the fill: A's fetch
+    // cannot land until `resume()`, however slow the machine. After it, that
+    // fetch (165-275ms) lands before the search for B's email can (a 250ms
+    // debounce, then its own round trip), so the old picker has overwritten
+    // the input before B is ever listed.
+    await pauseTimers(page);
+    await optionFor(page, a).click();
+    await input.fill(b.email ?? "");
+    await page.clock.resume();
+    await expect(page.getByRole("option")).toHaveText([startsWithName(b)]);
+    await expect(input).toHaveValue(b.email ?? "");
+
+    // A is still the selected contact.
+    await input.fill(a.name);
+    await expect(optionFor(page, a)).toHaveAttribute("aria-selected", "true");
   });
 }

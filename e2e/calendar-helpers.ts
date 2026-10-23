@@ -101,7 +101,9 @@ interface PersistedDb {
         firstName: string;
         lastName: string;
         email?: string;
+        phone?: string;
         companyName?: string;
+        jobTitle?: string;
       }
     >;
     activities: Record<string, { contactId?: string; summary: string }>;
@@ -177,7 +179,9 @@ export interface SeededContact {
   name: string;
   lastName: string;
   email: string | null;
+  phone: string | null;
   companyName: string | null;
+  jobTitle: string | null;
 }
 
 /** Every contact in the persisted database, in the store's own order. */
@@ -188,7 +192,9 @@ export async function readContacts(page: Page): Promise<SeededContact[]> {
     name: `${contact.firstName} ${contact.lastName}`,
     lastName: contact.lastName,
     email: contact.email ?? null,
+    phone: contact.phone ?? null,
     companyName: contact.companyName ?? null,
+    jobTitle: contact.jobTitle ?? null,
   }));
   expect(rows.length, "the seed has contacts").toBeGreaterThan(0);
   return rows;

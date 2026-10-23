@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 30/64 tasks done (47%) · **Current phase:** P7 · **Next agent task:** P7-T29 · **Awaiting review:** P7-T28 · **Blocked:** none · **Waiting on you:** P7-H4
+**Overall:** 31/65 tasks done (48%) · **Current phase:** P7 · **Next agent task:** P7-T30 · **Awaiting review:** P7-T29 · **Blocked:** none · **Waiting on you:** P7-H4
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 30/43 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 31/44 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -47,8 +47,8 @@ Status: active · Progress: 30/43 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T25 | Contact detail: error state instead of endless skeleton on non-404 load failure | agent | done | — | 939c322 | 2026-10-23 | Contact page: LoadError + Retry on non-404 load failure; new by-key contact fault helpers; 2 e2e tests, 4 mutants red. |
 | P7-T26 | Past appointments: only Showed/No-show; Cancel and Confirmed for future only (P7-H3) | agent | done | — | df315b9 | 2026-10-23 | Ended appts: only Showed/No Show; API 422 PAST_APPOINTMENT, dialog disables Confirmed/Cancelled and hides Cancel |
 | P7-T27 | e2e: longer toHaveURL timeout for cross-route navigation | agent | done | — | 71b5627 | 2026-10-23 | Shared 15s NAVIGATION in e2e/fixtures.ts on every first cross-route wait; no worker cap; comments fixed. Gate + e2e green. |
-| P7-T28 | Name the unlabelled Select triggers | agent | review | — |  | 2026-10-23 | Status/Pipeline/Assign owner Select labels, TagPicker named Tags via htmlFor; select-a11y spec pins names (12 tests) |
-| P7-T29 | Fix ContactPicker selection race after a pick | agent | todo | — |  |  |  |
+| P7-T28 | Name the unlabelled Select triggers | agent | done | — | 354e04b | 2026-10-23 | Status/Pipeline/Assign owner Select labels, TagPicker named Tags via htmlFor; select-a11y spec pins names (12 tests) |
+| P7-T29 | Fix ContactPicker selection race after a pick | agent | review | — |  | 2026-10-23 | Picked contact held locally via pickerValue(); race e2e on 3 surfaces with frozen timers; M1 red 60/60 |
 | P7-T30 | Shared chooseContact e2e helper | agent | todo | — |  |  |  |
 | P7-T31 | LinkButton helper and nativeButton lint rule | agent | todo | — |  |  |  |
 | P7-T32 | Link-button icon padding and link-buttons spec scoping | agent | todo | P7-T31 |  | 2026-10-23 | Repurposed from a duplicate of P7-T31 (P7-T19 review) |
@@ -60,6 +60,7 @@ Status: active · Progress: 30/43 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T38 | useResource unit test: failed refetch keeps data for same query | agent | todo | — |  |  |  |
 | P7-H4 | Decide: should an ended, already-Cancelled appointment stay frozen? | human | todo | — |  |  |  |
 | P7-T39 | Name the remaining TagPickers and the contacts search box | agent | todo | — |  |  |  |
+| P7-T40 | ContactPicker: hold fetched contact for outside-set values | agent | todo | — |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md
