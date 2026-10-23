@@ -400,38 +400,68 @@ export async function chooseCalendar(
 }
 
 /**
- * Picks `contact` in the dialog's Contact combobox: types the full name,
- * clicks the option whose name line is exactly that name, and checks the
- * input shows it.
+ * The listed contact option whose name line is exactly `contact`'s full name
+ * (its company, when it has one, is a second line).
+ */
+export const contactOption = (page: Page, contact: SeededContact) =>
+  page
+    .getByRole("option")
+    .filter({ has: page.getByText(contact.name, { exact: true }) });
+
+/**
+ * Picks `contact` in a contact picker's `input`: types the full name, clicks
+ * `contactOption`, and checks the input shows the name.
  *
  * The option is matched by name alone, so pass a contact no other contact
  * shares a full name with (`uniquelyNamedContact`). Two matches fail the click
  * as a strict-mode violation rather than pick either.
+ */
+export async function chooseContactIn(
+  page: Page,
+  input: Locator,
+  contact: SeededContact,
+) {
+  await input.fill(contact.name);
+  await contactOption(page, contact).click();
+  await expect(input).toHaveValue(contact.name);
+}
+
+/**
+ * Picks `contact` in the dialog's Contact combobox, through
+ * `chooseContactIn` (same rules: pass a uniquely named contact).
  */
 export async function chooseContact(
   page: Page,
   dialog: Locator,
   contact: SeededContact,
 ) {
-  const input = dialog.getByRole("combobox", { name: "Contact" });
-  await input.fill(contact.name);
-  await page
-    .getByRole("option")
-    .filter({ has: page.getByText(contact.name, { exact: true }) })
-    .click();
-  await expect(input).toHaveValue(contact.name);
+  await chooseContactIn(
+    page,
+    dialog.getByRole("combobox", { name: "Contact" }),
+    contact,
+  );
 }
+
+/** How far ahead of the page's "now" `pauseTimers` stops the clock. */
+const PAUSE_MARGIN_MS = 5_000;
 
 /**
  * Stops the page's timers (`setTimeout`, `requestAnimationFrame`, `Date`)
- * until `page.clock.resume()`, after `page.clock.install()`. `pauseAt` cannot
- * move the clock back, and until paused the clock keeps running, so it pauses
- * a second ahead of the page's "now": a timer due within that second fires at
- * once, and nothing else changes.
+ * until `page.clock.resume()`, after `page.clock.install()`.
+ *
+ * `pauseAt` cannot move the clock back, and until paused the clock keeps
+ * the wall clock's pace, so it pauses `PAUSE_MARGIN_MS` ahead of the page's
+ * `Date.now()`. Limits:
+ * - It throws "Cannot fast-forward to the past" if more than the margin of
+ *   page time passes between reading `Date.now()` and the pause. They are
+ *   two back-to-back calls, so only a stalled machine gets there.
+ * - Every timer due inside the margin fires at once on pause. So call it once
+ *   the page has settled (no debounce or simulated fetch in flight), or that
+ *   work completes before the pause instead of waiting for `resume()`.
  */
 export async function pauseTimers(page: Page) {
   const now = await page.evaluate(() => Date.now());
-  await page.clock.pauseAt(now + 1_000);
+  await page.clock.pauseAt(now + PAUSE_MARGIN_MS);
 }
 
 export interface OpenTime {

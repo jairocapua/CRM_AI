@@ -1830,12 +1830,70 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T40 — ContactPicker: hold fetched contact for outside-set values
 - **Owner:** agent · **Depends:** —
+- **Skills:** `tdd`, `vitest`, `playwright-cli`, `vercel-react-best-practices`
 - **Scope:** Edit path still uses each refetch's object; after fetch() swap an invalidation rewrites typed text. Keep first fetched copy per id (contact-picker-value.ts) + unit test.
   - From the P7-T29 review: the held pick (and a held fetched copy) keeps a contact's old name if it is renamed elsewhere while the picker stays mounted. Every consumer unmounts it when its dialog or sheet closes today, so say that in `pickerValue`'s doc rather than adding a refresh.
   - In e2e/calendar-helpers.ts `pauseTimers` (moved there in P7-T30): `pauseAt(now + 1s)` throws "Cannot fast-forward to the past" if more than 1s of page time passes before it runs. Widen the margin to a few seconds, or state the limit in the helper's comment (every timer due inside the margin fires at once on pause).
   - From the P7-T30 review: contact-picker.spec.ts keeps its own `chooseByName(page, input, contact)`, the same fill and exact-name click as `chooseContact`. Let `chooseContact` take the input locator (or add an input-level variant) so both share one helper.
+  - Decided: the hold is one hook, `useHeldValue(value, fetched)` in
+    `contact-picker-value.ts`, built on the pure `pickerValue`. It adopts
+    the first fetched copy per id with a guarded setState during render
+    (React's "storing information from previous renders", as
+    booking-dialog.tsx does), not an effect or a ref.
+  - Decided: no refresh on rename. The docs say a held contact keeps its old
+    name while the picker stays mounted, and that every consumer unmounts
+    the picker when its sheet or dialog closes.
+  - Decided: `pauseTimers`' margin widens to 5s, a named constant, and its
+    comment states the limit.
+  - Decided: the input-level pick is `chooseContactIn(page, input, contact)`
+    plus `contactOption(page, contact)` in calendar-helpers.ts;
+    `chooseContact(page, dialog, contact)` delegates to it, so the three
+    calendars specs keep their call sites.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. A value set from outside (editing a deal, booking from a
+        contact) is held from its first fetched copy whose id equals
+        `value`. Later refetches of the same id, which are new objects, do
+        not replace it, so Base UI never sees a new value and never rewrites
+        typed text.
+  - [ ] A2. The P7-T29 rules still hold. A pick is the value at once and wins
+        over its own fetch. A value moved to another id shows nothing until
+        that id's copy lands, then holds that copy. A cleared value shows
+        nothing even while `useResource` still holds the previous contact.
+  - [ ] A3. The hold lives in one place: `useHeldValue(value, fetched)` in
+        contact-picker-value.ts, built on the pure `pickerValue`.
+        ContactPicker calls it and keeps no `picked` state of its own. The
+        adoption is a guarded setState during render, with no effect and no
+        ref.
+  - [ ] A4. Comments match the code. contact-picker-value.ts says the held
+        contact is the last pick or the first fetched copy, and why (Base UI
+        compares by reference and rewrites the uncontrolled input; after the
+        `fetch()` swap every response is a new object). It also says a held
+        contact keeps its old name if it is renamed elsewhere while the
+        picker stays mounted, and that every consumer (deal sheet, booking
+        dialog, new-conversation dialog) unmounts the picker when its sheet
+        or dialog closes, so there is no refresh. contact-picker.tsx's doc
+        comment and the comment above `selected` describe the same rule.
+  - [ ] A5. `pauseTimers` pauses `PAUSE_MARGIN_MS = 5_000` ahead of the
+        page's `Date.now()`. Its doc states the limit (it throws "Cannot
+        fast-forward to the past" if more than the margin of page time passes
+        before the pause) and that every timer due inside the margin fires at
+        once on pause.
+  - [ ] A6. One shared input-level pick. calendar-helpers.ts exports
+        `contactOption(page, contact)` and `chooseContactIn(page, input,
+        contact)`. `chooseContact(page, dialog, contact)` delegates to it
+        with unchanged callers. contact-picker.spec.ts has no `chooseByName`
+        and no local `optionFor`.
+  - [ ] A7. No seed, API or mock change, and no regression. Under `src/` only
+        contact-picker.tsx, contact-picker-value.ts and its two test files
+        change. `SEED_VERSION` stays 4. `npm run check` is green with 4 more
+        Vitest cases. The full `npm run e2e` passes with the same test count
+        as before.
+  - [ ] A8. Each new hook test can go red. Mutant M1 (no adoption of the
+        fetched copy, i.e. the old behaviour) fails the outside-value and
+        move-to-another-id cases. Mutant M2 (fetched copy adopted over the
+        held one) fails the pick case.
+  - [ ] A9. This entry carries a Skills line, the four decisions and this
+        acceptance.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T41 — Document the Base UI trigger exception in LinkButton JSDoc

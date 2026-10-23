@@ -218,3 +218,6 @@
 - 2026-10-24 [P7-T38] `ReturnType<typeof useResource<Payload>>` (instantiation expression) types the hook result in tests without exporting a type.
 - 2026-10-24 [P7-T39] A multi-assertion e2e run against the old file stops at the first failing assertion; to prove a later one can fail, remove only the fix it covers, re-run with -g, then restore and confirm with cmp.
 - 2026-10-24 [P7-T39] TagPicker has an optional "aria-label" prop (toolbar filter, bulk Tags popover); where a visible FieldLabel exists, name it via id + htmlFor instead (deal sheet, Add contact sheet).
+- 2026-10-24 [P7-T40] A held-value hook is unit-testable under happy-dom with a Probe component (createRoot + act, IS_REACT_ACT_ENVIRONMENT stubbed); a guarded setState during render in a custom hook passes react-hooks 7.1.1 lint.
+- 2026-10-24 [P7-T40] In a hook test's Probe, assigning a module-level variable during render fails react-hooks/globals; pass an onRender callback prop and assign inside it (as use-resource.hook.test.ts does).
+- 2026-10-24 [P7-T40] Python is not on PATH here (the alias opens the Microsoft Store); use `node -` heredoc scripts for scripted multi-line edits.

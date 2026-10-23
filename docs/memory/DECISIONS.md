@@ -260,3 +260,8 @@
 - 2026-10-24 [P7-T39] Contacts toolbar TagPicker named "Filter by tags" (like "Filter by channel"); its "Add tags…" placeholder would mislead.
 - 2026-10-24 [P7-T39] Bulk Tags popover TagPicker named "Tags", matching its button; deal sheet TagPicker named via FieldLabel htmlFor="tagIds" + id, not aria-label.
 - 2026-10-24 [P7-T39] Add contact a11y tests retitled to the "... is named and its hidden input ignored" pattern.
+- 2026-10-24 [P7-T40] ContactPicker hold is one hook, useHeldValue(value, fetched), in contact-picker-value.ts on the pure pickerValue; first fetched copy per id adopted by guarded setState during render (not an effect, which commits a frame with the new object; not a ref, react-hooks/refs).
+- 2026-10-24 [P7-T40] No refresh on rename: docs state the stale-name limit; every consumer unmounts the picker on close (no keepMounted; BookingForm keyed per open).
+- 2026-10-24 [P7-T40] e2e pauseTimers margin is PAUSE_MARGIN_MS = 5_000; its doc states both limits.
+- 2026-10-24 [P7-T40] Input-level pick is chooseContactIn(page, input, contact) + contactOption(page, contact) in calendar-helpers.ts; chooseContact delegates, calendars specs unchanged; the race test keeps its own fill/pause/click sequence. chooseContactIn relies on click auto-wait (no separate toBeVisible).
+- 2026-10-24 [P7-T40] Today's mock returns store records by reference, so no e2e can show the refetch bug; the happy-dom hook test is the only guard.

@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 41/73 tasks done (56%) · **Current phase:** P7 · **Next agent task:** P7-T40 · **Awaiting review:** P7-T39 · **Blocked:** none · **Waiting on you:** P7-H4
+**Overall:** 42/73 tasks done (58%) · **Current phase:** P7 · **Next agent task:** P7-T41 · **Awaiting review:** P7-T40 · **Blocked:** none · **Waiting on you:** P7-H4
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 41/52 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 42/52 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -59,8 +59,8 @@ Status: active · Progress: 41/52 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T37 | Contacts list: error state instead of false 'No contacts found' on list failure | agent | done | — | 128a5a3 | 2026-10-24 | Contacts list shows LoadError+Retry on failed load/page change; new loadErrorOf helper replaces inline guards |
 | P7-T38 | useResource unit test: failed refetch keeps data for same query | agent | done | — | b5b8fe1 | 2026-10-24 | useResource hook test (happy-dom): failed refetch keeps data, new failing query drops it; 4 mutants red |
 | P7-H4 | Decide: should an ended, already-Cancelled appointment stay frozen? | human | todo | — |  |  |  |
-| P7-T39 | Name the remaining TagPickers and the contacts search box | agent | review | — |  | 2026-10-24 | TagPicker aria-label prop; toolbar/bulk/deal TagPickers + contacts search named; 3 new e2e; P7-T28 doc fixes |
-| P7-T40 | ContactPicker: hold fetched contact for outside-set values | agent | todo | — |  |  |  |
+| P7-T39 | Name the remaining TagPickers and the contacts search box | agent | done | — | 1f06927 | 2026-10-24 | TagPicker aria-label prop; toolbar/bulk/deal TagPickers + contacts search named; 3 new e2e; P7-T28 doc fixes |
+| P7-T40 | ContactPicker: hold fetched contact for outside-set values | agent | review | — |  | 2026-10-24 | useHeldValue hook holds first fetched copy per id; 4 hook tests (mutant-checked); shared e2e pick helpers; check+e2e green |
 | P7-T41 | Document the Base UI trigger exception in LinkButton JSDoc | agent | todo | — |  |  |  |
 | P7-T42 | Team settings link: stop 404 prefetch until P9 | agent | todo | — |  |  |  |
 | P7-T43 | Unsaved-changes guard: stable guardLeave, menu focus return, mobile Sheet | agent | todo | — |  |  |  |

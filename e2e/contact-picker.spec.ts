@@ -2,6 +2,8 @@ import type { Locator, Page } from "@playwright/test";
 
 import {
   bookingDialog,
+  chooseContactIn,
+  contactOption,
   pauseTimers,
   readContacts,
   type SeededContact,
@@ -81,12 +83,6 @@ const escapeRegExp = (text: string) =>
 const startsWithName = (contact: SeededContact) =>
   new RegExp(`^${escapeRegExp(contact.name)}`);
 
-/** The listed option whose name line is exactly this contact's name. */
-const optionFor = (page: Page, contact: SeededContact) =>
-  page
-    .getByRole("option")
-    .filter({ has: page.getByText(contact.name, { exact: true }) });
-
 /**
  * The fields the server's search looks in. Mirrors `SEARCH_FIELDS` in
  * src/lib/api/contacts.ts: the full name, email, phone, company and job title.
@@ -138,18 +134,6 @@ function pickContacts(contacts: readonly SeededContact[]) {
   return { a, b, c };
 }
 
-/** Types the full name, picks the option and checks the input shows it. */
-async function chooseByName(
-  page: Page,
-  input: Locator,
-  contact: SeededContact,
-) {
-  await input.fill(contact.name);
-  await expect(optionFor(page, contact)).toBeVisible();
-  await optionFor(page, contact).click();
-  await expect(input).toHaveValue(contact.name);
-}
-
 for (const surface of SURFACES) {
   test(`${surface.name}: finds a contact by its full name`, async ({
     page,
@@ -158,7 +142,7 @@ for (const surface of SURFACES) {
     const input = await surface.open(page, gotoApp);
     const { a } = pickContacts(await readContacts(page));
 
-    await chooseByName(page, input, a);
+    await chooseContactIn(page, input, a);
   });
 
   test(`${surface.name}: lists what the server found, not only label matches`, async ({
@@ -184,7 +168,7 @@ for (const surface of SURFACES) {
     const input = await surface.open(page, gotoApp);
     const { a, b } = pickContacts(await readContacts(page));
 
-    await chooseByName(page, input, a);
+    await chooseContactIn(page, input, a);
 
     // A is selected, but this search finds only B.
     await input.fill(b.email ?? "");
@@ -208,7 +192,7 @@ for (const surface of SURFACES) {
     await page.clock.install();
 
     await input.fill(a.name);
-    await expect(optionFor(page, a)).toBeVisible();
+    await expect(contactOption(page, a)).toBeVisible();
     // The old picker took its value only from A's own fetch, `contacts.get`,
     // which lands one simulated round trip after the click (165-275ms at the
     // default latency, http.ts). When it landed, the picker wrote A's name
@@ -223,7 +207,7 @@ for (const surface of SURFACES) {
     // debounce, then its own round trip), so the old picker has overwritten
     // the input before B is ever listed.
     await pauseTimers(page);
-    await optionFor(page, a).click();
+    await contactOption(page, a).click();
     await input.fill(b.email ?? "");
     await page.clock.resume();
     await expect(page.getByRole("option")).toHaveText([startsWithName(b)]);
@@ -231,6 +215,9 @@ for (const surface of SURFACES) {
 
     // A is still the selected contact.
     await input.fill(a.name);
-    await expect(optionFor(page, a)).toHaveAttribute("aria-selected", "true");
+    await expect(contactOption(page, a)).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 }
