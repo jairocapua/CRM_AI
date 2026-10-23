@@ -60,6 +60,33 @@ export function Demo() {
 }
 `;
 
+const TRIGGER_DIV = `import { Popover, PopoverTrigger } from "@/components/ui/popover";
+
+export function Demo() {
+  return (
+    <Popover>
+      <PopoverTrigger render={<div />} nativeButton={false}>
+        Pick date
+      </PopoverTrigger>
+    </Popover>
+  );
+}
+`;
+
+const TRIGGER_DIV_DISABLED = `import { Popover, PopoverTrigger } from "@/components/ui/popover";
+
+export function Demo() {
+  return (
+    <Popover>
+      {/* eslint-disable-next-line no-restricted-syntax -- a Popover trigger drawn as a div inside an input group */}
+      <PopoverTrigger render={<div />} nativeButton={false}>
+        Pick date
+      </PopoverTrigger>
+    </Popover>
+  );
+}
+`;
+
 const BARE_VARIANTS = `import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -134,6 +161,23 @@ test("nativeButton={false} is an error in app code", async () => {
     "src/components/modules/demo/demo.tsx",
   );
   assert.equal(messages.length, 1);
+  assert.match(messages[0].message, /trigger/);
+  assert.match(messages[0].message, /non-button element/);
+  assert.match(messages[0].message, /disable this line with a reason/);
+});
+
+test("a Base UI trigger that renders a non-button element is flagged; a reasoned disable comment silences it", async () => {
+  const relPath = "src/components/modules/demo/demo.tsx";
+
+  const messages = await restricted(TRIGGER_DIV, relPath);
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].severity, 2);
+  assert.match(messages[0].message, /trigger/);
+  assert.match(messages[0].message, /disable this line with a reason/);
+
+  // restricted() fails on an unused-directive report (it has no ruleId), so
+  // this passes only when the comment really silences the line below it.
+  assert.deepEqual(await restricted(TRIGGER_DIV_DISABLED, relPath), []);
 });
 
 test("a bare buttonVariants() className is an error; cn(buttonVariants()) and LinkButton are not", async () => {

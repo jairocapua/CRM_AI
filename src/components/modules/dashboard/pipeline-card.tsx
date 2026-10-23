@@ -141,7 +141,7 @@ export function PipelineCard() {
       <CardFooter>
         <LinkButton href="/opportunities" variant="ghost" size="sm">
           Open board
-          <ArrowRightIcon />
+          <ArrowRightIcon data-icon="inline-end" />
         </LinkButton>
       </CardFooter>
     </Card>

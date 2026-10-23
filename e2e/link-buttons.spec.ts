@@ -22,7 +22,7 @@ import { expect, NAVIGATION, test } from "./fixtures";
  *   beats the outline variant's `border-border` (no visible border),
  *   `rounded-lg` beats size sm/icon-sm's 8px radius, and the base 16px icon
  *   rule beats size sm's 14px. So each link is checked against the size,
- *   corners, icon and border of the button it replaced.
+ *   corners, padding, icon and border of the button it replaced.
  *
  * Light mode is pinned, with a tripwire on `<html>`: in dark mode the outline
  * variant's `dark:border-input` paints a border anyway, so a dark run would
@@ -38,6 +38,8 @@ interface ButtonLook {
   height: string;
   width: string;
   radius: string;
+  paddingLeft: string;
+  paddingRight: string;
   borderColor: string;
   borderWidth: string;
   background: string;
@@ -60,6 +62,8 @@ async function buttonLook(page: Page, control: Locator): Promise<ButtonLook> {
       height: style.height,
       width: style.width,
       radius: style.borderTopLeftRadius,
+      paddingLeft: style.paddingLeft,
+      paddingRight: style.paddingRight,
       borderColor: style.borderTopColor,
       borderWidth: style.borderTopWidth,
       background: style.backgroundColor,
@@ -71,21 +75,26 @@ async function buttonLook(page: Page, control: Locator): Promise<ButtonLook> {
 
 /**
  * What a variant and size fix, in one object so a failure lists every
- * difference at once: height, corners, icon size and whether a border shows
- * (outline has one, ghost does not). Expected values come from the tokens:
- * `--radius` 0.625rem (`rounded-lg` 10px, `--radius-md` 8px) and the 0.25rem
- * spacing step (`h-7` 28px, `h-8` 32px, `size-3.5` 14px, `size-4` 16px).
+ * difference at once: height, corners, side padding, icon size and whether a
+ * border shows (outline has one, ghost does not). Expected values come from
+ * the tokens: `--radius` 0.625rem (`rounded-lg` 10px, `--radius-md` 8px) and
+ * the 0.25rem spacing step (`h-7` 28px, `h-8` 32px, `size-3.5` 14px, `size-4`
+ * 16px). Padding is the size's `px-2.5` (10px), narrowed by sm to `pl-1.5` /
+ * `pr-1.5` (6px) on the side of an icon that carries `data-icon`
+ * (`inline-start` / `inline-end`). The icon sizes set no padding (0px).
  */
 function sizeLook({
   height,
   radius,
+  paddingLeft,
+  paddingRight,
   iconWidth,
   borderColor,
   borderWidth,
 }: ButtonLook) {
   const border =
     borderColor !== TRANSPARENT && borderWidth !== "0px" ? "visible" : "none";
-  return { height, radius, iconWidth, border };
+  return { height, radius, paddingLeft, paddingRight, iconWidth, border };
 }
 
 /** A plain link: the right destination and no role overriding "link". */
@@ -128,6 +137,8 @@ test("dashboard: Open board is a link styled as a small ghost button", async ({
   expect(sizeLook(await buttonLook(page, link))).toEqual({
     height: "28px",
     radius: "8px",
+    paddingLeft: "10px",
+    paddingRight: "6px",
     iconWidth: "14px",
     border: "none",
   });
@@ -156,11 +167,18 @@ test("inbox: View contact is a link styled as a small outline button", async ({
   await expect(link).toBeVisible(NAVIGATION);
 
   // The thread header's contact name links to the same record: an oracle the
-  // details pane does not share.
-  const headerLink = main
-    .locator('a[href^="/contacts/"]')
-    .filter({ hasNotText: "View contact" })
-    .first();
+  // details pane does not share. The header is found from its own Contact
+  // details toggle (the nearest box around it that holds a contact link), so
+  // the lookup does not depend on where the details pane sits in the DOM.
+  const header = main
+    .getByRole("button", { name: "Contact details", exact: true })
+    .locator('xpath=ancestor::*[.//a[starts-with(@href, "/contacts/")]][1]');
+  await expect(header).toHaveCount(1);
+  await expect(header.getByRole("link", { name: "View contact" })).toHaveCount(
+    0,
+  );
+  const headerLink = header.locator('a[href^="/contacts/"]');
+  await expect(headerLink).toHaveCount(1);
   const href = await headerLink.getAttribute("href");
   expect(href).toMatch(/^\/contacts\/[^/]+$/);
   const contactName = (await headerLink.innerText()).trim();
@@ -175,6 +193,8 @@ test("inbox: View contact is a link styled as a small outline button", async ({
   expect(sizeLook(await buttonLook(page, link))).toEqual({
     height: "28px",
     radius: "8px",
+    paddingLeft: "6px",
+    paddingRight: "10px",
     iconWidth: "14px",
     border: "visible",
   });
@@ -207,6 +227,8 @@ test("inbox: Back to inbox on a missing conversation is a link styled as an outl
   expect(sizeLook(await buttonLook(page, link))).toEqual({
     height: "32px",
     radius: "10px",
+    paddingLeft: "10px",
+    paddingRight: "10px",
     iconWidth: null,
     border: "visible",
   });
@@ -242,6 +264,8 @@ test.describe("phone", () => {
     expect(sizeLook(look)).toEqual({
       height: "28px",
       radius: "8px",
+      paddingLeft: "0px",
+      paddingRight: "0px",
       iconWidth: "16px",
       border: "none",
     });

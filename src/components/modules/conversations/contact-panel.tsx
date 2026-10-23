@@ -81,7 +81,7 @@ export function ContactPanel({ conversationId }: { conversationId: string }) {
             variant="outline"
             size="sm"
           >
-            <ExternalLinkIcon />
+            <ExternalLinkIcon data-icon="inline-start" />
             View contact
           </LinkButton>
         </div>

@@ -220,3 +220,9 @@
 - 2026-10-23 [P7-T31] Lint rule covers src/**/*.{ts,tsx} except src/components/ui/**: bans every `nativeButton={false}` and a bare `className={buttonVariants(...)}`; a real non-link exception disables the line with a reason.
 - 2026-10-23 [P7-T31] LinkButton uses `data-slot="link-button"` so `[data-slot="button"]` lookups match buttons only; per-site P7-T19 why-comments removed, the why lives in LinkButton's JSDoc.
 - 2026-10-23 [P7-T31] JSDoc spells the banned pattern without `nativeButton=` so `git grep "nativeButton=" -- src` stays empty; a typecheck `expectTypeOf<Exclude<...>>().toBeNever()` guards 6x8 parity coverage.
+- 2026-10-23 [P7-T32] Padding is pinned through the shared sizeLook object (all four look tests). Supersedes P7-T19 "Link children unchanged (no data-icon added)": View contact and Open board now carry data-icon.
+- 2026-10-23 [P7-T32] Thread header is found from its 'Contact details' toggle via a test-only nearest-ancestor XPath; no markup hook added to thread-view.tsx.
+- 2026-10-23 [P7-T32] ESLint trigger clause proven by a PopoverTrigger-as-div: flagged with the clause, clean behind a reasoned eslint-disable-next-line.
+- 2026-10-23 [P7-T32] button.test.ts 'lists every variant and size' stays, type-only; its expectTypeOf pair is the typecheck guard.
+- 2026-10-23 [P7-T32] The nativeButton message spells the directive form ('eslint-disable-next-line no-restricted-syntax -- why').
+- 2026-10-23 [P7-T32] link-buttons.spec.ts header still explains both causes (P7-T31 A7); only the ESLint block comment shrank to a pointer.

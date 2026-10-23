@@ -185,3 +185,9 @@
 - 2026-10-23 [P7-T31] An ESLint-API test of eslint.config.mjs must assert no fatal message and a ruleId on every message, or a parse error / 'File ignored' warning passes a 'no error' case.
 - 2026-10-23 [P7-T31] src/components/ui/ is prettier-ignored; format a test file there with `npx prettier --ignore-path ./nonexistent-ignore --write <file>`.
 - 2026-10-23 [P7-T31] Flat config replaces a rule's options per file: a later block setting `no-restricted-syntax` on overlapping src files silently drops LINK_BUTTON_RULE; merge selectors into one array.
+- 2026-10-23 [P7-T32] Computed padding, sm size, light mode: px-2.5 = 10px; sm's has-data-[icon=inline-start|inline-end] narrows that side to 6px; icon-sm on an <a> is 0px both sides. Without data-icon sm keeps 10/10.
+- 2026-10-23 [P7-T32] Playwright `xpath=ancestor::*[...][1]` in a chained locator is relative to the matched element: finds the nearest containing box.
+- 2026-10-23 [P7-T32] ESLint 9 reports an unused/misplaced disable directive as a warning with ruleId null; eslint-config.test.mjs restricted() fails on it, so a misplaced directive cannot fake a clean case.
+- 2026-10-23 [P7-T32] expectTypeOf assertions are inert under Vitest: a mutant dropping a VARIANTS entry passes vitest and fails only `npm run typecheck` (TS2349).
+- 2026-10-23 [P7-T32] Git Bash on Windows: `python` is the WindowsApps stub and a heredoc-fed `python -` hung. Use Edit or node for scripted edits.
+- 2026-10-23 [P7-T32] A scratch node script outside the repo cannot `import "eslint"`; load it via createRequire(<repo>/package.json).

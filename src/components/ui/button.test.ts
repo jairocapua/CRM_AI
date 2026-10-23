@@ -77,12 +77,13 @@ function classList(element: Root): string[] {
 
 describe("LinkButton", () => {
   it("lists every variant and size", () => {
-    // Fails typecheck when buttonVariants gains a variant or size that the
-    // parity loop below would not cover.
+    // The guard is this expectTypeOf pair, and it fails under
+    // `npm run typecheck`, not Vitest: Vitest strips types, so at run time
+    // these calls do nothing and this test always passes. Each line stops
+    // compiling when buttonVariants gains a variant or size that the parity
+    // loop below would miss.
     expectTypeOf<Exclude<Variant, (typeof VARIANTS)[number]>>().toBeNever();
     expectTypeOf<Exclude<Size, (typeof SIZES)[number]>>().toBeNever();
-    expect(VARIANTS).toHaveLength(6);
-    expect(SIZES).toHaveLength(8);
   });
 
   it("renders a plain link: an <a href> with no role", () => {

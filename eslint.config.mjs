@@ -28,16 +28,12 @@ const SEAM_RULE = [
 ];
 
 /**
- * A navigating control is `<LinkButton>` from `@/components/ui/button`. Two
- * spellings break it, and shadcn docs and examples show both:
- *
- * - `nativeButton={false}`: Base UI then gives the element `role="button"`,
- *   even an `<a href>`, so a link is announced as a button.
- * - a bare `className={buttonVariants(...)}`: without `cn()` the conflicting
- *   classes survive, and `border-transparent` hides the outline border.
- *
- * ui primitives (shadcn vendor code) are exempt. scripts/eslint-config.test.mjs
- * lints snippets through this config to prove the selectors fire.
+ * Links drawn as buttons are `<LinkButton>`; why is in its JSDoc
+ * (src/components/ui/button.tsx). This rule rejects the two spellings that
+ * break one: `nativeButton={false}` and a bare
+ * `className={buttonVariants(...)}`. ui primitives (shadcn vendor code) are
+ * exempt. scripts/eslint-config.test.mjs lints snippets through this config
+ * to prove the selectors fire.
  */
 const LINK_BUTTON_RULE = [
   "error",
@@ -45,7 +41,7 @@ const LINK_BUTTON_RULE = [
     selector:
       'JSXAttribute[name.name="nativeButton"][value.expression.value=false]',
     message:
-      'nativeButton={false} makes Base UI add role="button", so a link is announced as a button. A navigating control is <LinkButton> from @/components/ui/button. Only a non-link element that really is a button may disable this line, with a reason. See CLAUDE.md.',
+      'nativeButton={false} makes Base UI add role="button", so a link is announced as a button. A navigating control is <LinkButton> from @/components/ui/button. A non-link element that really is a button may keep it, and so may a Base UI trigger (Menu, Popover, Dialog, Select) that renders a non-button element: disable this line with a reason (eslint-disable-next-line no-restricted-syntax -- why). See CLAUDE.md.',
   },
   {
     selector:

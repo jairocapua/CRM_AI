@@ -1268,13 +1268,75 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T32 — Link-button icon padding and link-buttons spec scoping
 - **Owner:** agent · **Depends:** P7-T31
+- **Skills:** `shadcn`, `playwright-cli`, `vitest`, `writing-for-agents`
 - **Scope:** From the P7-T19 review (this id was first added by mistake as a duplicate of P7-T31, and was repurposed rather than deleted, since the tracker cannot delete rows).
   - Give the View contact (contact-panel.tsx) and Open board (pipeline-card.tsx) icons `data-icon="inline-start"` / `"inline-end"`, as the calendars links have, so the size's icon padding applies; update the A2 look values in e2e/link-buttons.spec.ts if they change.
   - In e2e/link-buttons.spec.ts (~:163), scope the thread-header contact link lookup to the thread header instead of `main ... .first()`, so it does not depend on DOM order.
   - From the P7-T31 review, in eslint.config.mjs: the `nativeButton={false}` message speaks only of links, but the ban also fires on a Base UI trigger (Menu, Popover, Dialog, Select) that renders a non-button element; add a clause for that case ("a trigger that renders a non-button element: disable this line with a reason"), and keep scripts/eslint-config.test.mjs's message assertions green. Shrink LINK_BUTTON_RULE's block comment to a pointer to LinkButton's JSDoc in ui/button.tsx, so the two causes are explained once (CLAUDE.md keeps its line).
   - In src/components/ui/button.test.ts (~:84), drop `expect(VARIANTS).toHaveLength(6)` / `expect(SIZES).toHaveLength(8)`, which check fixed literals and cannot fail; say in the test that the `expectTypeOf` pair is the guard and fails under `npm run typecheck`, not Vitest.
+  - Decided: the padding is pinned through the shared `sizeLook` object, so
+    all four look tests (Open board, View contact, both Back to inbox
+    links) pin it in one place, as P7-T19 decided for the other fields.
+    This supersedes P7-T19's "no data-icon added".
+  - Decided: the thread header is found from its own Contact details toggle,
+    as the nearest ancestor that holds a contact link
+    (`xpath=ancestor::*[.//a[starts-with(@href, "/contacts/")]][1]`). The
+    lookup is test-only: no markup hook is added to the app.
+  - Decided: the trigger clause is proven by a `PopoverTrigger` rendered as
+    a div: it is flagged with the clause, and it lints clean behind a
+    reasoned `eslint-disable-next-line no-restricted-syntax -- …`.
+  - Decided: the "lists every variant and size" test stays, now type-only,
+    because its `expectTypeOf` pair is the typecheck guard.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. Icon padding. View contact's icon is
+        `<ExternalLinkIcon data-icon="inline-start" />` (contact-panel.tsx)
+        and Open board's is `<ArrowRightIcon data-icon="inline-end" />`
+        (pipeline-card.tsx), so sm's icon padding applies. In light mode
+        View contact computes paddingLeft 6px / paddingRight 10px, and Open
+        board 10px / 6px. Their height, radius, icon width and border are
+        unchanged (28px / 8px / 14px, visible and none).
+  - [ ] A2. The spec's look checks include padding. `ButtonLook` and
+        `buttonLook()` read paddingLeft and paddingRight, `sizeLook()`
+        returns them, and every `sizeLook` assertion pins them: the
+        empty-state Back to inbox 10px / 10px, the phone Back to inbox
+        0px / 0px. The spec header and `sizeLook`'s JSDoc mention padding
+        and where 10px and 6px come from.
+  - [ ] A3. The thread-header contact link is found inside the thread
+        header, not through `main … .first()`. The header comes from its
+        Contact details toggle (the nearest ancestor that holds a
+        `/contacts/` link). It resolves to one element, holds no View
+        contact link and exactly one `/contacts/` link, and that lookup has
+        no `.first()` left.
+  - [ ] A4. The ESLint `nativeButton={false}` message still names
+        LinkButton and CLAUDE.md, and adds the trigger clause: a Base UI
+        trigger (Menu, Popover, Dialog, Select) that renders a non-button
+        element disables the line with a reason. The selectors are
+        unchanged. A PopoverTrigger-as-div snippet is flagged with that
+        message and lints clean behind a reasoned
+        `eslint-disable-next-line no-restricted-syntax -- …`. The existing
+        message assertions stay green and the repo lints clean.
+  - [ ] A5. LINK_BUTTON_RULE's block comment is a pointer: it names the two
+        banned spellings and sends the reader to LinkButton's JSDoc in
+        src/components/ui/button.tsx for the why, without explaining
+        role=button or the class merge again. CLAUDE.md's line and
+        LinkButton's JSDoc are unchanged.
+  - [ ] A6. button.test.ts no longer has `expect(VARIANTS).toHaveLength(6)`
+        or `expect(SIZES).toHaveLength(8)`. The test's comment says the
+        `expectTypeOf` pair is the guard and fails under
+        `npm run typecheck`, not Vitest. With "link" removed from VARIANTS,
+        `npm run typecheck` fails at button.test.ts while
+        `npx vitest run src/components/ui/button.test.ts` still passes.
+  - [ ] A7. Every new or changed assertion has been seen failing. On the
+        markup before data-icon, the View contact and Open board tests fail
+        on padding (10px received). Against the old ESLint message, the
+        trigger-clause assertions fail.
+  - [ ] A8. Docs and no regression. This entry has a Skills line, the
+        Decided lines and this acceptance. `SEED_VERSION` stays 4 and
+        nothing under src/lib changes. `npm run check` is green, with the
+        Vitest count unchanged and test:scripts up by 1. The full
+        `npm run e2e` passes with 103 tests. `npm ls @tanstack/react-table`
+        prints 8.21.3, `node scripts/progress.mjs --check` is clean, and
+        `git grep "nativeButton=" -- src` is empty.
 - **Refs:** added by `progress.mjs add` on 2026-10-23; repurposed in the P7-T19 review
 
 ### P7-T33 — App-wide unsaved-changes guard (sidebar links, reload, tab close)
@@ -1348,6 +1410,13 @@ hours land around midnight–08:00 local; that is expected.
   - From the P7-T29 review: the held pick (and a held fetched copy) keeps a contact's old name if it is renamed elsewhere while the picker stays mounted. Every consumer unmounts it when its dialog or sheet closes today, so say that in `pickerValue`'s doc rather than adding a refresh.
   - In e2e/calendar-helpers.ts `pauseTimers` (moved there in P7-T30): `pauseAt(now + 1s)` throws "Cannot fast-forward to the past" if more than 1s of page time passes before it runs. Widen the margin to a few seconds, or state the limit in the helper's comment (every timer due inside the margin fires at once on pause).
   - From the P7-T30 review: contact-picker.spec.ts keeps its own `chooseByName(page, input, contact)`, the same fill and exact-name click as `chooseContact`. Let `chooseContact` take the input locator (or add an input-level variant) so both share one helper.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T41 — Document the Base UI trigger exception in LinkButton JSDoc
+- **Owner:** agent · **Depends:** —
+- **Scope:** LinkButton JSDoc (ui/button.tsx) names the trigger-as-non-button disable exception the lint message allows; tidy eslint-config.test.mjs duplicate trigger asserts + comment; reword link-buttons spec header padding attribution
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
