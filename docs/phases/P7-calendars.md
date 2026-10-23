@@ -910,6 +910,7 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** Move the three copies of booking-dialog contact pick (fill + option click) into e2e/calendar-helpers.ts chooseContact and use it in calendars-booking, calendars-booking-dialog, calendars-load-errors specs.
   - From the P7-T18 review, in the same spec files: in calendars-load-errors.spec.ts, the RetryWatch.sawSkeleton doc should say "inside `scope`" (watchRetry now takes a scope), and the aria-busy MutationObserver should read the mutation records (attributeOldValue: true) rather than the live attribute. In calendars-booking-dialog.spec.ts, the header claims sixteen times on both 9 and 10 September but only the 9th is checked: trim the claim or assert it.
+  - From the P7-T24 review, in calendars-load-errors.spec.ts: rewrap the header line edited in P7-T24 (~:25, ~93 characters) to match the block, and scope the calendars test's `watchRetry(page, "main")` to the calendar column, since it reads the first `[data-slot="alert"]` in main.
   - From the P7-T21 review: failReads' Limits paragraph in calendar-helpers.ts names only calendars.ts. Add that any other API call reading the table through `Object.values` throws too while the fault is on, e.g. template rendering (templates.ts), analytics (analytics.ts) and the settings integrity check (settings.ts).
 - **Acceptance:**
   - [ ] (define before starting)
@@ -962,6 +963,7 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T36 — Booking dialog: error state and Retry when calendars.list fails
 - **Owner:** agent · **Depends:** —
 - **Scope:** booking-dialog.tsx:152 renders calendars.data ?? [], so a failed list leaves the Calendar select empty with no error or Retry; mirror P7-T24.
+  - From the P7-T24 review: P7-T24's guard `calendars.error && calendars.data === undefined` (calendars-workspace.tsx) has no test that goes red when `&& calendars.data === undefined` is dropped, because nothing on /calendars refetches the list with it on screen. Prove the same guard here with a test that can go red (a failed refetch with the list loaded keeps the list), or say in this task's acceptance that it holds by construction, as use-resource keeps `data` on a failed refetch.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

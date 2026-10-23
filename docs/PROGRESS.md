@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 26/60 tasks done (43%) · **Current phase:** P7 · **Next agent task:** P7-T25 · **Awaiting review:** P7-T24 · **Blocked:** none · **Waiting on you:** none
+**Overall:** 27/60 tasks done (45%) · **Current phase:** P7 · **Next agent task:** P7-T25 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 26/39 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 27/39 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -43,7 +43,7 @@ Status: active · Progress: 26/39 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T21 | Raise timeout on long calendars-booking e2e flows | agent | done | — | 431dcd3 | 2026-10-23 | 60s suite timeout; test.slow() on 2 long booking flows; failReads/restoreReads docs; Kolkata find merged. e2e 87/87 |
 | P7-T22 | Calendar update: reject explicit undefined keys and use a plain-language 422 message | agent | done | — | 6dcaa7a | 2026-10-23 | update() ignores undefined keys, null clears daily cap, 422 reads '<label>: <rule>' with path in ApiError.field |
 | P7-T23 | Deal form Expected close uses shared isCalendarDay | agent | done | — | 01e71ed | 2026-10-23 | Deal form Expected close uses isCalendarDay/parseCalendarDay; schema refuses bad days with 'Enter a valid date.'; unit+e2e red-first. |
-| P7-T24 | Calendars sidebar: error state and Retry when calendars.list fails | agent | review | — |  | 2026-10-23 | Calendar column shows LoadError + Retry when calendars.list fails; view still draws; e2e 90/90 |
+| P7-T24 | Calendars sidebar: error state and Retry when calendars.list fails | agent | done | — | 92adfbd | 2026-10-23 | Calendar column shows LoadError + Retry when calendars.list fails; view still draws; e2e 90/90 |
 | P7-T25 | Contact detail: error state instead of endless skeleton on non-404 load failure | agent | todo | — |  |  |  |
 | P7-T26 | Past appointments: only Showed/No-show; Cancel and Confirmed for future only (P7-H3) | agent | todo | — |  |  |  |
 | P7-T27 | e2e: longer toHaveURL timeout for cross-route navigation | agent | todo | — |  |  |  |
