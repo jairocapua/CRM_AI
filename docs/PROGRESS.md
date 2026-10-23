@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 24/58 tasks done (41%) · **Current phase:** P7 · **Next agent task:** P7-T23 · **Awaiting review:** P7-T22 · **Blocked:** none · **Waiting on you:** none
+**Overall:** 25/59 tasks done (42%) · **Current phase:** P7 · **Next agent task:** P7-T24 · **Awaiting review:** P7-T23 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 24/37 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 25/38 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -41,8 +41,8 @@ Status: active · Progress: 24/37 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T19 | Link-as-button semantics in modules | agent | done | — | db3906a | 2026-10-23 | 6 module links now <Link className={cn(buttonVariants())}>: no role=button, outline border restored; e2e/link-buttons.spec.ts (5) |
 | P7-T20 | Availability editor: unsaved-changes guard and empty open day | agent | done | — | b6c460a | 2026-10-23 | Unsaved-changes guard on calendar select + Back link (ConfirmDialog); last window removal turns day off. e2e 5 new, 87/87 |
 | P7-T21 | Raise timeout on long calendars-booking e2e flows | agent | done | — | 431dcd3 | 2026-10-23 | 60s suite timeout; test.slow() on 2 long booking flows; failReads/restoreReads docs; Kolkata find merged. e2e 87/87 |
-| P7-T22 | Calendar update: reject explicit undefined keys and use a plain-language 422 message | agent | review | — |  | 2026-10-23 | update() ignores undefined keys, null clears daily cap, 422 reads '<label>: <rule>' with path in ApiError.field |
-| P7-T23 | Deal form Expected close uses shared isCalendarDay | agent | todo | — |  |  |  |
+| P7-T22 | Calendar update: reject explicit undefined keys and use a plain-language 422 message | agent | done | — | 6dcaa7a | 2026-10-23 | update() ignores undefined keys, null clears daily cap, 422 reads '<label>: <rule>' with path in ApiError.field |
+| P7-T23 | Deal form Expected close uses shared isCalendarDay | agent | review | — |  | 2026-10-23 | Deal form Expected close uses isCalendarDay/parseCalendarDay; schema refuses bad days with 'Enter a valid date.'; unit+e2e red-first. |
 | P7-T24 | Calendars sidebar: error state and Retry when calendars.list fails | agent | todo | — |  |  |  |
 | P7-T25 | Contact detail: error state instead of endless skeleton on non-404 load failure | agent | todo | — |  |  |  |
 | P7-T26 | Past appointments: only Showed/No-show; Cancel and Confirmed for future only (P7-H3) | agent | todo | — |  |  |  |
@@ -54,6 +54,7 @@ Status: active · Progress: 24/37 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T32 | Link-button icon padding and link-buttons spec scoping | agent | todo | P7-T31 |  | 2026-10-23 | Repurposed from a duplicate of P7-T31 (P7-T19 review) |
 | P7-T33 | App-wide unsaved-changes guard (sidebar links, reload, tab close) | agent | todo | — |  |  |  |
 | P7-T34 | Calendar update: validate or allow-list keys outside the settings schema | agent | todo | — |  |  |  |
+| P7-T35 | Validate expectedCloseAt in api.opportunities create/update | agent | todo | — |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md

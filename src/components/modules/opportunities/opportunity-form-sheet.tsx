@@ -399,14 +399,29 @@ export function OpportunityFormSheet({
                 </Field>
               ) : null}
 
-              <Field>
+              <Field
+                data-invalid={Boolean(form.formState.errors.expectedCloseAt)}
+              >
                 <FieldLabel htmlFor="expectedCloseAt">
                   Expected close
                 </FieldLabel>
+                {/* No `min`/`max`: native constraint validation would block
+                    the submit with a browser bubble before the schema's
+                    message could show. */}
                 <Input
                   id="expectedCloseAt"
                   type="date"
+                  aria-invalid={
+                    Boolean(form.formState.errors.expectedCloseAt) || undefined
+                  }
                   {...form.register("expectedCloseAt")}
+                />
+                <FieldError
+                  errors={
+                    form.formState.errors.expectedCloseAt
+                      ? [form.formState.errors.expectedCloseAt]
+                      : undefined
+                  }
                 />
               </Field>
             </FieldGroup>

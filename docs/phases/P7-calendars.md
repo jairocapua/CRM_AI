@@ -783,9 +783,48 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T23 — Deal form Expected close uses shared isCalendarDay
 - **Owner:** agent · **Depends:** —
+- **Skills:** `tdd`, `vitest`, `playwright-cli`
 - **Scope:** validation/opportunity.ts dateInputToIso uses date-fns parse and accepts '0099-01-01'; switch to @/lib/dates isCalendarDay/parseCalendarDay with a red-first test.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. One day rule. `dateInputToIso` checks validity with
+        `isCalendarDay` and reads the parts with `parseCalendarDay`, both from
+        `@/lib/dates`. `validation/opportunity.ts` no longer imports `parse`
+        or `isValid` from date-fns and defines no day pattern of its own.
+  - [ ] A2. `dateInputToIso` returns undefined for '' and for every string
+        `isCalendarDay` refuses: '0099-01-01', '0000-01-01', '26-09-08',
+        '2026-9-8', '2026-09-08 ', '2026-02-30', '10000-01-01', 'banana'.
+  - [ ] A3. The local calendar date is kept. In UTC, Asia/Singapore and
+        America/Los_Angeles, `dateInputToIso('2026-09-08')` is that zone's
+        local midnight: '2026-09-08T00:00:00.000Z',
+        '2026-09-07T16:00:00.000Z' and '2026-09-08T07:00:00.000Z'. LA's DST
+        days give '2026-03-08T08:00:00.000Z' and '2026-11-01T07:00:00.000Z'.
+        `isoToDateInput(dateInputToIso(d)) === d` for 2026-09-08, 2028-02-29,
+        2026-03-08, 2026-11-01, 0100-01-01 and 9999-12-31 in all three zones.
+        A seeded 17:00Z close re-saved in Singapore keeps its day, save after
+        save.
+  - [ ] A4. The form refuses what `dateInputToIso` would drop.
+        `buildOpportunityFormSchema([])` on an otherwise complete draft
+        reports exactly `{ expectedCloseAt: 'Enter a valid date.' }` for
+        '0099-01-01', '0000-01-01', '2026-02-30' and '10000-01-01'. It reports
+        no error for '', '2026-12-01', '2028-02-29' or '0100-01-01'. A day the
+        user typed is never silently cleared on save.
+  - [ ] A5. The deal sheet shows the error. With Expected close
+        '0099-01-01', clicking 'Create deal' in the New deal sheet shows
+        'Enter a valid date.' in the Expected close field, the input has
+        aria-invalid='true', and the sheet stays open. With '2026-12-01' the
+        field shows neither.
+  - [ ] A6. Every new test has been seen failing. The red rows named in A2,
+        A4 and A5 failed on the old code. The type-clean mutants (refine
+        removed, date-fns parse restored, `Date.UTC` instead of local
+        midnight, FieldError removed) each turned their own tests red.
+  - [ ] A7. Comments match the code. The `dateInputToIso` doc comment
+        describes the shared rule, local midnight, and undefined for empty or
+        refused values (with the schema reporting the refusal first). The
+        `src/lib/dates.ts` header lists the deal form among its users.
+  - [ ] A8. No seed, mock or API change and no regression. SEED_VERSION stays
+        4, nothing under src/lib/mock or src/lib/api changes, `npm run check`
+        is green, and the full `npm run e2e` suite passes with the existing
+        specs unchanged.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T24 — Calendars sidebar: error state and Retry when calendars.list fails
@@ -875,6 +914,13 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** update() passes name/color/teamMemberIds/isActive/description unchecked (null or wrong type overwrites required fields) and lets createdAt be overwritten; validate the merged record or allow-list, always keep prev.createdAt (calendars.ts:163-164).
   - From the P7-T22 review, in the same file: add one BAD_PATCHES row whose issue path is top-level and unlabelled (e.g. a non-object patch, as a JSON client might send) to pin the "Calendar settings" fallback label. Type `withoutUndefined` as `{ [K in keyof T]?: Exclude<T[K], undefined> }` so TypeScript enforces what it guarantees. Note at `settingLabel` that "window N" counts windows in the order sent, while the editor's `toAvailabilityPatch` sorts them by start time, so whoever wires `ApiError.field` into the form maps it through the same order.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T35 — Validate expectedCloseAt in api.opportunities create/update
+- **Owner:** agent · **Depends:** —
+- **Scope:** src/lib/api/opportunities.ts accepts any string for expectedCloseAt; reject non-ISO values with a 422 so non-UI callers cannot store junk. Tests first.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

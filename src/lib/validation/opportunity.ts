@@ -1,6 +1,7 @@
-import { format, isValid, parse, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { z } from "zod";
 
+import { isCalendarDay, parseCalendarDay } from "@/lib/dates";
 import {
   LEAD_SOURCE_LABELS,
   OPPORTUNITY_STATUS_LABELS,
@@ -39,7 +40,11 @@ export function buildOpportunityFormSchema(customFields: CustomField[]) {
     source: z.enum(LEAD_SOURCE_VALUES),
     ownerId: z.string(),
     tagIds: z.array(z.string()),
-    expectedCloseAt: z.string(),
+    // The same day rule `dateInputToIso` applies, so a day it would drop is
+    // reported here instead of saving as "no date".
+    expectedCloseAt: z
+      .string()
+      .refine((v) => v === "" || isCalendarDay(v), "Enter a valid date."),
     lostReason: z.string().trim(),
     customFields: buildCustomFieldsSchema(customFields),
   });
@@ -72,11 +77,18 @@ export interface OpportunityFormValues {
  * Both directions use the *local* calendar date, because that is what every
  * screen displays. Reading the UTC date instead shifted a seeded 17:00 UTC
  * close back a day east of Greenwich — each save of the form moved it again.
+ *
+ * A day is valid by the shared rule in `@/lib/dates`, the same one the booking
+ * form and the calendars use. An empty or refused value gives undefined ("no
+ * date"); the form schema reports a refused value before submit, so a day the
+ * user typed is never silently cleared.
  */
 export function dateInputToIso(value: string): ISODate | undefined {
-  if (!value) return undefined;
-  const parsed = parse(value, "yyyy-MM-dd", new Date(0));
-  return isValid(parsed) ? parsed.toISOString() : undefined;
+  if (!isCalendarDay(value)) return undefined;
+  const { year, month, day } = parseCalendarDay(value);
+  // `isCalendarDay` refuses years 0000-0099, so `new Date` cannot read a
+  // two-digit year here as 1900-1999.
+  return new Date(year, month - 1, day).toISOString();
 }
 
 export function isoToDateInput(iso: ISODate | undefined): string {

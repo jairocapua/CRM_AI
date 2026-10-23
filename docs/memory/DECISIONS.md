@@ -179,3 +179,7 @@
 - 2026-10-23 [P7-T22] maxBookingsPerDay: null removes the daily cap; the key is deleted, never stored as null, so Calendar type and seed are unchanged. 0 is still a 422.
 - 2026-10-23 [P7-T22] The 422 INVALID_CALENDAR message is now '<label>: <rule>' in the editor's words (supersedes P7-T11's '<path>: <issue>'); the dotted path moves to optional ApiError.field, not for display.
 - 2026-10-23 [P7-T22] SETTING_LABELS is Record<keyof calendarSettingsSchema.shape, string>, so a new setting needs a label; lookup uses Object.hasOwn so prototype keys never become labels.
+- 2026-10-23 [P7-T23] Expected close input gets no min/max: without noValidate, native validation would block submit with a browser bubble before the schema message. JSX comment says so.
+- 2026-10-23 [P7-T23] Field uses `data-invalid={Boolean(...)}`; Input uses `aria-invalid={Boolean(...) || undefined}` so the attribute is absent (not 'false') when valid; e2e asserts absence.
+- 2026-10-23 [P7-T23] e2e field filter's `has` locator is page-rooted, and the spec asserts the field locator matches exactly one element.
+- 2026-10-23 [P7-T23] 0100-01-01 is asserted only as a round trip (pre-1883 local mean time gives odd seconds); UTC/Singapore midnight tables also pin LA DST days 2026-03-08 and 2026-11-01.

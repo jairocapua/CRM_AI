@@ -2,7 +2,8 @@
  * Calendar days: the one rule for "is this a real YYYY-MM-DD day?".
  *
  * Shared by the calendars page (`calendar-nav.ts`), the booking form
- * (`validation/appointment.ts`), the booking engine (`mock/slots.ts`) and the
+ * (`validation/appointment.ts`), the deal form's Expected close
+ * (`validation/opportunity.ts`), the booking engine (`mock/slots.ts`) and the
  * API (`api/calendars.ts`), so a day one of them accepts the others accept
  * too. Plain functions with no imports: no store, no clock, no zone, which
  * also keeps it outside the mock seam so components may use it.

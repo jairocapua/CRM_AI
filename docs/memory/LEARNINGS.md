@@ -148,3 +148,7 @@
 - 2026-10-23 [P7-T22] zod 4.5.4: a per-parse error map (`safeParse(data, { error: () => '...' })`) ranks below schema/check messages, so it replaces only zod's built-in wording: a safe catch-all for wrong-type JSON input.
 - 2026-10-23 [P7-T22] Vitest toEqual treats a key holding undefined as missing. To prove no key was written as undefined, filter Object.entries for undefined or use not.toHaveProperty.
 - 2026-10-23 [P7-T22] Python is not installed here; scratch scripts must be node .mjs. Large mixed-quote bash heredocs can fail to parse; write the payload with Write and splice it with node.
+- 2026-10-23 [P7-T23] Playwright `locator.filter({ has })` matches the inner locator inside each candidate, so root it at the page (`page.getByLabel(...)`), not the dialog.
+- 2026-10-23 [P7-T23] Chromium's `<input type=date>` accepts `fill('0099-01-01')` without a 'Malformed value' error; no `locator.evaluate` fallback needed.
+- 2026-10-23 [P7-T23] A `Date.UTC` mutant still passes the Asia/Singapore round trip (UTC midnight is 08:00 same day); exact-ISO rows and the LA round trip are what catch it.
+- 2026-10-23 [P7-T23] `npx playwright test` (build + start on :3100) runs fine alongside the owner's `next dev` on :3000 in the same folder.
