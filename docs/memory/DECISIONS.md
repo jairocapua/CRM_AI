@@ -175,3 +175,7 @@
 - 2026-10-23 [P7-T21] Only the per-test timeout changed (60s suite-wide, 180s on the two slow-marked flows); expect's 5s timeout and worker count stay default, owned by P7-T27.
 - 2026-10-23 [P7-T21] The other two calendars-booking tests are not marked slow (rule: >20s alone on 1 worker; they took 4.2s/3.5s). :259 hit 24.5s under load, within the 60s budget.
 - 2026-10-23 [P7-T21] failReads' comment states the narrow truth: setStatus() reads the appointments table only when un-cancelling; cancel() never does.
+- 2026-10-23 [P7-T22] An undefined value in an update() patch is ignored, never written (as JSON would drop it). Supersedes the P7-T11 note "(undefined clears the cap)".
+- 2026-10-23 [P7-T22] maxBookingsPerDay: null removes the daily cap; the key is deleted, never stored as null, so Calendar type and seed are unchanged. 0 is still a 422.
+- 2026-10-23 [P7-T22] The 422 INVALID_CALENDAR message is now '<label>: <rule>' in the editor's words (supersedes P7-T11's '<path>: <issue>'); the dotted path moves to optional ApiError.field, not for display.
+- 2026-10-23 [P7-T22] SETTING_LABELS is Record<keyof calendarSettingsSchema.shape, string>, so a new setting needs a label; lookup uses Object.hasOwn so prototype keys never become labels.

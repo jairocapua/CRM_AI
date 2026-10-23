@@ -726,8 +726,59 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** calendars.update(): {timezone: undefined} passes .partial() and erases the stored value; drop undefined keys or validate merged record. Keep zod path off the toast-facing message (separate field).
   - From the P7-T11 review: once undefined keys are dropped, nothing can remove a `maxBookingsPerDay` cap (the schema's minimum is 1, and JSON cannot send `undefined`). Give "no cap" an explicit spelling that `update()` accepts (`null`, or 0 as the engine already reads it) and test that it clears the cap.
+  - Decided: an undefined value in a patch is ignored, never written, the
+    same as JSON would drop it on the wire.
+  - Decided: `maxBookingsPerDay: null` removes the daily cap. The key is
+    deleted from the stored calendar, never stored as null; `0` stays
+    rejected. A 422 message reads `<label>: <rule>` in the editor's words,
+    and the dotted zod path goes in `ApiError.field`, never in the message.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. Undefined values are ignored, never written. On Discovery Call,
+        `update(id, { timezone: undefined, name: undefined, isActive:
+        undefined, availability: undefined, maxBookingsPerDay: undefined,
+        bufferBeforeMin: 5 })` resolves. The stored calendar equals the
+        previous one except for `bufferBeforeMin: 5` and `updatedAt`, and
+        still has timezone America/Los_Angeles, its name, `isActive` true,
+        its availability and its cap of 6. No own key on the returned or
+        stored calendar holds `undefined`. Tuesday 2026-10-27 still offers
+        its Los Angeles wall-clock slots.
+  - [ ] A2. `maxBookingsPerDay: null` removes the daily cap, and nothing else
+        does. With Strategy Session's three bookings on Tue 2026-10-27
+        (16:00Z, 20:00Z, 22:00Z) that day offers no slots;
+        `{ maxBookingsPerDay: undefined }` leaves it full;
+        `{ maxBookingsPerDay: null }` resolves, neither the returned nor the
+        stored calendar has a `maxBookingsPerDay` key, and the day offers
+        exactly 18:00Z; a later `{ maxBookingsPerDay: 2 }` closes the day
+        again. `0` is still rejected.
+  - [ ] A3. A rejected patch gets a plain-language message, with the path in
+        a separate field. Every rejected settings patch is a 422
+        `INVALID_CALENDAR` with `field` set to the dotted path (for example
+        `availability.2.windows.0.end`) and `message` set to
+        `<label>: <rule>` with no path in it. Labels use the editor's words
+        ("Tuesday, end of window 1", "Slot duration", "Booking range",
+        "Time zone", "Daily booking limit", "Weekly hours"). zod's built-in
+        wording never reaches the message: a wrong type reads "Not a valid
+        value." and an out-of-range weekday "Not a weekday.". The calendar
+        is unchanged after each rejection.
+  - [ ] A4. `ApiError` carries an optional `field`, a fourth constructor
+        parameter documented as not for display. Every other `ApiError` in
+        the app is constructed as before.
+  - [ ] A5. Valid settings still save, and the editor works as before.
+        Touching windows save, every seeded calendar's whole record re-saves
+        (Onboarding Kickoff with no cap included), and nothing under
+        `src/components` changes.
+  - [ ] A6. Every new or changed test has been seen failing: on the old code
+        the undefined test fails at the timezone check, the null test at the
+        422, and the rejection rows at message/field. Type-clean mutants
+        (no undefined filter, no null branch, the path back in the message,
+        no per-parse error map) each turn their own test red.
+  - [ ] A7. Comments match the code: `update()`'s doc comment (undefined
+        ignored, null clears the cap, plain `message` plus `field`),
+        `calendarSettingsSchema`'s (null means no cap) and `ApiError.field`.
+  - [ ] A8. No seed, mock or UI change and no regression. `SEED_VERSION`
+        stays 4, nothing under `src/lib/mock` or `src/components` changes,
+        `npm run check` is green, and the full `npm run e2e` suite passes
+        with the existing specs unchanged.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T23 — Deal form Expected close uses shared isCalendarDay
@@ -816,6 +867,13 @@ hours land around midnight–08:00 local; that is expected.
   - From the P7-T20 review: in calendars-availability-editor.spec.ts ("a clean editor switches and leaves without asking"), cover the two missing clean cases, a calendar switch right after Save and Back right after load, so each control is proven unguarded after load, Discard and Save.
   - In availability-workspace.tsx, call `setDirty(false)` before `router.push("/calendars")` on Discard, so a second Back click during a slow push does not ask again.
   - availability-form.tsx reports `isDirty` through an effect that re-fires when `onDirtyChange` changes identity: say in the prop doc that it must be stable (as `setDirty` is), or report through RHF's `form.subscribe({ formState: { isDirty: true } })`, which the app-wide blocker will need anyway.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T34 — Calendar update: validate or allow-list keys outside the settings schema
+- **Owner:** agent · **Depends:** —
+- **Scope:** update() passes name/color/teamMemberIds/isActive/description unchecked (null or wrong type overwrites required fields) and lets createdAt be overwritten; validate the merged record or allow-list, always keep prev.createdAt (calendars.ts:163-164).
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

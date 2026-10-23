@@ -9,7 +9,10 @@ import {
   liveBookings,
   zonedDay,
 } from "@/lib/mock/slots";
-import { calendarSettingsSchema } from "@/lib/validation/availability";
+import {
+  calendarSettingsSchema,
+  WEEKDAY_LABELS,
+} from "@/lib/validation/availability";
 import { invalidate } from "./cache";
 import { ApiError, apiNowMs, notFound, nowIso, simulate } from "./http";
 
@@ -31,31 +34,138 @@ export async function get(id: ID): Promise<Calendar> {
 }
 
 /**
- * Applies `patch` to a calendar. Its booking settings must pass
- * `calendarSettingsSchema`, the availability editor's own rules ("HH:mm"
- * windows that end after they start and do not overlap, on an enabled day;
- * one rule per weekday; whole numbers in range; a known time zone), or the
- * call is a 422 `INVALID_CALENDAR`, its message naming the first bad field,
- * and nothing is saved. An unknown id is a 404.
+ * What `update()` takes: any of a calendar's fields, plus `null` as the way
+ * to remove the daily cap (a calendar with no cap has no `maxBookingsPerDay`
+ * key at all).
  */
-export async function update(
-  id: ID,
-  patch: Partial<Calendar>,
-): Promise<Calendar> {
+export type CalendarPatch = Omit<Partial<Calendar>, "maxBookingsPerDay"> & {
+  maxBookingsPerDay?: number | null;
+};
+
+/**
+ * `patch` without the keys whose value is `undefined`. JSON drops such keys
+ * on the way to a server (`JSON.stringify({ timezone: undefined })` is "{}"),
+ * so a `fetch()` client could never send them. Dropping them here gives the
+ * mock the same behaviour, and a spread can never write `undefined` over a
+ * stored value.
+ */
+function withoutUndefined<T extends object>(patch: T): T {
+  return Object.fromEntries(
+    Object.entries(patch).filter(([, value]) => value !== undefined),
+  ) as T;
+}
+
+type SettingKey = keyof typeof calendarSettingsSchema.shape;
+
+/**
+ * Each setting `calendarSettingsSchema` checks, in the availability editor's
+ * own words, for a 422's message. Typed by the schema's keys, so a new
+ * setting cannot be added without a label.
+ */
+const SETTING_LABELS: Record<SettingKey, string> = {
+  availability: "Weekly hours",
+  slotDurationMin: "Slot duration",
+  slotIntervalMin: "Slot interval",
+  bufferBeforeMin: "Buffer before",
+  bufferAfterMin: "Buffer after",
+  minSchedulingNoticeHours: "Minimum notice",
+  dateRangeDays: "Booking range",
+  timezone: "Time zone",
+  maxBookingsPerDay: "Daily booking limit",
+};
+
+/**
+ * The setting a validation issue at `path` is about, as the editor names it:
+ * "Tuesday, end of window 1" (the editor's "End of window 1" on Tuesday),
+ * "Tuesday hours" for anything else in Tuesday's rule, "Slot duration".
+ * `patch` is what was sent, read only for the weekday of `availability.<i>`.
+ * It may come from a JSON client in any shape, so every read is guarded and
+ * the error path itself can never throw.
+ */
+function settingLabel(
+  path: readonly PropertyKey[],
+  patch: CalendarPatch,
+): string {
+  const [key, ruleIndex, part, windowIndex, edge] = path;
+  if (
+    key === "availability" &&
+    typeof ruleIndex === "number" &&
+    Array.isArray(patch.availability)
+  ) {
+    const rule: unknown = patch.availability[ruleIndex];
+    const weekday =
+      typeof rule === "object" && rule !== null && "weekday" in rule
+        ? rule.weekday
+        : undefined;
+    const day =
+      typeof weekday === "number" ? WEEKDAY_LABELS[weekday] : undefined;
+    if (day) {
+      if (
+        part === "windows" &&
+        typeof windowIndex === "number" &&
+        (edge === "start" || edge === "end")
+      ) {
+        return `${day}, ${edge} of window ${windowIndex + 1}`;
+      }
+      return `${day} hours`;
+    }
+  }
+  return typeof key === "string" && Object.hasOwn(SETTING_LABELS, key)
+    ? SETTING_LABELS[key as SettingKey]
+    : "Calendar settings";
+}
+
+/**
+ * Applies `patch` to a calendar and returns the saved record.
+ *
+ * - A key whose value is `undefined` is ignored, the same as a missing key
+ *   (see `withoutUndefined`), so it never erases a stored value.
+ * - `maxBookingsPerDay: null` removes the daily cap: the key is deleted from
+ *   the calendar, never stored as null. A number sets the cap, and must be
+ *   1 or more.
+ * - The booking settings must pass `calendarSettingsSchema`, the availability
+ *   editor's own rules ("HH:mm" windows that end after they start and do not
+ *   overlap, on an enabled day; one rule per weekday; whole numbers in range;
+ *   a known time zone). Otherwise the call is a 422 `INVALID_CALENDAR` about
+ *   the first bad setting, and nothing is saved. Its `message` is a plain
+ *   sentence that names the setting in the editor's words ("Tuesday, end of
+ *   window 1: End time must be after the start time."), ready for a toast;
+ *   its `field` is where the problem is, as a dotted path
+ *   ("availability.2.windows.0.end").
+ * - An unknown id is a 404.
+ */
+export async function update(id: ID, patch: CalendarPatch): Promise<Calendar> {
   const calendar = await simulate(() => {
     const prev = db.getState().calendars[id] ?? notFound("Calendar", id);
-    const checked = calendarSettingsSchema.safeParse(patch);
+    const defined = withoutUndefined(patch);
+    // A per-parse error map ranks below every message the schema sets
+    // itself, so this replaces only zod's built-in wording ("Invalid input:
+    // expected string, received number"), which a wrong type would show.
+    const checked = calendarSettingsSchema.safeParse(defined, {
+      error: () => "Not a valid value.",
+    });
     if (!checked.success) {
       const [issue] = checked.error.issues;
+      if (!issue) {
+        throw new ApiError(
+          "Those calendar settings are not valid.",
+          422,
+          "INVALID_CALENDAR",
+        );
+      }
       throw new ApiError(
-        issue
-          ? `${issue.path.join(".")}: ${issue.message}`
-          : "Those calendar settings are not valid.",
+        `${settingLabel(issue.path, defined)}: ${issue.message}`,
         422,
         "INVALID_CALENDAR",
+        issue.path.join("."),
       );
     }
-    const next: Calendar = { ...prev, ...patch, id, updatedAt: nowIso() };
+    const { maxBookingsPerDay, ...rest } = defined;
+    const next: Calendar = { ...prev, ...rest, id, updatedAt: nowIso() };
+    if (maxBookingsPerDay === null) delete next.maxBookingsPerDay;
+    else if (maxBookingsPerDay !== undefined) {
+      next.maxBookingsPerDay = maxBookingsPerDay;
+    }
     db.setState((s) => ({ calendars: { ...s.calendars, [id]: next } }));
     return next;
   });

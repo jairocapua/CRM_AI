@@ -47,7 +47,7 @@ const isTime = (value: string) => TIME.test(value);
 
 const rule = z
   .object({
-    weekday: z.literal(WEEKDAYS),
+    weekday: z.literal(WEEKDAYS, { error: "Not a weekday." }),
     enabled: z.boolean(),
     // Strings here, checked below only when the day is enabled: a day turned
     // off with a half-typed time in it must not block saving.
@@ -156,6 +156,10 @@ export function isTimeZone(zone: string): boolean {
  * at most one rule per weekday. Keys it does not name (name, colour,
  * `isActive` ...) pass through unchecked.
  *
+ * `maxBookingsPerDay: null` means "no cap" (update() then removes the key);
+ * a number must still be 1 or more. `update()` drops keys whose value is
+ * `undefined` before this runs, so an undefined value counts as absent.
+ *
  * As in the editor, a disabled day's windows are not checked. That is no gap:
  * `availability` is replaced whole, so re-enabling a day means sending the
  * array again, and its windows are checked then.
@@ -181,7 +185,7 @@ export const calendarSettingsSchema = availabilitySchema
     maxBookingsPerDay: wholeNumber(
       [1, "Must be at least 1."],
       [1440, "Can't be more than 1,440."],
-    ),
+    ).nullable(),
   })
   .partial();
 

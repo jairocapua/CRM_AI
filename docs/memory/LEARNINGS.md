@@ -145,3 +145,6 @@
 - 2026-10-23 [P7-T21] calendars-booking flows take ~6-7s alone on 1 worker but 20-28s in a full 16-worker e2e run: length is machine load, not the flows. Alone: :153 7.1s, :259 4.2s, :317 6.4s, :387 3.5s.
 - 2026-10-23 [P7-T21] Playwright JSON reporter records test.slow() as annotation type 'slow' and the tripled test.timeout (180000 on a 60s base). `npx playwright test --list --reporter=json` gives config.projects[0].timeout without starting the webServer.
 - 2026-10-23 [P7-T21] `node script.cjs arg`: the first argument is process.argv[2]; argv[1] is the script path.
+- 2026-10-23 [P7-T22] zod 4.5.4: a per-parse error map (`safeParse(data, { error: () => '...' })`) ranks below schema/check messages, so it replaces only zod's built-in wording: a safe catch-all for wrong-type JSON input.
+- 2026-10-23 [P7-T22] Vitest toEqual treats a key holding undefined as missing. To prove no key was written as undefined, filter Object.entries for undefined or use not.toHaveProperty.
+- 2026-10-23 [P7-T22] Python is not installed here; scratch scripts must be node .mjs. Large mixed-quote bash heredocs can fail to parse; write the payload with Write and splice it with node.

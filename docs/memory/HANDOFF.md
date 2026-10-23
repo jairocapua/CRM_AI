@@ -5,27 +5,28 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T21 in review (deep review).
+- **Status:** P7-T22 in review (deep review).
 
 ## Last change
-- playwright.config.ts: suite-wide test timeout 60s (was Playwright's 30s default); expect timeout and workers unchanged.
-- calendars-booking.spec.ts: `test.slow()` on the two long flows (:153, :317), no split, no assertion change.
-- Comment fixes in e2e/calendar-helpers.ts (failReads/restoreReads), Kolkata find merged in calendars-details.spec.ts, one test comment in appointment-display.test.ts.
-- check green; e2e 87/87.
+- calendars.update() drops undefined keys before validating/merging; `maxBookingsPerDay: null` deletes the cap (0 still 422).
+- 422 INVALID_CALENDAR message now '<label>: <rule>' (e.g. "Time zone: Not a valid value."); dotted path in new optional `ApiError.field`.
+- New `CalendarPatch` type; per-parse zod error map; 21 BAD_PATCHES rows + undefined/null tests, all seen red.
+- check green (488 tests); e2e 87/87; no mock/UI/e2e change, SEED_VERSION 4.
 
 ## Next up
-- **Agent:** P7-T22 Calendar update: reject explicit undefined keys and use a plain-language 422 message.
+- **Agent:** P7-T23 (next by tracker order).
 
 ## Waiting on you
-- Review of P7-T21.
+- Review of P7-T22.
 - P7-T32 is a duplicate: delete it from the phase file.
 
 ## Open suggestions (non-blocking review notes)
-- booking spec :157/:321: "Playwright's old 30s default" wording; add "measured in P7-T21" to the durations.
-- calendar-helpers.ts:437-443: mention other appointments-table readers (templates.ts:112, analytics.ts:135, settings.ts:195/200).
-- playwright.config.ts:47-54: point the comment at P7-T27.
-- If P7-T27 does not cap workers, consider test.slow() on booking :259 (24.5s under load).
-- Earlier: P7-T20 notes (spec A5 gap, onDirtyChange stability, setDirty before push, ConfirmDialog pending state, availability.spec:69 into P7-T27).
+- New task P7-T34: validate/allow-list keys outside the settings schema, keep prev.createdAt.
+- settingLabel numbers windows by patch order; editor sorts by start time. Add a comment before wiring `field` into the form.
+- Later UI task: map ApiError.field onto form inputs (form.setError) for a server 422.
+- withoutUndefined return type could exclude undefined (cosmetic).
+- No test for fallback label 'Calendar settings' / `!issue` branch.
+- Earlier: P7-T21 notes (booking spec wording, calendar-helpers readers, config comment -> P7-T27, test.slow on :259).
 
 ## Blockers
 - None.

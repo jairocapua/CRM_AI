@@ -742,44 +742,52 @@ describe("update() checks the settings it is given", () => {
 
   /**
    * Each patch breaks one rule, built on Discovery's own (valid) settings, so
-   * `at` (where the API says the problem is) proves which rule caught it.
-   * Discovery has one rule per weekday, so Tuesday's is availability.2 and an
-   * extra rule is availability.7.
+   * `at` (where the API says the problem is) proves which rule caught it, and
+   * `says` is the whole plain-language message a toast shows, with no path in
+   * it. Discovery has one rule per weekday, so Tuesday's is availability.2 and
+   * an extra rule is availability.7.
    */
   const BAD_PATCHES: {
     name: string;
     patch: (calendar: Calendar) => Partial<Calendar>;
     at: string;
+    says: string;
   }[] = [
     {
       name: "a time that is not HH:mm",
       patch: tuesday(["9:00", "17:00"]),
       at: "availability.2.windows.0.start",
+      says: "Tuesday, start of window 1: Enter a time.",
     },
     {
       name: "an hour past 23",
       patch: tuesday(["09:00", "24:00"]),
       at: "availability.2.windows.0.end",
+      says: "Tuesday, end of window 1: Enter a time.",
     },
     {
       name: "a reversed window",
       patch: tuesday(["17:00", "09:00"]),
       at: "availability.2.windows.0.end",
+      says: "Tuesday, end of window 1: End time must be after the start time.",
     },
     {
       name: "a zero-length window",
       patch: tuesday(["09:00", "09:00"]),
       at: "availability.2.windows.0.end",
+      says: "Tuesday, end of window 1: End time must be after the start time.",
     },
     {
       name: "overlapping windows",
       patch: tuesday(["09:00", "12:00"], ["11:00", "14:00"]),
       at: "availability.2.windows.1.start",
+      says: "Tuesday, start of window 2: Overlaps another time window on this day.",
     },
     {
       name: "a window nested in another",
       patch: tuesday(["09:00", "17:00"], ["10:00", "11:00"]),
       at: "availability.2.windows.1.start",
+      says: "Tuesday, start of window 2: Overlaps another time window on this day.",
     },
     {
       name: "two rules for one weekday",
@@ -790,6 +798,7 @@ describe("update() checks the settings it is given", () => {
         ],
       }),
       at: "availability.7.weekday",
+      says: "Tuesday hours: Only one rule per weekday.",
     },
     {
       name: "a weekday past Saturday",
@@ -804,67 +813,99 @@ describe("update() checks the settings it is given", () => {
         ],
       }),
       at: "availability.7.weekday",
+      says: "Weekly hours: Not a weekday.",
+    },
+    {
+      // A JSON client can send any type: zod's own wording ("Invalid input:
+      // expected boolean, received string") must not reach the message.
+      name: "a day switch that is not true or false",
+      patch: (c) => ({
+        availability: c.availability.map((rule) =>
+          rule.weekday === 2
+            ? { ...rule, enabled: "yes" as unknown as boolean }
+            : rule,
+        ),
+      }),
+      at: "availability.2.enabled",
+      says: "Tuesday hours: Not a valid value.",
     },
     {
       name: "a zero slot length",
       patch: () => ({ slotDurationMin: 0 }),
       at: "slotDurationMin",
+      says: "Slot duration: Must be at least 1 minute.",
     },
     {
       name: "a negative slot length",
       patch: () => ({ slotDurationMin: -30 }),
       at: "slotDurationMin",
+      says: "Slot duration: Must be at least 1 minute.",
     },
     {
       name: "a fractional slot interval",
       patch: () => ({ slotIntervalMin: 7.5 }),
       at: "slotIntervalMin",
+      says: "Slot interval: Enter a whole number.",
     },
     {
       name: "a negative buffer before",
       patch: () => ({ bufferBeforeMin: -5 }),
       at: "bufferBeforeMin",
+      says: "Buffer before: Can't be negative.",
     },
     {
       name: "a fractional buffer after",
       patch: () => ({ bufferAfterMin: 2.5 }),
       at: "bufferAfterMin",
+      says: "Buffer after: Enter a whole number.",
     },
     {
       name: "a negative notice",
       patch: () => ({ minSchedulingNoticeHours: -1 }),
       at: "minSchedulingNoticeHours",
+      says: "Minimum notice: Can't be negative.",
     },
     {
       name: "a fractional date range",
       patch: () => ({ dateRangeDays: 1.5 }),
       at: "dateRangeDays",
+      says: "Booking range: Enter a whole number.",
     },
     {
       name: "a daily cap of zero",
       patch: () => ({ maxBookingsPerDay: 0 }),
       at: "maxBookingsPerDay",
+      says: "Daily booking limit: Must be at least 1.",
     },
     {
       name: "a fractional daily cap",
       patch: () => ({ maxBookingsPerDay: 2.5 }),
       at: "maxBookingsPerDay",
+      says: "Daily booking limit: Enter a whole number.",
     },
     {
       name: "an unknown time zone",
       patch: () => ({ timezone: "Mars/Olympus" }),
       at: "timezone",
+      says: "Time zone: Not a known time zone.",
     },
     {
       name: "an empty time zone",
       patch: () => ({ timezone: "" }),
       at: "timezone",
+      says: "Time zone: Not a known time zone.",
+    },
+    {
+      name: "a time zone that is not a string",
+      patch: () => ({ timezone: 5 as unknown as string }),
+      at: "timezone",
+      says: "Time zone: Not a valid value.",
     },
   ];
 
   it.each(BAD_PATCHES)(
     "rejects $name with a 422 and leaves the calendar unchanged",
-    async ({ patch, at }) => {
+    async ({ patch, at, says }) => {
       const { api, discovery } = await loadWorld(ZONES[0]!);
       const before = await settle(api.get(discovery.id));
 
@@ -873,7 +914,8 @@ describe("update() checks the settings it is given", () => {
       ).rejects.toMatchObject({
         status: 422,
         code: "INVALID_CALENDAR",
-        message: expect.stringContaining(`${at}: `),
+        field: at,
+        message: says,
       });
       expect(await settle(api.get(discovery.id))).toEqual(before);
     },
@@ -900,6 +942,88 @@ describe("update() checks the settings it is given", () => {
         settle(api.update(calendar.id, calendar)),
       ).resolves.toMatchObject({ ...calendar, updatedAt: expect.any(String) });
     }
+  });
+});
+
+/**
+ * A patch says only what it changes. A key set to `undefined` is the same as
+ * a missing one, as it would be once the patch went over the wire as JSON, so
+ * `null` is how a caller removes the one optional setting, the daily cap.
+ */
+describe("update() merges only what the patch defines", () => {
+  it("ignores keys set to undefined and saves the rest", async () => {
+    const { api, discovery, slots } = await loadWorld(ZONES[0]!);
+    const before = await settle(api.get(discovery.id));
+
+    const saved = await settle(
+      api.update(discovery.id, {
+        timezone: undefined,
+        name: undefined,
+        isActive: undefined,
+        availability: undefined,
+        maxBookingsPerDay: undefined,
+        bufferBeforeMin: 5,
+      }),
+    );
+    const stored = await settle(api.get(discovery.id));
+
+    for (const calendar of [saved, stored]) {
+      expect(calendar.timezone).toBe("America/Los_Angeles");
+      expect(calendar).toEqual({
+        ...before,
+        bufferBeforeMin: 5,
+        updatedAt: expect.any(String),
+      });
+      // `toEqual` reads a key holding `undefined` as a missing one, so it
+      // cannot see a key the patch wrote as `undefined`.
+      expect(
+        Object.entries(calendar).filter(([, value]) => value === undefined),
+      ).toEqual([]);
+    }
+    expect(stored).toMatchObject({
+      name: "Discovery Call",
+      isActive: true,
+      maxBookingsPerDay: 6,
+    });
+    // Still read in Los Angeles: the slots are its wall-clock hours.
+    expect(await slots(discovery, "2026-10-27")).toEqual(DISCOVERY_TUESDAY);
+  });
+
+  it("clears the daily cap with null, and only with null", async () => {
+    // Strategy Session takes three a day, 60-minute slots with 10/15-minute
+    // buffers: with these three booked, the buffers leave only 18:00Z.
+    const { api, strategy, slots, book } = await loadWorld(ZONES[0]!);
+    for (const startAt of [
+      "2026-10-27T16:00:00.000Z",
+      "2026-10-27T20:00:00.000Z",
+      "2026-10-27T22:00:00.000Z",
+    ]) {
+      await book(strategy, startAt);
+    }
+    expect(await slots(strategy, "2026-10-27")).toEqual([]);
+
+    await settle(api.update(strategy.id, { maxBookingsPerDay: undefined }));
+    expect(await settle(api.get(strategy.id))).toMatchObject({
+      maxBookingsPerDay: 3,
+    });
+    expect(await slots(strategy, "2026-10-27")).toEqual([]);
+
+    const saved = await settle(
+      api.update(strategy.id, { maxBookingsPerDay: null }),
+    );
+    // Removed, never stored as null: an absent key is how a calendar with no
+    // cap already reads (Onboarding Kickoff is seeded that way).
+    expect(saved).not.toHaveProperty("maxBookingsPerDay");
+    expect(await settle(api.get(strategy.id))).not.toHaveProperty(
+      "maxBookingsPerDay",
+    );
+    expect(await slots(strategy, "2026-10-27")).toEqual([
+      "2026-10-27T18:00:00.000Z",
+    ]);
+
+    // A cap can be set again afterwards.
+    await settle(api.update(strategy.id, { maxBookingsPerDay: 2 }));
+    expect(await slots(strategy, "2026-10-27")).toEqual([]);
   });
 });
 

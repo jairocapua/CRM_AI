@@ -35,7 +35,7 @@ export type {
   WinRate,
 } from "./analytics";
 export type { ActivityRow } from "./activities";
-export type { AppointmentRow } from "./calendars";
+export type { AppointmentRow, CalendarPatch } from "./calendars";
 export type { StageRollup } from "./opportunities";
 export type {
   ChannelOption,
