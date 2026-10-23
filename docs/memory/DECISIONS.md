@@ -233,3 +233,9 @@
 - 2026-10-23 [P7-T33] T-C counts non-prefetch /calendars?_rsc requests: 0 before Discard, 1 after, 2 after the second click.
 - 2026-10-23 [P7-T33] Extra mutants m3b, m5, m5b show each T-E control check fails on its own.
 - 2026-10-23 [P7-T33] beforeUnloadPrevented is read via expect.poll in T-B, T-D and T-E; its JSDoc says so.
+- 2026-10-23 [P7-T34] update() saves calendarSettingsSchema's parsed output (allow-list), never the raw patch. Editable: booking settings + name, description, color, teamMemberIds, isActive; id, slug, type, createdAt, createdBy, updatedAt and unknown keys ignored at every depth. Supersedes P7-T11's "saves the raw patch" line.
+- 2026-10-23 [P7-T34] slug and type are fixed at creation (slug is the editor's ?calendar= key; editing it would need a uniqueness rule).
+- 2026-10-23 [P7-T34] null removes an optional field (description, maxBookingsPerDay); a required field given null is a 422 'Not a valid value.'
+- 2026-10-23 [P7-T34] name trimmed, not blank; color must be a tag-palette value; teamMemberIds checked for shape only (not against users), like contacts' ownerId.
+- 2026-10-23 [P7-T34] A non-object patch is a 422 'Calendar settings: Not a valid value.' with ApiError.field undefined. New labels: Name, Description, Colour, Team members, Active.
+- 2026-10-23 [P7-T34] CALENDAR_COLORS = Object.keys(TAG_COLOR_CLASSES) in availability.ts (contact.ts pattern); availabilitySchema untouched.

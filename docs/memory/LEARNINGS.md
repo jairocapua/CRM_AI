@@ -199,3 +199,8 @@
 - 2026-10-23 [P7-T33] Another local project (ai_project_management) runs next start on 0.0.0.0:3100; E2E_REUSE_SERVER=1 could silently test the wrong app.
 - 2026-10-23 [P7-T33] Bare 'Failed to type check' in Playwright [WebServer] output came from a type error in an e2e spec; run npx tsc --noEmit after spec edits.
 - 2026-10-23 [P7-T33] A provider DOM listener driven by form state reported up through effects lags input by several commits; check it in Playwright with expect.poll, not a one-shot evaluate (also for removal).
+- 2026-10-23 [P7-T34] zod's default z.object strips unknown keys at every nested z.object (even inside superRefine'd schemas), so saving the parsed output is a deep allow-list with fresh arrays.
+- 2026-10-23 [P7-T34] For toMatchObject({ field: undefined }) to pass, pass undefined explicitly as ApiError's 4th arg so the key exists.
+- 2026-10-23 [P7-T34] A zod per-parse error map (safeParse(x, { error })) also replaces default messages of checks without their own text, e.g. z.string().min(1).
+- 2026-10-23 [P7-T34] Prove new tests red on HEAD without stash/reset: copy files to scratchpad, write git show HEAD:<path> over them, run vitest, copy back, confirm with cmp.
+- 2026-10-23 [P7-T34] Mutants that drop a schema key break Record<SettingKey,…>/Pick<Calendar,SettingKey>; run them under vitest only.

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import type { AvailabilityWindow, Calendar } from "@/types";
+import { TAG_COLOR_CLASSES } from "@/lib/constants";
+import type { AvailabilityWindow, Calendar, TagColor } from "@/types";
 
 /**
  * The availability editor's form: a calendar's weekly hours and its booking
@@ -140,6 +141,12 @@ export const availabilitySchema = z.object({
 
 export type AvailabilityFormValues = z.infer<typeof availabilitySchema>;
 
+/** The colours a calendar can take: the tag palette. */
+const CALENDAR_COLORS = Object.keys(TAG_COLOR_CLASSES) as [
+  TagColor,
+  ...TagColor[],
+];
+
 /** Whether `zone` is a time zone this runtime knows, such as an IANA name. */
 export function isTimeZone(zone: string): boolean {
   try {
@@ -152,13 +159,20 @@ export function isTimeZone(zone: string): boolean {
 
 /**
  * What `calendars.update` accepts: the editor's rules, every key optional,
- * plus the settings the editor does not show (time zone and daily cap) and
- * at most one rule per weekday. Keys it does not name (name, colour,
- * `isActive` ...) pass through unchecked.
+ * plus at most one rule per weekday, the settings the editor does not show
+ * (time zone and daily cap) and the calendar's details: a name that is not
+ * blank (trimmed), a description, a calendar colour, team member ids
+ * (non-empty strings, not checked against the users) and the active switch.
  *
- * `maxBookingsPerDay: null` means "no cap" (update() then removes the key);
- * a number must still be 1 or more. `update()` drops keys whose value is
- * `undefined` before this runs, so an undefined value counts as absent.
+ * This is also the allow-list: `update()` saves only what this parses, and
+ * zod drops every key it does not name, at every depth (id, slug, type, the
+ * timestamps, a stray key in a rule or a window).
+ *
+ * `null` is how a caller removes an optional field: `maxBookingsPerDay: null`
+ * means "no cap" and `description: null` "no description" (update() then
+ * removes the key). A number must still be 1 or more, and a required field
+ * rejects `null`. An undefined value counts as absent: every key is optional
+ * and `update()` drops undefined values from the parsed output.
  *
  * As in the editor, a disabled day's windows are not checked. That is no gap:
  * `availability` is replaced whole, so re-enabling a day means sending the
@@ -186,6 +200,11 @@ export const calendarSettingsSchema = availabilitySchema
       [1, "Must be at least 1."],
       [1440, "Can't be more than 1,440."],
     ).nullable(),
+    name: z.string().trim().min(1, "Can't be empty."),
+    description: z.string().nullable(),
+    color: z.enum(CALENDAR_COLORS, { error: "Not a calendar colour." }),
+    teamMemberIds: z.array(z.string().min(1)),
+    isActive: z.boolean(),
   })
   .partial();
 

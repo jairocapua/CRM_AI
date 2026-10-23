@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 35/68 tasks done (51%) · **Current phase:** P7 · **Next agent task:** P7-T34 · **Awaiting review:** P7-T33 · **Blocked:** none · **Waiting on you:** P7-H4
+**Overall:** 36/68 tasks done (53%) · **Current phase:** P7 · **Next agent task:** P7-T35 · **Awaiting review:** P7-T34 · **Blocked:** none · **Waiting on you:** P7-H4
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 35/47 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 36/47 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -52,8 +52,8 @@ Status: active · Progress: 35/47 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T30 | Shared chooseContact e2e helper | agent | done | — | bed1313 | 2026-10-23 | Shared chooseContact/pauseTimers/uniquelyNamedContact in calendar-helpers; review notes folded; NAVIGATION frozen; e2e 103 |
 | P7-T31 | LinkButton helper and nativeButton lint rule | agent | done | — | 263a3ac | 2026-10-23 | LinkButton in ui/button.tsx, 6 links migrated, PaginationLink plain <a>, lint bans nativeButton={false}/bare buttonVariants |
 | P7-T32 | Link-button icon padding and link-buttons spec scoping | agent | done | P7-T31 | 8d186f2 | 2026-10-23 | data-icon on View contact/Open board; spec pins padding, scoped header lookup; lint trigger clause; inert length asserts removed |
-| P7-T33 | App-wide unsaved-changes guard (sidebar links, reload, tab close) | agent | review | — |  | 2026-10-23 | UnsavedChangesProvider guards sidebar/user-menu/Back links + beforeunload; e2e T-A..T-E, mutants seen red |
-| P7-T34 | Calendar update: validate or allow-list keys outside the settings schema | agent | todo | — |  |  |  |
+| P7-T33 | App-wide unsaved-changes guard (sidebar links, reload, tab close) | agent | done | — | ab8154c | 2026-10-23 | UnsavedChangesProvider guards sidebar/user-menu/Back links + beforeunload; e2e T-A..T-E, mutants seen red |
+| P7-T34 | Calendar update: validate or allow-list keys outside the settings schema | agent | review | — |  | 2026-10-23 | update() saves parsed allow-list; name/colour/team/active/description checked; null patch 422; +13 tests |
 | P7-T35 | Validate expectedCloseAt in api.opportunities create/update | agent | todo | — |  |  |  |
 | P7-T36 | Booking dialog: error state and Retry when calendars.list fails | agent | todo | — |  |  |  |
 | P7-T37 | Contacts list: error state instead of false 'No contacts found' on list failure | agent | todo | — |  |  |  |

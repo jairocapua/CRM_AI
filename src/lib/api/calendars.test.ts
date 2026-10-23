@@ -7,6 +7,7 @@ import {
   settle,
   stubLocalStorage,
 } from "@/lib/mock/testing";
+import type { CalendarPatch } from "./calendars";
 
 /**
  * The P7 time model: availability windows are wall-clock times in the
@@ -911,12 +912,13 @@ describe("update() checks the settings it is given", () => {
    * `at` (where the API says the problem is) proves which rule caught it, and
    * `says` is the whole plain-language message a toast shows, with no path in
    * it. Discovery has one rule per weekday, so Tuesday's is availability.2 and
-   * an extra rule is availability.7.
+   * an extra rule is availability.7. The last row is about the patch as a
+   * whole, so it has no `at`: the error's `field` is unset.
    */
   const BAD_PATCHES: {
     name: string;
-    patch: (calendar: Calendar) => Partial<Calendar>;
-    at: string;
+    patch: (calendar: Calendar) => CalendarPatch;
+    at: string | undefined;
     says: string;
   }[] = [
     {
@@ -1067,6 +1069,68 @@ describe("update() checks the settings it is given", () => {
       at: "timezone",
       says: "Time zone: Not a valid value.",
     },
+    {
+      // A required field takes no null: only the optional ones are removed
+      // that way.
+      name: "a null name",
+      patch: () => ({ name: null }) as unknown as CalendarPatch,
+      at: "name",
+      says: "Name: Not a valid value.",
+    },
+    {
+      name: "a blank name",
+      patch: () => ({ name: "   " }),
+      at: "name",
+      says: "Name: Can't be empty.",
+    },
+    {
+      name: "a colour that is not a calendar colour",
+      patch: () => ({ color: "purple" }) as unknown as CalendarPatch,
+      at: "color",
+      says: "Colour: Not a calendar colour.",
+    },
+    {
+      name: "a null colour",
+      patch: () => ({ color: null }) as unknown as CalendarPatch,
+      at: "color",
+      says: "Colour: Not a calendar colour.",
+    },
+    {
+      name: "a null team",
+      patch: () => ({ teamMemberIds: null }) as unknown as CalendarPatch,
+      at: "teamMemberIds",
+      says: "Team members: Not a valid value.",
+    },
+    {
+      name: "an empty team member id",
+      patch: () => ({ teamMemberIds: [""] }),
+      at: "teamMemberIds.0",
+      says: "Team members: Not a valid value.",
+    },
+    {
+      name: "a null active switch",
+      patch: () => ({ isActive: null }) as unknown as CalendarPatch,
+      at: "isActive",
+      says: "Active: Not a valid value.",
+    },
+    {
+      name: "an active switch that is not true or false",
+      patch: () => ({ isActive: "yes" }) as unknown as CalendarPatch,
+      at: "isActive",
+      says: "Active: Not a valid value.",
+    },
+    {
+      name: "a description that is not a string",
+      patch: () => ({ description: 5 }) as unknown as CalendarPatch,
+      at: "description",
+      says: "Description: Not a valid value.",
+    },
+    {
+      name: "a patch that is not an object (a JSON body of null)",
+      patch: () => null as unknown as CalendarPatch,
+      at: undefined,
+      says: "Calendar settings: Not a valid value.",
+    },
   ];
 
   it.each(BAD_PATCHES)(
@@ -1099,9 +1163,40 @@ describe("update() checks the settings it is given", () => {
     expect(await slots(discovery, "2026-10-27")).toEqual(DISCOVERY_TUESDAY);
   });
 
+  it("saves a valid name, description, colour, team and active state", async () => {
+    const { api, discovery, strategy, slots } = await loadWorld(ZONES[0]!);
+    const before = await settle(api.get(discovery.id));
+    const changes = {
+      description: "First chat with a new lead.",
+      color: "sky" as const,
+      teamMemberIds: [strategy.teamMemberIds[0]!],
+      isActive: false,
+    };
+
+    const saved = await settle(
+      api.update(discovery.id, { ...changes, name: "  Intro Call  " }),
+    );
+    const stored = await settle(api.get(discovery.id));
+
+    for (const calendar of [saved, stored]) {
+      expect(calendar).toEqual({
+        ...before,
+        ...changes,
+        name: "Intro Call",
+        updatedAt: expect.any(String),
+      });
+    }
+    // Inactive took effect: the calendar no longer offers slots.
+    await expect(slots(discovery, "2026-10-27")).rejects.toMatchObject({
+      status: 409,
+      code: "CALENDAR_INACTIVE",
+    });
+  });
+
   it("re-saves every seeded calendar's own settings", async () => {
     // Every field at once, as a client that round-trips the whole record
-    // would send it: the fields the rules do not cover pass through too.
+    // would send it: the server-owned keys (id, slug, type, timestamps) are
+    // ignored, so the record saves as it was.
     const { api } = await loadWorld(ZONES[0]!);
     for (const calendar of await settle(api.list())) {
       await expect(
@@ -1114,7 +1209,8 @@ describe("update() checks the settings it is given", () => {
 /**
  * A patch says only what it changes. A key set to `undefined` is the same as
  * a missing one, as it would be once the patch went over the wire as JSON, so
- * `null` is how a caller removes the one optional setting, the daily cap.
+ * `null` is how a caller removes an optional field, the daily cap or the
+ * description. Keys `update()` does not let a caller change are dropped.
  */
 describe("update() merges only what the patch defines", () => {
   it("ignores keys set to undefined and saves the rest", async () => {
@@ -1190,6 +1286,74 @@ describe("update() merges only what the patch defines", () => {
     // A cap can be set again afterwards.
     await settle(api.update(strategy.id, { maxBookingsPerDay: 2 }));
     expect(await slots(strategy, "2026-10-27")).toEqual([]);
+  });
+
+  it("removes the description with null, and only with null", async () => {
+    const { api, discovery } = await loadWorld(ZONES[0]!);
+
+    await settle(api.update(discovery.id, { description: undefined }));
+    expect(await settle(api.get(discovery.id))).toMatchObject({
+      description: "30-minute intro call for new leads.",
+    });
+
+    const saved = await settle(api.update(discovery.id, { description: null }));
+    // Removed, never stored as null, as the daily cap is.
+    expect(saved).not.toHaveProperty("description");
+    expect(await settle(api.get(discovery.id))).not.toHaveProperty(
+      "description",
+    );
+
+    // A description can be set again afterwards.
+    await settle(api.update(discovery.id, { description: "Back again." }));
+    expect(await settle(api.get(discovery.id))).toMatchObject({
+      description: "Back again.",
+    });
+  });
+
+  it("keeps the calendar's id, slug, type and timestamps, and stores nothing it does not know", async () => {
+    // What a JSON client could send: server-owned keys, a key the API has
+    // never heard of, and extra keys inside the weekly hours.
+    const { api, discovery } = await loadWorld(ZONES[0]!);
+    const before = await settle(api.get(discovery.id));
+    const ids = (await settle(api.list())).map((c) => c.id);
+    const sent = {
+      id: "cal_other",
+      slug: "elsewhere",
+      type: "class",
+      createdAt: "1999-01-01T00:00:00.000Z",
+      updatedAt: "2099-01-01T00:00:00.000Z",
+      createdBy: "usr_x",
+      foo: "bar",
+      bufferAfterMin: 20,
+      availability: before.availability.map((rule) => ({
+        ...rule,
+        note: "extra",
+        windows: rule.windows.map((hours) => ({ ...hours, label: "extra" })),
+      })),
+    };
+
+    const saved = await settle(
+      api.update(discovery.id, sent as unknown as CalendarPatch),
+    );
+    const stored = await settle(api.get(discovery.id));
+
+    for (const calendar of [saved, stored]) {
+      // `toEqual` fails on any key `before` lacks, at every depth: `foo`,
+      // `createdBy`, a rule's `note`, a window's `label`.
+      expect(calendar).toEqual({
+        ...before,
+        bufferAfterMin: 20,
+        updatedAt: expect.any(String),
+      });
+      expect(calendar.createdAt).toBe(before.createdAt);
+      expect(calendar.updatedAt).not.toBe(sent.updatedAt);
+      expect(calendar).not.toHaveProperty("foo");
+      expect(calendar).not.toHaveProperty("createdBy");
+    }
+    await expect(settle(api.get("cal_other"))).rejects.toMatchObject({
+      status: 404,
+    });
+    expect((await settle(api.list())).map((c) => c.id)).toEqual(ids);
   });
 });
 

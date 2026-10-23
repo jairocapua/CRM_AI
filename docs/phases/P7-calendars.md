@@ -1429,10 +1429,91 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T34 — Calendar update: validate or allow-list keys outside the settings schema
 - **Owner:** agent · **Depends:** —
+- **Skills:** `tdd`, `vitest`
 - **Scope:** update() passes name/color/teamMemberIds/isActive/description unchecked (null or wrong type overwrites required fields) and lets createdAt be overwritten; validate the merged record or allow-list, always keep prev.createdAt (calendars.ts:163-164).
   - From the P7-T22 review, in the same file: add one BAD_PATCHES row whose issue path is top-level and unlabelled (e.g. a non-object patch, as a JSON client might send) to pin the "Calendar settings" fallback label. Type `withoutUndefined` as `{ [K in keyof T]?: Exclude<T[K], undefined> }` so TypeScript enforces what it guarantees. Note at `settingLabel` that "window N" counts windows in the order sent, while the editor's `toAvailabilityPatch` sorts them by start time, so whoever wires `ApiError.field` into the form maps it through the same order.
+  - Decided: update() saves what `calendarSettingsSchema` parses (an
+    allow-list), never the raw patch. The editable keys are the booking
+    settings plus name, description, color, teamMemberIds and isActive. id,
+    slug, type, createdAt, createdBy, updatedAt and unknown keys are ignored
+    at every depth, so a whole-record round trip still saves. slug and type
+    are fixed at creation: slug is the availability editor's `?calendar=`
+    key, and changing it would need a uniqueness rule.
+  - Decided: `null` removes an optional field (description,
+    maxBookingsPerDay); a required field given `null` is a 422 "Not a valid
+    value."
+  - Decided: name is trimmed and must not be empty ("Can't be empty.").
+    color must be a `TAG_COLORS` value ("Not a calendar colour.").
+    teamMemberIds is an array of non-empty strings, checked for shape only,
+    not against users (a contact's ownerId isn't checked either).
+  - Decided: a patch that is not an object is a 422 "Calendar settings: Not
+    a valid value." with `field` unset.
+  - Decided: the new labels are Name, Description, Colour, Team members and
+    Active.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. A null or wrong-typed value never overwrites a calendar field.
+        On Discovery Call each of these is a 422 `INVALID_CALENDAR` with this
+        field and message, and `get(id)` is unchanged afterwards:
+        `{name:null}` name "Name: Not a valid value."; `{name:'   '}` name
+        "Name: Can't be empty."; `{color:'purple'}` and `{color:null}` color
+        "Colour: Not a calendar colour."; `{teamMemberIds:null}`
+        teamMemberIds and `{teamMemberIds:['']}` teamMemberIds.0, both "Team
+        members: Not a valid value."; `{isActive:null}` and
+        `{isActive:'yes'}` isActive "Active: Not a valid value.";
+        `{description:5}` description "Description: Not a valid value."
+  - [ ] A2. A patch that is not an object (JSON `null`) is a 422
+        `INVALID_CALENDAR` "Calendar settings: Not a valid value." with
+        `field` unset, not a TypeError, and nothing is written. This pins
+        `settingLabel`'s fallback label.
+  - [ ] A3. Valid values still save, and `null` removes the description.
+        `{name:'  Intro Call  ', description, color:'sky', teamMemberIds:[a
+        seeded user], isActive:false}` resolves; the returned and stored
+        calendars equal the previous one with name "Intro Call" (trimmed),
+        those values and a new updatedAt, and the calendar then answers
+        `availableSlots` with 409 `CALENDAR_INACTIVE`. `{description:
+        undefined}` keeps the description; `{description:null}` removes the
+        key from the returned and stored calendar (never stored as null); a
+        later string sets it again.
+  - [ ] A4. id, slug, type, createdAt, createdBy, updatedAt and unknown keys
+        (top-level and inside availability rules and windows) are ignored. A
+        patch carrying all of them plus `bufferAfterMin: 20` resolves; the
+        returned and stored calendars equal the previous one except
+        bufferAfterMin 20 and a fresh updatedAt (not the sent one). createdAt
+        is unchanged, no foo, createdBy or nested extra key is stored,
+        `get('cal_other')` is a 404, and `list()` still has the same four
+        ids.
+  - [ ] A5. Existing behaviour holds. Every existing calendars.test.ts case
+        passes with its assertions unchanged: P7-T22's undefined-ignored and
+        null-cap tests, all 21 original BAD_PATCHES rows, "saves touching
+        windows" and "re-saves every seeded calendar's own settings" (a
+        whole-record round trip still resolves to the same record). Only the
+        row type (`CalendarPatch`, `at: string | undefined`) and the re-save
+        comment change.
+  - [ ] A6. The types say what the code does. `CalendarPatch` is
+        `Partial<Pick<Calendar, the schema's keys>>` with maxBookingsPerDay
+        and description also accepting null. `withoutUndefined` returns
+        `{ [K in keyof T]?: Exclude<T[K], undefined> }`. `SETTING_LABELS`
+        (`Record<SettingKey, string>`) has the five new labels.
+        `availabilitySchema`, the editor's form schema, is unchanged.
+  - [ ] A7. Every new test has been seen failing: on HEAD's src the nine A1
+        rows resolve instead of rejecting, the A2 row throws a TypeError, the
+        A4 test fails at createdAt, and the description test fails at
+        `not.toHaveProperty`. Each mutant (raw patch saved, a loose schema,
+        an unconditional `path.join`, name without trim/min, no description
+        null branch, color off the schema) turns its own test red.
+  - [ ] A8. Comments match the code: update()'s doc (allow-list, ignored
+        keys with createdAt always kept, null removes the cap and the
+        description, a non-object patch is a 422 with no field),
+        `CalendarPatch`'s and `withoutUndefined`'s docs, `settingLabel`'s
+        note on window order vs `toAvailabilityPatch`'s start-time sort,
+        `calendarSettingsSchema`'s doc (no "pass through unchecked"), and the
+        re-save test comment.
+  - [ ] A9. No seed, mock or UI change and no regression. SEED_VERSION stays
+        4; nothing under src/lib/mock or src/components changes. `npm run
+        check` is green with the Vitest count up by exactly the 13 new cases
+        (10 BAD_PATCHES rows, 3 its). The full `npm run e2e` passes with the
+        specs unchanged. `npm ls @tanstack/react-table` prints 8.21.3, and
+        `node scripts/progress.mjs --check` is clean.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T35 — Validate expectedCloseAt in api.opportunities create/update
