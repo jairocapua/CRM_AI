@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
@@ -14,6 +14,7 @@ import {
   bookingFormSchema,
   type BookingFormValues,
 } from "@/lib/validation/appointment";
+import { LoadError } from "@/components/common/load-error";
 import { ContactPicker } from "@/components/modules/opportunities/contact-picker";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,8 +64,16 @@ import {
  *
  * Controlled by its caller: the Calendars toolbar's Book button, or the
  * contact page's Appointments tab, which passes `contactId` so the contact is
- * filled in (and can still be changed). The form lives inside the popup,
- * which unmounts on close, so every open starts from fresh defaults.
+ * filled in (and can still be changed).
+ *
+ * Every open starts from fresh defaults. Unmounting on close cannot promise
+ * that: Base UI keeps the popup mounted until its exit animation ends, and
+ * for good while animations are paused (a hidden browser pane), so a reopen
+ * before then lands in the same popup. The form is keyed instead on a count
+ * that goes up each time `open` turns true. A new key remounts it, which
+ * resets the form's values, its id, the open-times list and the contact
+ * picker's own (uncontrolled) input text, which `form.reset` would not
+ * clear. Closing keeps the key, so the closing popup shows the same form.
  */
 export function BookingDialog({
   open,
@@ -78,6 +87,14 @@ export function BookingDialog({
   defaultDay: CalendarDay;
   contactId?: ID;
 }) {
+  // The open state last rendered, and how many times it has turned true. Set
+  // during render, guarded so it settles in one pass (React's "storing
+  // information from previous renders").
+  const [opens, setOpens] = useState({ open, count: 0 });
+  if (opens.open !== open) {
+    setOpens({ open, count: open ? opens.count + 1 : opens.count });
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
@@ -88,6 +105,7 @@ export function BookingDialog({
           </DialogDescription>
         </DialogHeader>
         <BookingForm
+          key={opens.count}
           defaultDay={defaultDay}
           contactId={contactId}
           onBooked={() => onOpenChange(false)}
@@ -109,6 +127,11 @@ function BookingForm({
   onBooked: () => void;
 }) {
   const formId = useId();
+  const ids = {
+    calendar: `${formId}-calendar`,
+    contact: `${formId}-contact`,
+    day: `${formId}-day`,
+  };
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
@@ -199,7 +222,7 @@ function BookingForm({
       >
         <FieldGroup>
           <Field data-invalid={Boolean(errors.calendarId) || undefined}>
-            <FieldLabel htmlFor="booking-calendar">Calendar</FieldLabel>
+            <FieldLabel htmlFor={ids.calendar}>Calendar</FieldLabel>
             <Controller
               control={form.control}
               name="calendarId"
@@ -213,7 +236,7 @@ function BookingForm({
                   }}
                 >
                   <SelectTrigger
-                    id="booking-calendar"
+                    id={ids.calendar}
                     className="w-full"
                     aria-invalid={Boolean(errors.calendarId) || undefined}
                   >
@@ -244,13 +267,13 @@ function BookingForm({
           </Field>
 
           <Field data-invalid={Boolean(errors.contactId) || undefined}>
-            <FieldLabel htmlFor="booking-contact">Contact</FieldLabel>
+            <FieldLabel htmlFor={ids.contact}>Contact</FieldLabel>
             <Controller
               control={form.control}
               name="contactId"
               render={({ field }) => (
                 <ContactPicker
-                  id="booking-contact"
+                  id={ids.contact}
                   value={field.value}
                   onChange={(next) => {
                     field.onChange(next);
@@ -263,9 +286,9 @@ function BookingForm({
           </Field>
 
           <Field data-invalid={Boolean(errors.day) || undefined}>
-            <FieldLabel htmlFor="booking-day">Day</FieldLabel>
+            <FieldLabel htmlFor={ids.day}>Day</FieldLabel>
             <Input
-              id="booking-day"
+              id={ids.day}
               type="date"
               min={today}
               aria-invalid={Boolean(errors.day) || undefined}
@@ -288,8 +311,14 @@ function BookingForm({
               <TimesNote>Pick a day to see open times.</TimesNote>
             ) : slots.isLoading ? (
               <SlotsSkeleton />
-            ) : slots.error ? (
-              <TimesNote>Could not load the open times.</TimesNote>
+            ) : slots.error && slots.data === undefined ? (
+              // Only with nothing listed: a failed refetch keeps the list.
+              <LoadError
+                title="Could not load the open times"
+                message={slots.error.message}
+                onRetry={slots.refetch}
+                retrying={slots.isRefreshing}
+              />
             ) : (slots.data ?? []).length === 0 ? (
               <TimesNote>No open times on this day.</TimesNote>
             ) : (
@@ -304,7 +333,7 @@ function BookingForm({
                       field.onChange(value);
                       form.clearErrors(SERVER_ERROR);
                     }}
-                    className="grid-cols-3 sm:grid-cols-4"
+                    className="grid-cols-2 sm:grid-cols-4"
                   >
                     {(slots.data ?? []).map((slot) => (
                       <SlotChoice key={slot} slot={slot} formId={formId} />
@@ -341,7 +370,7 @@ function SlotChoice({ slot, formId }: { slot: ISODate; formId: string }) {
     <FieldLabel htmlFor={id}>
       <Field orientation="horizontal" className="gap-2">
         <RadioGroupItem id={id} value={slot} data-start={slot} />
-        <FieldTitle className="tabular-nums">
+        <FieldTitle className="whitespace-nowrap tabular-nums">
           {format(new Date(slot), "h:mm a")}
         </FieldTitle>
       </Field>
@@ -374,7 +403,7 @@ function TimesNote({ children }: { children: React.ReactNode }) {
 
 function SlotsSkeleton() {
   return (
-    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {Array.from({ length: 8 }, (_, i) => (
         <Skeleton key={i} className="h-10 w-full rounded-lg" />
       ))}

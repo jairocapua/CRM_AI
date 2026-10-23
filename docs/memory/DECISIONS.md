@@ -159,3 +159,8 @@
 - 2026-10-23 [P7-T17] e2e (3) waits for A's aria-selected=true before typing; product race left for a follow-up task.
 - 2026-10-23 [P7-T17] e2e picks are stricter: C's company unique across name/email/company; B's email unique among emails. SeededContact gains email/companyName (`string | null`).
 - 2026-10-23 [P7-T17] Booking spec's uniqueContact selection unchanged; only comment and chooseContact's typed text changed.
+- 2026-10-23 [P7-T18] Phone test's "inside" check uses the card's content box (0.5px tolerance), stricter than the plan: 3 columns overflow ~1.3px into the padding.
+- 2026-10-23 [P7-T18] LoadError condition is `slots.error && slots.data === undefined`, matching contact-appointments-panel.tsx, not `== null`.
+- 2026-10-23 [P7-T18] Skills line: vercel-react-best-practices, shadcn, playwright-cli.
+- 2026-10-23 [P7-T18] Fresh-form test uses a local uniquelyNamed helper; calendars-booking.spec.ts left untouched. Failed-reread test takes the first contact (booking fails anyway).
+- 2026-10-23 [P7-T18] Failed-reread test observes the Time fieldset's aria-busy so it cannot pass if the re-read stops happening.

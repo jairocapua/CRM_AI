@@ -523,10 +523,44 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T18 — Booking dialog: slot-load error with Retry, ids from formId, fresh form per open
 - **Owner:** agent · **Depends:** —
+- **Skills:** `vercel-react-best-practices`, `shadcn`, `playwright-cli`
 - **Scope:** booking-dialog.tsx:292 show slots.error.message + Retry (slots.refetch); derive booking-* ids from formId; key BookingForm on an open counter.
   - From the P7-T08 review: at phone width (400px) the three-column time cards wrap "12:00 AM" onto two lines; keep each time on one line (e.g. `whitespace-nowrap`, or two columns below `sm`).
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. When the open times fail to load for the chosen calendar and day
+        and nothing is listed yet, the Time group shows a "Could not load the
+        open times" alert with the error's message and a Retry button. No
+        time cards, no skeleton and no "No open times on this day." are
+        shown.
+  - [ ] A2. While a Retry is in flight the alert stays, its Retry busy
+        (aria-disabled), and no skeleton appears in the dialog. A Retry that
+        fails again leaves the alert with Retry enabled. Once the fault
+        clears, Retry lists the day's open times and the alert is gone.
+  - [ ] A3. The error shows only when the read failed and there is nothing to
+        draw, as `LoadError`'s contract and DECISIONS P7-T13 require. A
+        failed refetch keeps a list already on screen.
+  - [ ] A4. The Calendar trigger, Contact input and Day input take their ids
+        from the form's `useId` (`<formId>-calendar`, `-contact`, `-day`).
+        Each label's `for` matches, each id appears once in the document, no
+        element id starts with "booking-", and the labels still name their
+        controls.
+  - [ ] A5. Every open starts a fresh form. Reopening while the previous popup
+        is still mounted (exit animation unfinished, as in a hidden browser
+        pane) shows Calendar "Pick a calendar", an empty Contact, Day back at
+        the default day, no time chosen and a new form id. The test confirms
+        the same popup element reopened, so it cannot pass vacuously.
+  - [ ] A6. Below `sm` the time cards are two columns, and every time label,
+        "12:00 AM" included, stays on one line inside its card at 320, 375,
+        400 and 639px. From `sm` up (640, 1280) the grid stays four columns.
+        The loading skeleton uses the same columns.
+  - [ ] A7. Comments match the code. `BookingDialog`'s doc comment explains
+        the open-counter key and no longer says that unmounting on close is
+        what resets the form. The calendars-load-errors.spec.ts header lists
+        the booking dialog's open times.
+  - [ ] A8. No seed, API or mock change and no regression: `SEED_VERSION`
+        stays 4, nothing under `src/lib/api` or `src/lib/mock` changes, `npm
+        run check` is green, and the full `npm run e2e` suite passes with the
+        existing booking specs' assertions unchanged.
 - **Refs:** added by `progress.mjs add` on 2026-10-22
 
 ### P7-T19 — Link-as-button semantics in modules
@@ -609,6 +643,13 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** Keep picked Contact in local state as value immediately; use selected.data only when id matches. Add e2e typing right after a pick without aria-selected wait.
   - From the P7-T17 review: new-conversation-dialog.tsx is a third ContactPicker consumer; add it as a third entry in SURFACES in e2e/contact-picker.spec.ts (and name it in that file's header) so its behaviour is pinned too. In pickContacts, make the uniqueness check cover phone and jobTitle as well (add them to SeededContact in calendar-helpers.ts), since the server searches those. In query-engine.test.ts, note on the mixed-fields case that its first assertion is the one proving function fields work.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T30 — Shared chooseContact e2e helper
+- **Owner:** agent · **Depends:** —
+- **Scope:** Move the three copies of booking-dialog contact pick (fill + option click) into e2e/calendar-helpers.ts chooseContact and use it in calendars-booking, calendars-booking-dialog, calendars-load-errors specs.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

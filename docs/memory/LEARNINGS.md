@@ -126,3 +126,10 @@
 - 2026-10-23 [P7-T17] Playwright fill() sends one insertText input event; Base UI treats it as typing (opens popup, sets queryChangedAfterOpen).
 - 2026-10-23 [P7-T17] On Windows, TaskStop on a background `npx next start` can leave node holding port 3100; find it with Get-NetTCPConnection -LocalPort 3100 and stop it.
 - 2026-10-23 [P7-T17] A temporary `true || ...` edit fails next build's typecheck so the e2e webServer won't start; prove tests red with type-clean edits.
+- 2026-10-23 [P7-T18] Base UI 1.8.0 useAnimationsFinished has no timeout; injecting `animation-duration:60s !important` on a closed dialog popup + overlay keeps it mounted in e2e, and open=true reopens the same element.
+- 2026-10-23 [P7-T18] The repo's eslint react-hooks plugin accepts a guarded setState during render (`if (prev.open !== open) setState(...)`).
+- 2026-10-23 [P7-T18] In the booking dialog every Field has role=group; scope time-card queries to `fieldset`/timeGroup() and match `label[data-slot=field-label]` (FieldTitle shares the slot).
+- 2026-10-23 [P7-T18] In the hidden pane a Base UI Select popup sits at 0,0 and ref clicks are refused; DOM `.click()` on [role=option] via javascript_tool works.
+- 2026-10-23 [P7-T18] useId looks like `_r_1h_` on the production build and `_r_q_` in dev.
+- 2026-10-23 [P7-T18] After a failed booking, setError and slots.refetch() commit together: once the root error shows, the Time group is already aria-busy.
+- 2026-10-23 [P7-T18] failReads('appointments') also makes book() throw (calendars.ts:228 reads appointments); plain Error, so the dialog shows 'Could not book the appointment.'.
