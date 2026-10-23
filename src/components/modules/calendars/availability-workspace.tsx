@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { AvailabilityForm } from "./availability-form";
 import { CalendarName } from "./calendar-name";
 
@@ -131,8 +132,13 @@ export function AvailabilityWorkspace() {
 /** The way back to the calendars page, shown above the editor or the error. */
 function BackLink() {
   // A link styled as a button: Base UI's Button would give it role="button".
+  // cn() merges the variant classes as Button does, or the outline border is
+  // lost.
   return (
-    <Link href="/calendars" className={buttonVariants({ variant: "outline" })}>
+    <Link
+      href="/calendars"
+      className={cn(buttonVariants({ variant: "outline" }))}
+    >
       <ArrowLeftIcon data-icon="inline-start" />
       Back to calendars
     </Link>

@@ -565,9 +565,54 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T19 — Link-as-button semantics in modules
 - **Owner:** agent · **Depends:** —
+- **Skills:** `shadcn`, `playwright-cli`
 - **Scope:** Switch Button render={<Link/>} nativeButton={false} to <Link className={buttonVariants(...)}> in conversations/contact-panel.tsx:83, thread-view.tsx:81,:309, dashboard/pipeline-card.tsx:147 (role=button bug)
+  - The links are spelled `<Link className={cn(buttonVariants({...}))}>`:
+    `Button` tailwind-merges its variant classes, and the raw string keeps
+    `border-transparent`, `rounded-lg` and the base `size-4` icon rule, which
+    win in Tailwind's CSS order. The two P7-T09 links (Availability, Back to
+    calendars) get the same `cn()` wrap, since they lose their outline border
+    in light mode today.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. The four scoped controls are links without a button role. "View
+        contact" (conversation details pane), "Back to inbox" (missing
+        conversation empty state), "Back to inbox" (phone thread header) and
+        "Open board" (dashboard Deals by stage card) each render as `<a href>`
+        with no role attribute: `getByRole('link', {name, exact})` finds each
+        one, `getByRole('button', {name})` finds none, and no
+        `a[role="button"]` is on those screens. No `nativeButton={false}` is
+        left under `src/components/modules`.
+  - [ ] A2. Each link looks like the button it replaced, because it uses
+        `cn(buttonVariants())` with the same variant and size. In light mode:
+        View contact is 28px tall with 8px corners, a 14px icon and a visible
+        border; Open board is 28px tall with 8px corners and a 14px icon; the
+        empty-state Back to inbox is 32px tall with 10px corners and a visible
+        border; the phone Back to inbox is 28x28 with 8px corners and a 16px
+        icon.
+  - [ ] A3. The P7-T09 links use the same `cn()` spelling and keep the
+        outline border. On /calendars the Availability link's border colour,
+        border width, corner radius, height, background and font size equal
+        the toolbar's Today button (`<Button variant="outline">`); on
+        /calendars/availability Back to calendars matches the same values.
+        Neither link has a role attribute.
+  - [ ] A4. Each link still goes where it did, by pointer and keyboard. Open
+        board leads to /opportunities, by focus + Enter too. View contact
+        leads to /contacts/<id>, the id matching the thread header's contact
+        name link. Both Back to inbox links lead to /conversations, where the
+        inbox or the "Select a conversation" state shows. Availability leads
+        to /calendars/availability.
+  - [ ] A5. Every new test has been seen failing: on the old markup the four
+        scoped tests fail at the link-role check and the calendars test at
+        border parity; restoring `Button render={<Link/>}
+        nativeButton={false}` at one site fails its test again; dropping
+        `cn()` from an outline small link fails the look checks.
+  - [ ] A6. No seed, API or mock change and no regression: `SEED_VERSION`
+        stays 4, nothing under `src/lib` or `src/components/ui` changes,
+        `npm run check` is green, and the full `npm run e2e` suite passes with
+        the existing specs unchanged.
+  - [ ] A7. Comments and docs match the code: each changed site's comment
+        says why it is a Link and why `cn()` is there, and the spec header
+        explains the role=button cause and the class-merge cause.
 - **Refs:** added by `progress.mjs add` on 2026-10-22
 
 ### P7-T20 — Availability editor: unsaved-changes guard and empty open day
@@ -651,6 +696,20 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** Move the three copies of booking-dialog contact pick (fill + option click) into e2e/calendar-helpers.ts chooseContact and use it in calendars-booking, calendars-booking-dialog, calendars-load-errors specs.
   - From the P7-T18 review, in the same spec files: in calendars-load-errors.spec.ts, the RetryWatch.sawSkeleton doc should say "inside `scope`" (watchRetry now takes a scope), and the aria-busy MutationObserver should read the mutation records (attributeOldValue: true) rather than the live attribute. In calendars-booking-dialog.spec.ts, the header claims sixteen times on both 9 and 10 September but only the 9th is checked: trim the claim or assert it.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T31 — LinkButton helper and nativeButton lint rule
+- **Owner:** agent · **Depends:** —
+- **Scope:** Export a cn(buttonVariants()) link helper from ui/button.tsx; no-restricted-syntax for nativeButton={false} in modules; fix pagination.tsx PaginationLink
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T32 — LinkButton helper and nativeButton lint rule
+- **Owner:** agent · **Depends:** —
+- **Scope:** Export a cn(buttonVariants()) link helper from ui/button.tsx; lint ban nativeButton={false} in modules; fix pagination.tsx PaginationLink
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

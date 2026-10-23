@@ -7,7 +7,7 @@ import { ArrowRightIcon } from "lucide-react";
 import * as api from "@/lib/api";
 import { useResource } from "@/lib/api";
 import { Money } from "@/components/common/money";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -140,15 +140,16 @@ export function PipelineCard() {
         )}
       </CardContent>
       <CardFooter>
-        <Button
-          variant="ghost"
-          size="sm"
-          render={<Link href="/opportunities" />}
-          nativeButton={false}
+        {/* A link styled as a button: Button render={<Link>} would give it
+            role="button". cn() merges the variant classes as Button does, or
+            the sm radius and icon size are lost. */}
+        <Link
+          href="/opportunities"
+          className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
         >
           Open board
           <ArrowRightIcon />
-        </Button>
+        </Link>
       </CardFooter>
     </Card>
   );

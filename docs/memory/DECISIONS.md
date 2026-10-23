@@ -164,3 +164,6 @@
 - 2026-10-23 [P7-T18] Skills line: vercel-react-best-practices, shadcn, playwright-cli.
 - 2026-10-23 [P7-T18] Fresh-form test uses a local uniquelyNamed helper; calendars-booking.spec.ts left untouched. Failed-reread test takes the first contact (booking fails anyway).
 - 2026-10-23 [P7-T18] Failed-reread test observes the Time fieldset's aria-busy so it cannot pass if the re-read stops happening.
+- 2026-10-23 [P7-T19] Links styled as buttons are `<Link className={cn(buttonVariants({ variant, size }))}>`, never `<Button render={<Link/>} nativeButton={false}>` (role=button) and never a bare `buttonVariants()` string (conflicting classes survive). Replaces the P7-T09 spelling.
+- 2026-10-23 [P7-T19] Scope included the two P7-T09 calendars links (Availability, Back to calendars) for the same missing-border defect; they now match the Today button. Link children unchanged (no data-icon added).
+- 2026-10-23 [P7-T19] Look checks compare one object (height, radius, icon, border) so a regression reports every difference at once.

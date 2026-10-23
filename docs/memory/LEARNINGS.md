@@ -133,3 +133,7 @@
 - 2026-10-23 [P7-T18] useId looks like `_r_1h_` on the production build and `_r_q_` in dev.
 - 2026-10-23 [P7-T18] After a failed booking, setError and slots.refetch() commit together: once the root error shows, the Time group is already aria-busy.
 - 2026-10-23 [P7-T18] failReads('appointments') also makes book() throw (calendars.ts:228 reads appointments); plain Error, so the dialog shows 'Could not book the appointment.'.
+- 2026-10-23 [P7-T19] A raw `buttonVariants()` string is not what `<Button>` renders: Button wraps it in cn() (tailwind-merge). Without it border-transparent beats outline's border-border (no light-mode border), rounded-lg beats sm's 8px radius, and size-4 beats size-3.5 icons. Dark mode hides it, so look tests pin light mode. Supersedes the raw spelling noted for P7-T09.
+- 2026-10-23 [P7-T19] Base UI useButton sets role="button" on any non-native element, including `<a href>`; `nativeButton={false}` on a link always makes it a button to assistive tech.
+- 2026-10-23 [P7-T19] Computed-style e2e checks: page.mouse.move(0, 0) before reading, or a leftover hover state leaks into the reading.
+- 2026-10-23 [P7-T19] next build (Next 16) runs TypeScript but not ESLint, and tsconfig has no noUnusedLocals: a red-proof edit can leave unused imports, but must stay type-clean.

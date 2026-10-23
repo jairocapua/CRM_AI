@@ -5,26 +5,25 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T13–T18 approved (Autopilot review, 2026-10-23); P7-T19 is next. P7-H3 decided (owner): past appointments = Showed/No-show only, applied by P7-T26. Session handed off to a fresh one after 6 approvals, per CLAUDE.md.
+- **Status:** P7-T19 in review (deep review).
 
 ## Last change
-- P7-T18 booking-dialog.tsx: open-times LoadError + Retry (`slots.error && slots.data === undefined`); ids from formId.
-- Form keyed on an open counter, so every open is fresh even in a still-mounted popup; phone grid 2 columns, nowrap labels.
-- New e2e/calendars-booking-dialog.spec.ts (3) + 2 load-error tests, shared watchRetry; check green, e2e 77/77.
-- Added P7-T30 (shared chooseContact e2e helper).
+- Six module links (View contact, 2x Back to inbox, Open board, Availability, Back to calendars) are now `<Link className={cn(buttonVariants(...))}>`: no role=button.
+- cn() restores the light-mode outline border, 8px radius and 14px icons that a raw buttonVariants() string lost.
+- New e2e/link-buttons.spec.ts (5 tests, light mode pinned); check green, e2e 82/82.
+- Added P7-T31 (LinkButton helper + nativeButton lint rule + pagination fix). P7-T32 is an accidental duplicate, marked blocked: delete it from the phase file.
 
 ## Next up
-- **Agent:** P7-T19 Link-as-button semantics in modules.
+- **Agent:** P7-T20 Availability editor: unsaved-changes guard and empty open day.
 
 ## Waiting on you
-- None.
+- Review of P7-T19.
+- Your call: add a CLAUDE.md "Non-obvious constraints" note on the link-as-button spelling (the shadcn skill recommends nativeButton={false}).
 
 ## Open suggestions (non-blocking review notes)
-- P7-T18 e2e comment notes are folded into P7-T30.
-- Cover fresh-form-per-open from the contact page's Appointments tab.
-- No column check on SlotsSkeleton; add one if it regresses.
-- Guard could be `slots.data == null` (hardening only).
-- Earlier: P7-T17 notes (new-conversation-dialog in SURFACES, search whitespace, "Searching..." state).
+- View contact / Open board icons lack data-icon, so inline padding never applies (predates task).
+- link-buttons.spec.ts:163 header-link lookup relies on DOM order; scope it to the thread header.
+- Earlier: P7-T18 notes (fresh form from Appointments tab, SlotsSkeleton columns, `== null` guard).
 
 ## Blockers
-- None.
+- None (P7-T32 is a duplicate, not a real blocker).

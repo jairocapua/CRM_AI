@@ -11,6 +11,7 @@ import { apiNow, useResource, type AppointmentRow } from "@/lib/api";
 import { LoadError } from "@/components/common/load-error";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { AppointmentDetailsDialog } from "./appointment-details-dialog";
 import { liveFirst } from "./appointment-display";
 import { appointmentFocusFallback } from "./appointment-focus";
@@ -208,10 +209,12 @@ export function CalendarsWorkspace() {
         onNavigate={navigate}
       >
         {/* A link styled as a button, not a Button rendering a link: Base UI
-            gives a non-native button role="button", and this navigates. */}
+            gives a non-native button role="button", and this navigates. cn()
+            merges the variant classes as Button does, or the outline border
+            is lost. */}
         <Link
           href="/calendars/availability"
-          className={buttonVariants({ variant: "outline" })}
+          className={cn(buttonVariants({ variant: "outline" }))}
         >
           <ClockIcon data-icon="inline-start" />
           Availability
