@@ -2029,9 +2029,56 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T44 — book(): check the start's day in the calendar zone (422 INVALID_START, not RangeError)
 - **Owner:** agent · **Depends:** —
+- **Skills:** `tdd`, `vitest`
 - **Scope:** In book(), check isCalendarDay(zonedDay(startMs, calendar.timezone)) and map failure to INVALID_START (e.g. 0100-01-01T05:00Z on an LA calendar, 9999-12-31T20:00Z on Asia). Fix parseStart comment; consider reworded message.
+  - Decided: book() checks the start's day in the calendar's own zone,
+    `isCalendarDay(zonedDay(startMs, calendar.timezone))`, and the slot engine
+    gets that same day.
+  - Decided: `parseStart` is removed and the check on the string's own date
+    part (`value.slice(0, 10)`) is dropped. The calendar-zone day is the only
+    day the engine reads, so a start whose string date is 0099 but whose
+    calendar day is 0100 is an ordinary 409. This supersedes P7-T35 A5's
+    wording "parseStart is parseInstant plus isCalendarDay on the date part";
+    that done entry stays as written.
+  - Decided: two messages, one code. A string that is not an instant keeps
+    today's message exactly. A start whose calendar-zone day is outside
+    0100-9999 gets `"<startAt>" falls on <day> in <zone>, outside the years
+    0100-9999 this calendar can book.`
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. A start whose day in the calendar's zone is outside 0100-9999 is a
+        422 `INVALID_START`, not a RangeError. 0100-01-01T05:00:00Z on an
+        America/Los_Angeles calendar (0099-12-31 there) and
+        9999-12-31T20:00:00Z on an Asia/Tokyo calendar (10000-01-01 there)
+        each reject with status 422, code `INVALID_START`, an `ApiError`, and
+        message exactly `"<startAt>" falls on <day> in <zone>, outside the
+        years 0100-9999 this calendar can book.` Nothing is written. Holds
+        with the runtime in UTC and in Asia/Singapore.
+  - [ ] A2. The day is read in the calendar's zone, not in UTC and not from
+        the string. 9999-12-31T20:00:00Z on LA, 0100-01-01T05:00:00Z on Tokyo
+        and 0099-12-31T20:00:00-10:00 on Tokyo are each a 409
+        `SLOT_UNAVAILABLE` and write nothing.
+  - [ ] A3. A string that is not an instant is unchanged. Every existing
+        `INVALID_START` row in `calendars.test.ts` passes as written, and that
+        path's message stays byte for byte: `"<startAt>" is not a date and
+        time with a time zone (end it with Z or an offset such as -07:00).`
+  - [ ] A4. Code and docs match. `parseStart` is gone (`grep -rn parseStart
+        src` is empty). book() checks
+        `isCalendarDay(zonedDay(startMs, calendar.timezone))` after
+        `parseInstant` and passes that same `day` to `freeSlots`. book()'s
+        JSDoc `INVALID_START` bullet names both causes. The test comment on
+        "a start before the year 0100" says the day is read in the calendar's
+        zone. This entry carries Skills, Decided lines and this list.
+  - [ ] A5. Every new test has been seen failing. On HEAD's `calendars.ts`,
+        the two A1 rows reject with a RangeError ("Not a calendar day: …") in
+        both runtime zones, and the A2 -10:00 row rejects with a 422 instead
+        of a 409. A mutant that reads the day in UTC turns the A1 rows red.
+        The other two A2 rows are positive controls, green on HEAD by design.
+  - [ ] A6. No regression and nothing beyond scope. `SEED_VERSION` is
+        unchanged and no faker call is touched. Nothing under
+        `src/lib/mock`, `src/lib/dates.ts`, `src/components` or `e2e`
+        changes. `npm run check` is green with Vitest +10.
+        `npm ls @tanstack/react-table` shows 8.21.3.
+        `node scripts/progress.mjs --check` is clean.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T45 — Opportunities: null removes optional fields (expectedCloseAt, ownerId, lostReason)

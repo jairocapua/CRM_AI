@@ -229,3 +229,5 @@
 - 2026-10-24 [P7-T43] For red runs against HEAD's src, move any new test file that uses the new API out of src first: next build (the e2e webServer) typechecks src/**/*.test.ts, and the webServer only reports 'not able to start' with exit code 1.
 - 2026-10-24 [P7-T43] On a phone viewport the sidebar is a Base UI Sheet: getByRole('dialog', { name: 'Sidebar' }) with data-slot='sidebar' on SheetContent, so sidebarLink helpers work once open. Under the provider's AlertDialog the Sheet needs includeHidden; getByLabel ignores aria-hidden, so slotDuration(page) still reads.
 - 2026-10-24 [P7-T43] Writing JS with backslash regex literals through a bash heredoc in the Bash tool lost the backslashes (\/ became /). Write such scripts with the Write tool instead.
+- 2026-10-24 [P7-T44] calendars.test.ts loads the API through seededWorld(), which resets modules: assert errors with toMatchObject({ name: 'ApiError' }), not toBeInstanceOf(ApiError).
+- 2026-10-24 [P7-T44] Year-0100 instants use LMT offsets (LA -7:52:58, Tokyo +9:18:59). Tokyo's 0100-01-01 day goes through freeSlots without throwing and returns no slots, so it is a 409.

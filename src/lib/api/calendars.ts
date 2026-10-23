@@ -295,18 +295,6 @@ export type AppointmentDraft = Pick<
     >
   >;
 
-/**
- * `value` as epoch milliseconds, or null unless it names one instant by the
- * shared rule (`parseInstant`: an ISO date-time ending in `Z` or an offset,
- * on a real date, inside UTC years 0000-9999) and its date part is a day in
- * 0100-9999. The second check is book()'s own: the slot engine reads the
- * booking's day with `parseCalendarDay`, which takes only 0100-9999.
- */
-function parseStart(value: string): number | null {
-  const ms = parseInstant(value);
-  return ms !== null && isCalendarDay(value.slice(0, 10)) ? ms : null;
-}
-
 /** A 409 unless `calendar` is active: an inactive one neither offers nor books. */
 function assertTakesBookings(calendar: Calendar): void {
   if (!calendar.isActive) {
@@ -327,7 +315,9 @@ function assertTakesBookings(calendar: Calendar): void {
  *
  * Errors, checked in this order, and nothing is written on any of them:
  * - 404 `NOT_FOUND`: no such calendar;
- * - 422 `INVALID_START`: `startAt` is not an instant (see `parseStart`);
+ * - 422 `INVALID_START`: `startAt` is not an instant (`parseInstant` in
+ *   `@/lib/dates`), or the day it falls on in the calendar's zone is outside
+ *   0100-9999 (the days the slot engine reads);
  * - 404 `NOT_FOUND`: no such contact;
  * - 409 `CALENDAR_INACTIVE`: the calendar is not taking bookings;
  * - 409 `SLOT_UNAVAILABLE`: `startAt` is not an open slot.
@@ -340,10 +330,21 @@ export async function book(draft: AppointmentDraft): Promise<Appointment> {
         state.calendars[draft.calendarId] ??
         notFound("Calendar", draft.calendarId);
 
-      const startMs = parseStart(draft.startAt);
+      const startMs = parseInstant(draft.startAt);
       if (startMs === null) {
         throw new ApiError(
           `"${draft.startAt}" is not a date and time with a time zone (end it with Z or an offset such as -07:00).`,
+          422,
+          "INVALID_START",
+        );
+      }
+      // The slot engine reads the booking's day in the calendar's zone with
+      // `parseCalendarDay`, which takes only 0100-9999, so the start must fall
+      // on such a day there. Near either end the string's own date can differ.
+      const day = zonedDay(startMs, calendar.timezone);
+      if (!isCalendarDay(day)) {
+        throw new ApiError(
+          `"${draft.startAt}" falls on ${day} in ${calendar.timezone}, outside the years 0100-9999 this calendar can book.`,
           422,
           "INVALID_START",
         );
@@ -359,7 +360,7 @@ export async function book(draft: AppointmentDraft): Promise<Appointment> {
       // bookings racing for the same slot cannot both pass it.
       const offered = freeSlots({
         calendar,
-        day: zonedDay(startMs, calendar.timezone),
+        day,
         appointments: Object.values(state.appointments),
         nowMs: apiNowMs(),
       });

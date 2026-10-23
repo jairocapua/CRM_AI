@@ -632,7 +632,7 @@ describe.each(ZONES)("book() with the runtime in $zone", (zone) => {
     // `Date.parse` reads this one as 2 March.
     { name: "an impossible date", startAt: "2026-02-30T17:00:00.000Z" },
     { name: "an impossible hour", startAt: "2026-10-27T25:00:00Z" },
-    // The slot engine reads the day with `parseCalendarDay` (0100-9999).
+    // The slot engine reads the day, in the calendar's zone, with `parseCalendarDay` (0100-9999).
     { name: "a start before the year 0100", startAt: "0099-12-31T17:00:00Z" },
     // A real date whose instant is in UTC year 10000.
     {
@@ -648,6 +648,84 @@ describe.each(ZONES)("book() with the runtime in $zone", (zone) => {
       await expect(world.book(world.discovery, startAt)).rejects.toMatchObject({
         status: 422,
         code: "INVALID_START",
+      });
+      expect(await snapshot(world)).toEqual(before);
+    },
+  );
+
+  /** Moves Discovery Call to `timezone` and returns the updated calendar. */
+  async function onZone(world: World, timezone: string): Promise<Calendar> {
+    return settle(world.api.update(world.discovery.id, { timezone }));
+  }
+
+  /**
+   * The slot engine reads a booking's day in the calendar's zone, and only
+   * 0100-9999 is a day there. Near the ends of that range a valid instant can
+   * fall outside it in one zone and inside it in another (LMT: Los Angeles is
+   * -7:52:58 in year 0100, Tokyo +9:18:59).
+   */
+  it.each([
+    {
+      name: "0100-01-01T05:00Z on a Los Angeles calendar (0099-12-31 there)",
+      timezone: "America/Los_Angeles",
+      startAt: "0100-01-01T05:00:00Z",
+      day: "0099-12-31",
+    },
+    {
+      name: "9999-12-31T20:00Z on a Tokyo calendar (10000-01-01 there)",
+      timezone: "Asia/Tokyo",
+      startAt: "9999-12-31T20:00:00Z",
+      day: "10000-01-01",
+    },
+  ])(
+    "rejects a start whose day in the calendar's zone is outside 0100-9999 ($name) with a 422 and writes nothing",
+    async ({ timezone, startAt, day }) => {
+      const world = await loadWorld(zone);
+      const calendar = await onZone(world, timezone);
+      const before = await snapshot(world);
+
+      // `name` pins an ApiError: a RangeError from the engine is the bug.
+      await expect(world.book(calendar, startAt)).rejects.toMatchObject({
+        name: "ApiError",
+        status: 422,
+        code: "INVALID_START",
+        message: `"${startAt}" falls on ${day} in ${timezone}, outside the years 0100-9999 this calendar can book.`,
+      });
+      expect(await snapshot(world)).toEqual(before);
+    },
+  );
+
+  /**
+   * The first two rows swap the instants above between the zones, so the
+   * answer depends on the calendar's zone. The last one's string date is 0099,
+   * but its day in Tokyo is 0100-01-01: the string's own date does not decide.
+   */
+  it.each([
+    {
+      name: "9999-12-31T20:00Z on a Los Angeles calendar (9999-12-31 there)",
+      timezone: "America/Los_Angeles",
+      startAt: "9999-12-31T20:00:00Z",
+    },
+    {
+      name: "0100-01-01T05:00Z on a Tokyo calendar (0100-01-01 there)",
+      timezone: "Asia/Tokyo",
+      startAt: "0100-01-01T05:00:00Z",
+    },
+    {
+      name: "0099-12-31T20:00-10:00 on a Tokyo calendar (0100-01-01 there)",
+      timezone: "Asia/Tokyo",
+      startAt: "0099-12-31T20:00:00-10:00",
+    },
+  ])(
+    "reads the start's day in the calendar's zone, not the string's: $name is a 409 and writes nothing",
+    async ({ timezone, startAt }) => {
+      const world = await loadWorld(zone);
+      const calendar = await onZone(world, timezone);
+      const before = await snapshot(world);
+
+      await expect(world.book(calendar, startAt)).rejects.toMatchObject({
+        status: 409,
+        code: "SLOT_UNAVAILABLE",
       });
       expect(await snapshot(world)).toEqual(before);
     },

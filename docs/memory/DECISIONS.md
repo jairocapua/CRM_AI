@@ -276,3 +276,7 @@
 - 2026-10-24 [P7-T43] nav-user holds the trigger element in state via a callback ref (ref={setTrigger}) rather than useRef, so it can be passed into guardLeave during render.
 - 2026-10-24 [P7-T43] Phone tests scope the sidebar opener with page.locator('header'): the header sits inside SidebarInset's <main> (not a banner landmark), and the Sheet's SidebarRail shares the 'Toggle Sidebar' name.
 - 2026-10-24 [P7-T43] Only My profile is followed in the clean phone test (Team settings is the P9 placeholder; the Discard path is covered by the sidebar Contacts link).
+- 2026-10-24 [P7-T44] book() checks isCalendarDay(zonedDay(startMs, calendar.timezone)) and passes that same day to freeSlots.
+- 2026-10-24 [P7-T44] parseStart and the string-date check (value.slice(0,10)) are removed: 0099-12-31T20:00-10:00 on Tokyo (0100-01-01 there) is now a 409, not a 422. Supersedes P7-T35 A5's parseStart wording; that done entry stays as written.
+- 2026-10-24 [P7-T44] Two messages, one code (INVALID_START): a non-instant string keeps today's message byte for byte; a day outside 0100-9999 in the calendar's zone gets a new message naming the day and zone.
+- 2026-10-24 [P7-T44] New tests match name: 'ApiError' rather than toBeInstanceOf, because seededWorld() calls vi.resetModules() and a static ApiError import is a different class.
