@@ -210,3 +210,8 @@
 - 2026-10-23 [P7-T29] Mutant M2 (fetched first) is invisible to e2e while the mock returns records by reference; unit case 2 is its only guard. No e2e workaround added.
 - 2026-10-23 [P7-T29] Race test freezes page timers with page.clock (installed after load, never before: @date-fns/tz, P7-T08), pausing 1s ahead of page Date.now(); chosen over raising Demo Data latency, whose jitter could reorder responses.
 - 2026-10-23 [P7-T29] New-conversation dialog is the third picker surface (/conversations, 'New' button exact). Race test skips chooseByName; 'finds a contact by its full name' covers the label.
+- 2026-10-23 [P7-T30] Implementer did not edit LEARNINGS.md; A9 says the implementer reports the NAVIGATION note and the recorder appends it.
+- 2026-10-23 [P7-T30] Calendar-column scope guard also asserts exactly one alert containing 'Could not load calendars' (strict mode), covering A5's "holds the calendars alert".
+- 2026-10-23 [P7-T30] Fixture self-test only reads NAVIGATION (never writes), so a broken freeze cannot leak a changed timeout to other tests in the worker.
+- 2026-10-23 [P7-T30] Fixed A9 by annotating `NAVIGATION: Readonly<{ timeout: number }>` rather than rewording acceptance; the literal 15000 type gave callers nothing.
+- 2026-10-23 [P7-T30] Decided lines sit in the P7-T30 scope list as '- Decided:' bullets, matching P7-T29; A1-A10 copied from the planner's map.

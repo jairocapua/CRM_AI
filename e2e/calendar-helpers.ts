@@ -3,8 +3,8 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "./fixtures";
 
 /**
- * Shared helpers for the calendars specs. Not a spec itself: Playwright only
- * collects `*.spec.ts`.
+ * Shared helpers for the calendars specs and contact-picker.spec.ts. Not a
+ * spec itself: Playwright only collects `*.spec.ts`.
  */
 
 export type ViewName = "Month" | "Week" | "Day";
@@ -201,6 +201,21 @@ export async function readContacts(page: Page): Promise<SeededContact[]> {
 }
 
 /**
+ * A contact no other contact shares a full name with, so `chooseContact` can
+ * pick it by name. Throws when there is none.
+ */
+export function uniquelyNamedContact(
+  contacts: readonly SeededContact[],
+): SeededContact {
+  const found = contacts.find(
+    (contact) =>
+      contacts.filter((other) => other.name === contact.name).length === 1,
+  );
+  if (!found) throw new Error("No contact with a unique name");
+  return found;
+}
+
+/**
  * One calendar's weekly hours as persisted, found by name, in the store's
  * own order. Throws when no calendar has that name.
  */
@@ -359,6 +374,41 @@ export async function chooseCalendar(
   await expect(trigger.locator('[data-slot="select-value"]')).toHaveText(name);
 }
 
+/**
+ * Picks `contact` in the dialog's Contact combobox: types the full name,
+ * clicks the option whose name line is exactly that name, and checks the
+ * input shows it.
+ *
+ * The option is matched by name alone, so pass a contact no other contact
+ * shares a full name with (`uniquelyNamedContact`). Two matches fail the click
+ * as a strict-mode violation rather than pick either.
+ */
+export async function chooseContact(
+  page: Page,
+  dialog: Locator,
+  contact: SeededContact,
+) {
+  const input = dialog.getByRole("combobox", { name: "Contact" });
+  await input.fill(contact.name);
+  await page
+    .getByRole("option")
+    .filter({ has: page.getByText(contact.name, { exact: true }) })
+    .click();
+  await expect(input).toHaveValue(contact.name);
+}
+
+/**
+ * Stops the page's timers (`setTimeout`, `requestAnimationFrame`, `Date`)
+ * until `page.clock.resume()`, after `page.clock.install()`. `pauseAt` cannot
+ * move the clock back, and until paused the clock keeps running, so it pauses
+ * a second ahead of the page's "now": a timer due within that second fires at
+ * once, and nothing else changes.
+ */
+export async function pauseTimers(page: Page) {
+  const now = await page.evaluate(() => Date.now());
+  await page.clock.pauseAt(now + 1_000);
+}
+
 export interface OpenTime {
   /** The radio's name, the viewer's local time: "12:00 AM". */
   label: string;
@@ -447,6 +497,13 @@ interface ReadFaultWindow {
  * shows "Could not book the appointment."), and `setStatus()` when it moves a
  * cancelled appointment to another status. `cancel()` and every other status
  * change do not read the table.
+ *
+ * Any other API call that reads the table through `Object.values` while the
+ * fault is on throws too, for example template rendering (`render()` in
+ * src/lib/api/templates.ts reads appointments and calendars), the
+ * dashboard's analytics (`summary()` in analytics.ts reads appointments) and
+ * the settings integrity check (`integrityReport()` in settings.ts reads
+ * appointments). Restore reads before a step that reaches them.
  */
 export async function failReads(page: Page, table: FaultTable): Promise<void> {
   await page.evaluate(

@@ -176,3 +176,7 @@
 - 2026-10-23 [P7-T29] Back-to-back --repeat-each runs on Windows can fail page.goto with net::ERR_NO_BUFFER_SPACE (sockets exhausted): the machine, not the test.
 - 2026-10-23 [P7-T29] page.clock.pauseAt(t) throws 'Cannot fast-forward to the past' if t is behind the fake now; after install() the clock keeps wall pace, so pause at page Date.now() + a margin.
 - 2026-10-23 [P7-T29] page.clock install-after-load + pauseAt + act + resume makes mock-latency races deterministic: simulate()'s sleep and useDebouncedValue freeze; React's MessageChannel scheduler and Playwright actionability keep working.
+- 2026-10-23 [P7-T30] E2e rule: the first wait after a client-side navigation to another route passes the shared, frozen `NAVIGATION` from e2e/fixtures.ts (15s); new specs import it rather than writing a local timeout.
+- 2026-10-23 [P7-T30] To scope a page-side watcher to an unhooked part of the page, tag it from the test (el.parentElement.setAttribute('data-e2e-...')); React leaves unmanaged attributes alone. Guard with count 1 plus what must/must not be inside.
+- 2026-10-23 [P7-T30] A MutationObserver catching a short attribute spell should read records with attributeOldValue: true (oldValue 'true' marks a spell's end), not the live attribute, which may already be back.
+- 2026-10-23 [P7-T30] `Object.freeze({ timeout: 15_000 })` keeps literal types (`Readonly<{ timeout: 15000 }>`); annotate the variable to get `Readonly<{ timeout: number }>`.

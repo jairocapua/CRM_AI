@@ -3,6 +3,7 @@ import {
   BOOT_FAILED,
   BOOT_SKELETON,
   expect,
+  NAVIGATION,
   test,
   waitForBoot,
 } from "./fixtures";
@@ -150,5 +151,14 @@ test.describe("clean storage", () => {
     expect(
       await page.evaluate(() => localStorage.getItem("e2e-selftest-marker")),
     ).toBe("kept");
+  });
+});
+
+test.describe("navigation timeout", () => {
+  test("NAVIGATION is frozen at 15s", () => {
+    // Read only, never written: were it not frozen, a write here would leak
+    // into every later test in this worker.
+    expect(Object.isFrozen(NAVIGATION)).toBe(true);
+    expect(NAVIGATION).toEqual({ timeout: 15_000 });
   });
 });

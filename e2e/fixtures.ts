@@ -36,10 +36,15 @@ export const BOOT_FAILED = "Could not start the demo workspace";
  *
  * A URL change within the same route needs no server and keeps the default:
  * the calendars' view and date, and the availability editor's `?calendar=`,
- * both go through `history.pushState`/`replaceState`. So do "the URL did not
- * change" checks. Decided in P7-T27, instead of capping the worker count.
+ * both go through `history.pushState`/`replaceState`. Checks that the URL did
+ * not change keep the 5s default too. Decided in P7-T27, instead of capping
+ * the worker count.
+ *
+ * Frozen, so no spec can change it for the others.
  */
-export const NAVIGATION = { timeout: 15_000 };
+export const NAVIGATION: Readonly<{ timeout: number }> = Object.freeze({
+  timeout: 15_000,
+});
 
 /**
  * Waits until the boot skeleton is gone, then fails if the app landed on the

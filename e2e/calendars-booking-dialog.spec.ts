@@ -3,12 +3,13 @@ import type { Locator, Page } from "@playwright/test";
 import {
   bookingDialog,
   chooseCalendar,
+  chooseContact,
   expectViewLoaded,
   openTimes,
   readContacts,
   timeGroup,
   timeRadio,
-  type SeededContact,
+  uniquelyNamedContact,
 } from "./calendar-helpers";
 import { expect, test } from "./fixtures";
 
@@ -18,11 +19,11 @@ import { expect, test } from "./fixtures";
  * ids, a fresh form on every open, and the time cards at phone widths.
  *
  * Seed facts these tests rely on (LEARNINGS P7-T08, P7-T09): the demo clock
- * starts at 2026-09-08 09:00 UTC, and Discovery Call offers sixteen times on
- * each of Wednesday 9 and Thursday 10 September in Singapore, the first of
- * them at 12:00 AM, the widest label a time card holds. The phone test checks
- * that one is listed, so a seed change fails loudly instead of passing on
- * narrower labels.
+ * starts at 2026-09-08 09:00 UTC, and Discovery Call has open times on
+ * Wednesday 9 and Thursday 10 September in Singapore. The 9th's first is
+ * 12:00 AM, the widest label a time card holds; the phone test checks that it
+ * is listed, so a seed change fails loudly instead of passing on narrower
+ * labels.
  */
 
 const ZONE = "Asia/Singapore";
@@ -57,16 +58,6 @@ async function formIdOf(dialog: Locator): Promise<string> {
   return id;
 }
 
-/** A contact no other contact shares a full name with. */
-function uniquelyNamed(contacts: readonly SeededContact[]): SeededContact {
-  const found = contacts.find(
-    (contact) =>
-      contacts.filter((other) => other.name === contact.name).length === 1,
-  );
-  if (!found) throw new Error("No contact with a unique name");
-  return found;
-}
-
 test("the form's controls take their ids from the form's own id", async ({
   page,
   gotoApp,
@@ -97,18 +88,13 @@ test("reopening before the closing popup unmounts starts a fresh form", async ({
   gotoApp,
 }) => {
   const dialog = await openBookingDialog(page, gotoApp);
-  const contact = uniquelyNamed(await readContacts(page));
+  const contact = uniquelyNamedContact(await readContacts(page));
   const firstFormId = await formIdOf(dialog);
 
   // The first open: every field changed, a time chosen.
   await chooseCalendar(page, dialog, CALENDAR);
   const contactInput = dialog.getByRole("combobox", { name: "Contact" });
-  await contactInput.fill(contact.name);
-  await page
-    .getByRole("option")
-    .filter({ has: page.getByText(contact.name, { exact: true }) })
-    .click();
-  await expect(contactInput).toHaveValue(contact.name);
+  await chooseContact(page, dialog, contact);
   await dialog.getByLabel("Day", { exact: true }).fill(OTHER_DAY);
   const [first] = await openTimes(dialog, OTHER_DAY, ZONE);
   if (!first) throw new Error("No open time");

@@ -1106,14 +1106,75 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T30 — Shared chooseContact e2e helper
 - **Owner:** agent · **Depends:** —
+- **Skills:** `playwright-cli`
 - **Scope:** Move the three copies of booking-dialog contact pick (fill + option click) into e2e/calendar-helpers.ts chooseContact and use it in calendars-booking, calendars-booking-dialog, calendars-load-errors specs.
   - From the P7-T18 review, in the same spec files: in calendars-load-errors.spec.ts, the RetryWatch.sawSkeleton doc should say "inside `scope`" (watchRetry now takes a scope), and the aria-busy MutationObserver should read the mutation records (attributeOldValue: true) rather than the live attribute. In calendars-booking-dialog.spec.ts, the header claims sixteen times on both 9 and 10 September but only the 9th is checked: trim the claim or assert it.
   - From the P7-T24 review, in calendars-load-errors.spec.ts: rewrap the header line edited in P7-T24 (~:25, ~93 characters) to match the block, and scope the calendars test's `watchRetry(page, "main")` to the calendar column, since it reads the first `[data-slot="alert"]` in main.
   - From the P7-T21 review: failReads' Limits paragraph in calendar-helpers.ts names only calendars.ts. Add that any other API call reading the table through `Object.values` throws too while the fault is on, e.g. template rendering (templates.ts), analytics (analytics.ts) and the settings integrity check (settings.ts).
   - From the P7-T27 review, in e2e/fixtures.ts: make `NAVIGATION` read-only (`as const` or `Object.freeze`) so no spec can change it for the others, and reword "So do 'the URL did not change' checks." to say plainly that those keep the 5s default too. Add a one-line e2e note (LEARNINGS or CLAUDE.md) that the first wait after a cross-route navigation passes the shared `NAVIGATION`, so new specs do not write a local copy again.
   - From the P7-T29 review: move `pauseTimers` from e2e/contact-picker.spec.ts into the shared e2e helpers next to `chooseContact`, so the next race test can reuse it.
+  - Decided: `chooseContact` lives in calendar-helpers.ts next to
+    `chooseCalendar` and matches the option by exact name, with no
+    `.first()`. Callers pass a uniquely named contact: `uniquelyNamedContact`,
+    moved there from calendars-booking-dialog.spec.ts.
+    calendars-booking.spec.ts keeps its own `uniqueContact` (it also requires
+    a unique last name and takes a skip), so it picks the same seeded
+    contacts as before.
+  - Decided: the booking-dialog header's sixteen-times claim is trimmed, not
+    asserted.
+  - Decided: `NAVIGATION` is `Object.freeze`d, and a fixture self-test checks
+    it.
+  - Decided: the calendar column scope is a test-only
+    `data-e2e-calendar-column` attribute set from the spec; the app's markup
+    does not change.
+  - Decided: the NAVIGATION note goes in LEARNINGS, not CLAUDE.md.
+  - Decided: the P7-T24 header rewrap was already done in P7-T25, so the
+    calendars-load-errors.spec.ts header needs no edit.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. One `chooseContact(page, dialog, contact)` is exported from
+        e2e/calendar-helpers.ts, next to `chooseCalendar`.
+        calendars-booking, calendars-booking-dialog and calendars-load-errors
+        call it, and none of them fills the Contact combobox and clicks an
+        option itself.
+  - [ ] A2. The shared pick matches the option by exact name with no
+        `.first()`. Every caller passes a uniquely named contact:
+        `uniquelyNamedContact` (moved from calendars-booking-dialog.spec.ts
+        into calendar-helpers.ts) in booking-dialog and load-errors, and
+        `uniqueContact` in calendars-booking.
+  - [ ] A3. `pauseTimers` is exported from e2e/calendar-helpers.ts directly
+        after `chooseContact`, with no local copy left, and
+        contact-picker.spec.ts imports it. P7-T40's entry points at its new
+        home.
+  - [ ] A4. calendars-load-errors.spec.ts: the RetryWatch.sawSkeleton doc
+        says "inside `scope`". The Time-group aria-busy observer reads
+        mutation records with `attributeOldValue: true` and never reads the
+        live attribute in its callback.
+  - [ ] A5. The calendars-list test watches Retry inside the calendar column
+        only, not `main`. The test proves its scope is that column: one
+        element, holding the calendars alert, not holding the Month view, and
+        holding the Calendars group after Retry.
+  - [ ] A6. Every line of the calendars-load-errors.spec.ts header is 80
+        characters or less (the P7-T24 note; already true since P7-T25, so
+        no edit).
+  - [ ] A7. The calendars-booking-dialog.spec.ts header claims only what the
+        spec relies on: open times on 9 and 10 September, and 12:00 AM on the
+        9th, which the phone test checks. It no longer claims sixteen times
+        on both days.
+  - [ ] A8. failReads' doc says that any other API call reading the table
+        through `Object.values` throws while the fault is on, naming
+        `render()` in templates.ts, `summary()` in analytics.ts and
+        `integrityReport()` in settings.ts.
+  - [ ] A9. `NAVIGATION` is read-only: `Object.freeze({ timeout: 15_000 })`,
+        with type `Readonly<{ timeout: number }>`. Its doc says plainly that
+        checks that the URL did not change keep the 5s default too. A
+        one-line LEARNINGS note (reported by the implementer, appended by the
+        recorder) says the first wait after a cross-route navigation passes
+        the shared `NAVIGATION`.
+  - [ ] A10. No app, seed or mock change, and no regression.
+        `git diff --stat -- src` is empty, `SEED_VERSION` stays 4,
+        `npm run check` is green with the same Vitest count, and the full
+        `npm run e2e` passes with 103 tests (102 + 1 fixture self-test). This
+        entry carries a Skills line, this acceptance and the Decided lines.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T31 — LinkButton helper and nativeButton lint rule
@@ -1201,7 +1262,7 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** Edit path still uses each refetch's object; after fetch() swap an invalidation rewrites typed text. Keep first fetched copy per id (contact-picker-value.ts) + unit test.
   - From the P7-T29 review: the held pick (and a held fetched copy) keeps a contact's old name if it is renamed elsewhere while the picker stays mounted. Every consumer unmounts it when its dialog or sheet closes today, so say that in `pickerValue`'s doc rather than adding a refresh.
-  - In e2e/contact-picker.spec.ts `pauseTimers` (~:147-150): `pauseAt(now + 1s)` throws "Cannot fast-forward to the past" if more than 1s of page time passes before it runs. Widen the margin to a few seconds, or state the limit in the helper's comment (every timer due inside the margin fires at once on pause).
+  - In e2e/calendar-helpers.ts `pauseTimers` (moved there in P7-T30): `pauseAt(now + 1s)` throws "Cannot fast-forward to the past" if more than 1s of page time passes before it runs. Widen the margin to a few seconds, or state the limit in the helper's comment (every timer due inside the margin fires at once on pause).
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

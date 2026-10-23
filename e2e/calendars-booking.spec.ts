@@ -1,8 +1,9 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 import {
   bookingDialog,
   chooseCalendar,
+  chooseContact,
   expectPosition,
   expectViewLoaded,
   localDayIn,
@@ -76,21 +77,6 @@ function uniqueContact(
   );
   if (!found) throw new Error("No contact with a unique name");
   return found;
-}
-
-async function chooseContact(
-  page: Page,
-  dialog: Locator,
-  contact: SeededContact,
-) {
-  const input = dialog.getByRole("combobox", { name: "Contact" });
-  // The full name, so every booking flow searches by it.
-  await input.fill(contact.name);
-  await page
-    .getByRole("option")
-    .filter({ has: page.getByText(contact.name, { exact: true }) })
-    .click();
-  await expect(input).toHaveValue(contact.name);
 }
 
 /**

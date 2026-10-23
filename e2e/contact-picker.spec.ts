@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import {
   bookingDialog,
+  pauseTimers,
   readContacts,
   type SeededContact,
 } from "./calendar-helpers";
@@ -135,18 +136,6 @@ function pickContacts(contacts: readonly SeededContact[]) {
   if (!c) throw new Error("No contact with a company of its own");
 
   return { a, b, c };
-}
-
-/**
- * Stops the page's timers (`setTimeout`, `requestAnimationFrame`, `Date`)
- * until `page.clock.resume()`, after `page.clock.install()`. `pauseAt` cannot
- * move the clock back, and until paused the clock keeps running, so it pauses
- * a second ahead of the page's "now": a timer due within that second fires at
- * once, and nothing else changes.
- */
-async function pauseTimers(page: Page) {
-  const now = await page.evaluate(() => Date.now());
-  await page.clock.pauseAt(now + 1_000);
 }
 
 /** Types the full name, picks the option and checks the input shows it. */

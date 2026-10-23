@@ -4,6 +4,7 @@ import {
   armContactFault,
   bookingDialog,
   chooseCalendar,
+  chooseContact,
   expectPosition,
   expectViewLoaded,
   failContactRead,
@@ -16,6 +17,7 @@ import {
   restoreReads,
   timeGroup,
   timeRadio,
+  uniquelyNamedContact,
   viewRegion,
 } from "./calendar-helpers";
 import { expect, NAVIGATION, test } from "./fixtures";
@@ -51,11 +53,16 @@ const CALENDARS_ERROR = "Could not load calendars";
 const SLOTS_ERROR = "Could not load the open times";
 const CONTACT_ERROR = "Could not load the contact";
 const FAULT_MESSAGE = "Something went wrong.";
+/** The calendar list's column, tagged by the calendar-list test. */
+const CALENDAR_COLUMN = "[data-e2e-calendar-column]";
 
 interface RetryWatch {
-  /** The Retry button was seen with aria-disabled="true". */
+  /**
+   * The Retry button of an alert inside `scope` was seen with
+   * aria-disabled="true".
+   */
   sawBusy: boolean;
-  /** A skeleton was added to the page's main area. */
+  /** A skeleton appeared inside `scope`. */
   sawSkeleton: boolean;
   /** While busy, something in the button still carried an aria-label. */
   sawLabelledSpinner: boolean;
@@ -251,8 +258,22 @@ test("calendars page: a failed calendar list shows the error in its column and R
   );
 
   // A Retry that fails again: the button goes busy, and no skeleton appears.
-  // The calendars alert is the only alert in main.
-  const readWatch = await watchRetry(page, "main");
+  // The watch reads the first alert in its scope, and the view beside the
+  // column can hold an alert of its own, so it watches the calendar column
+  // only. The column has no hook of its own, so the test tags it: LoadError's
+  // root is the Alert, whose parent is the column's `<div>`
+  // (calendars-workspace.tsx).
+  await alert.evaluate((el) =>
+    el.parentElement?.setAttribute("data-e2e-calendar-column", ""),
+  );
+  const column = page.locator(CALENDAR_COLUMN);
+  await expect(column).toHaveCount(1);
+  // One alert in the column (a second would fail strict mode): this one.
+  await expect(column.getByRole("alert")).toContainText(CALENDARS_ERROR);
+  await expect(column.getByRole("region", { name: "Month view" })).toHaveCount(
+    0,
+  );
+  const readWatch = await watchRetry(page, CALENDAR_COLUMN);
   await retry.click();
   await expect.poll(async () => (await readWatch()).sawBusy).toBe(true);
   await expect(retry).toBeEnabled();
@@ -274,6 +295,10 @@ test("calendars page: a failed calendar list shows the error in its column and R
   await expect(alert).toHaveCount(0);
   await expect(month).toBeVisible();
   await expect(chips).toHaveCount(chipCount);
+  // The tag sat on the column, and the list replaced the alert inside it.
+  await expect(
+    column.getByRole("group", { name: "Calendars", exact: true }),
+  ).toHaveCount(1);
 });
 
 test("contact Appointments tab: a failed load shows the error, not an empty list", async ({
@@ -490,8 +515,7 @@ test("booking dialog: a failed re-read of the open times keeps the list on scree
   const DAY = "2026-09-09";
   await gotoApp(`/calendars?view=month&date=${DAY}`);
   await expectViewLoaded(page, "Month");
-  const [contact] = await readContacts(page);
-  if (!contact) throw new Error("The seed has no contacts");
+  const contact = uniquelyNamedContact(await readContacts(page));
 
   await page.getByRole("button", { name: "Book", exact: true }).click();
   const dialog = bookingDialog(page);
@@ -499,15 +523,8 @@ test("booking dialog: a failed re-read of the open times keeps the list on scree
   await chooseCalendar(page, dialog, "Discovery Call");
   const times = await openTimes(dialog, DAY, ZONE);
   expect(times).toHaveLength(16);
-  const contactInput = dialog.getByRole("combobox", { name: "Contact" });
-  await contactInput.fill(contact.name);
-  // Any contact of that name will do: the booking fails either way.
-  await page
-    .getByRole("option")
-    .filter({ has: page.getByText(contact.name, { exact: true }) })
-    .first()
-    .click();
-  await expect(contactInput).toHaveValue(contact.name);
+  // Any contact will do: the booking fails either way.
+  await chooseContact(page, dialog, contact);
   const [first] = times;
   if (!first) throw new Error("No open time");
   await timeRadio(dialog, first.label).click();
@@ -516,17 +533,24 @@ test("booking dialog: a failed re-read of the open times keeps the list on scree
     "true",
   );
 
-  // Notes the Time group going busy, so the test knows the times were read
-  // again, rather than passing because nothing happened.
+  // Notes a busy spell of the Time group ending, so the test knows the times
+  // were read again, rather than passing because nothing happened. It reads
+  // the mutation records, not the live attribute, so a spell that starts and
+  // ends between two callbacks still counts: its last record's old value is
+  // "true". The group is not busy now (openTimes waited for that).
   const group = timeGroup(dialog);
   await group.evaluate((fieldset) => {
     const w = window as unknown as { __timesWentBusy?: boolean };
     w.__timesWentBusy = false;
-    new MutationObserver(() => {
-      if (fieldset.getAttribute("aria-busy") === "true") {
+    new MutationObserver((records) => {
+      if (records.some((record) => record.oldValue === "true")) {
         w.__timesWentBusy = true;
       }
-    }).observe(fieldset, { attributes: true, attributeFilter: ["aria-busy"] });
+    }).observe(fieldset, {
+      attributes: true,
+      attributeFilter: ["aria-busy"],
+      attributeOldValue: true,
+    });
   });
 
   // book() reads the appointments to check the slot is still open, so it
