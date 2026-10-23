@@ -1708,6 +1708,8 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T46 — Opportunities update(): allow-list the patch, 422 for non-object patch
 - **Owner:** agent · **Depends:** —
 - **Scope:** update() writes closedAt/createdAt/status/position/stageId raw; a null patch throws TypeError. Mirror P7-T34: save parsed output, 422 with message.
+  - From the P7-T35 review, in src/lib/api/opportunities.ts (~:128): the create() comment says a deal with no date "gets no `expectedCloseAt` key at all", but the deal form sends `expectedCloseAt: undefined`, which leaves an own undefined key; drop undefined values (as calendars' `withoutUndefined` does) or reword. create()/update() promise the expected-close check runs before `nowIso()` so a refused call does not move the demo clock, but no test pins it (moving the check below `nowIso()` stays green): add one, e.g. calendars.test.ts ~:1370's pattern.
+  - In e2e/deal-form.spec.ts's round trip, add a line saying the persisted-value poll carries the proof (the reopen `toHaveValue(day)` would pass on a stale prop) and why it filters `status === "open"`.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
