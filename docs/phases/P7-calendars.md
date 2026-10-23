@@ -924,6 +924,7 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** Two specs flaked once at 5s toHaveURL after leaving /calendars under full-suite load; raise timeout for cross-route nav or cap Playwright workers on Windows.
   - From the P7-T21 review: the playwright.config.ts comment above `timeout: 60_000` says expect's timeout and the worker count are "left at their defaults on purpose"; update it to say what this task decided (and name P7-T27). In calendars-booking.spec.ts, the two `test.slow()` comments say "Playwright's old 30s default": 30s is still Playwright's default, so say "the 30s Playwright default this suite used before", and date the measured durations ("measured in P7-T21").
+  - From the P7-T25 review: the contact-page test in calendars-load-errors.spec.ts has two `toHaveURL` checks after client-side navigation (`/contacts$` and `/contacts/${id}$`); cover them with the same timeout.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
