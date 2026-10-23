@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 34/66 tasks done (52%) · **Current phase:** P7 · **Next agent task:** P7-T33 · **Awaiting review:** P7-T32 · **Blocked:** none · **Waiting on you:** P7-H4
+**Overall:** 35/68 tasks done (51%) · **Current phase:** P7 · **Next agent task:** P7-T34 · **Awaiting review:** P7-T33 · **Blocked:** none · **Waiting on you:** P7-H4
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 34/45 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 35/47 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -51,8 +51,8 @@ Status: active · Progress: 34/45 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T29 | Fix ContactPicker selection race after a pick | agent | done | — | c39d93e | 2026-10-23 | Picked contact held locally via pickerValue(); race e2e on 3 surfaces with frozen timers; M1 red 60/60 |
 | P7-T30 | Shared chooseContact e2e helper | agent | done | — | bed1313 | 2026-10-23 | Shared chooseContact/pauseTimers/uniquelyNamedContact in calendar-helpers; review notes folded; NAVIGATION frozen; e2e 103 |
 | P7-T31 | LinkButton helper and nativeButton lint rule | agent | done | — | 263a3ac | 2026-10-23 | LinkButton in ui/button.tsx, 6 links migrated, PaginationLink plain <a>, lint bans nativeButton={false}/bare buttonVariants |
-| P7-T32 | Link-button icon padding and link-buttons spec scoping | agent | review | P7-T31 |  | 2026-10-23 | data-icon on View contact/Open board; spec pins padding, scoped header lookup; lint trigger clause; inert length asserts removed |
-| P7-T33 | App-wide unsaved-changes guard (sidebar links, reload, tab close) | agent | todo | — |  |  |  |
+| P7-T32 | Link-button icon padding and link-buttons spec scoping | agent | done | P7-T31 | 8d186f2 | 2026-10-23 | data-icon on View contact/Open board; spec pins padding, scoped header lookup; lint trigger clause; inert length asserts removed |
+| P7-T33 | App-wide unsaved-changes guard (sidebar links, reload, tab close) | agent | review | — |  | 2026-10-23 | UnsavedChangesProvider guards sidebar/user-menu/Back links + beforeunload; e2e T-A..T-E, mutants seen red |
 | P7-T34 | Calendar update: validate or allow-list keys outside the settings schema | agent | todo | — |  |  |  |
 | P7-T35 | Validate expectedCloseAt in api.opportunities create/update | agent | todo | — |  |  |  |
 | P7-T36 | Booking dialog: error state and Retry when calendars.list fails | agent | todo | — |  |  |  |
@@ -62,6 +62,8 @@ Status: active · Progress: 34/45 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T39 | Name the remaining TagPickers and the contacts search box | agent | todo | — |  |  |  |
 | P7-T40 | ContactPicker: hold fetched contact for outside-set values | agent | todo | — |  |  |  |
 | P7-T41 | Document the Base UI trigger exception in LinkButton JSDoc | agent | todo | — |  |  |  |
+| P7-T42 | Team settings link: stop 404 prefetch until P9 | agent | todo | — |  |  |  |
+| P7-T43 | Unsaved-changes guard: stable guardLeave, menu focus return, mobile Sheet | agent | todo | — |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md

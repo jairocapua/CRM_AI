@@ -1341,12 +1341,90 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T33 — App-wide unsaved-changes guard (sidebar links, reload, tab close)
 - **Owner:** agent · **Depends:** —
+- **Skills:** `vercel-react-best-practices`, `vercel-composition-patterns`, `playwright-cli`
 - **Scope:** Extend the availability guard via Next Link onNavigate + context blocker (link.md 'Blocking navigation') and a beforeunload handler while dirty.
   - From the P7-T20 review: in calendars-availability-editor.spec.ts ("a clean editor switches and leaves without asking"), cover the two missing clean cases, a calendar switch right after Save and Back right after load, so each control is proven unguarded after load, Discard and Save.
   - In availability-workspace.tsx, call `setDirty(false)` before `router.push("/calendars")` on Discard, so a second Back click during a slow push does not ask again.
   - availability-form.tsx reports `isDirty` through an effect that re-fires when `onDirtyChange` changes identity: say in the prop doc that it must be stable (as `setDirty` is), or report through RHF's `form.subscribe({ formState: { isDirty: true } })`, which the app-wide blocker will need anyway.
+  - Decided: the leave question is the app's `ConfirmDialog`, owned by a
+    new `UnsavedChangesProvider` (src/components/providers/unsaved-changes.tsx)
+    in the (app) layout. A page registers the name of what has unsaved edits
+    with `useUnsavedChanges(subject)`; a link asks through
+    `useLeaveGuard()(href)` as its Next Link `onNavigate`.
+  - Decided: reload and tab close ask through the browser's own
+    `beforeunload` prompt, added only while a page is registered. Its text
+    is the browser's and cannot be set.
+  - Decided: the guarded links are the sidebar's 7 nav links, the user
+    menu's My profile and Team settings, and Back to calendars. This
+    supersedes P7-T20's guard-scope line. The browser's back and forward and
+    a programmatic `router.push` stay unguarded: Next has no API to cancel a
+    history traversal.
+  - Decided: Back to calendars moves to the provider's question; the
+    workspace's own dialog keeps only the calendar switch.
+  - Decided: the Discard fix (the second scope item) lives in the
+    provider's Discard changes, which releases the registration before it
+    calls `router.push(href)`.
+  - Decided: the `onDirtyChange` item is settled by the prop doc ("must
+    keep one identity"), with no `form.subscribe`: the provider is fed from
+    the workspace's `dirty` state, which the form already reports.
+  - Decided: the clean-editor e2e becomes one test per clean state (just
+    loaded, after Discard changes, after Save), each driving the calendar
+    switch, Back to calendars and a sidebar link.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. Every sidebar link asks first while the editor has unsaved
+        edits. On /calendars/availability with Slot duration changed to 45,
+        each of the sidebar's 7 nav links and the user menu's My profile and
+        Team settings opens "Discard unsaved changes?" naming Discovery Call
+        ("Leaving this page will discard them"), with Keep editing focused;
+        the URL stays /calendars/availability. Keep editing or Escape closes
+        it with the edit intact (45, the form's Discard changes enabled)
+        and, for a nav link, focus back on that link.
+  - [ ] A2. Discard changes on a sidebar link leaves at once and drops the
+        edit: Contacts goes to /contacts with no alert dialog, and reopening
+        the editor shows Slot duration 30.
+  - [ ] A3. Back to calendars goes through the same app-wide question. The
+        existing "Back to calendars with unsaved edits asks first, by
+        keyboard and pointer" test passes unchanged, and the workspace's own
+        dialog now handles only the calendar switch.
+  - [ ] A4. Discard releases the guard before the push. With /calendars
+        route data held, after Discard changes a second Back click during
+        the push opens no question, and once released the page lands on
+        /calendars.
+  - [ ] A5. Reload and tab close ask while the editor has unsaved edits.
+        The browser's beforeunload prompt appears; dismissing it on reload
+        keeps the page and the edit (45); dismissing it on close keeps the
+        tab open; accepting it on reload reloads to the saved Slot duration
+        30.
+  - [ ] A6. The browser's Back is not guarded and leaves no stale question.
+        With the question open from a sidebar link, browser Back returns to
+        /calendars with no alert dialog and no beforeunload guard left.
+  - [ ] A7. A clean editor never asks. Right after load, after the form's
+        Discard changes and after Save, switching calendars, Back to
+        calendars and a sidebar link each act at once with no alert dialog,
+        and a beforeunload is not prevented. This covers the P7-T20
+        review's missing cases: switch after Save, Back after load.
+  - [ ] A8. The `onDirtyChange` prop doc says the callback must keep one
+        identity across renders (a state setter, as `setDirty` is) and why.
+        The reporting effect is unchanged and no `form.subscribe` is added.
+  - [ ] A9. Every new test has been seen failing. On HEAD's src, T-A fails
+        at the dialog check and T-B sees no beforeunload guard. T-C fails
+        against a provider that pushes before releasing. T-D fails without
+        the close-on-release. Each T-E fails against a type-clean
+        AvailabilityForm that always reports dirty, and its beforeunload
+        check fails against a listener installed regardless of dirty.
+  - [ ] A10. No seed, API or mock change and no regression. SEED_VERSION
+        stays 4, nothing under src/lib or src/components/ui changes,
+        `npm run check` is green with the Vitest count unchanged (547), the
+        full `npm run e2e` passes with 109 tests (103 + 6) and the other
+        specs unchanged, `npm ls @tanstack/react-table` prints 8.21.3, and
+        `node scripts/progress.mjs --check` is clean.
+  - [ ] A11. Docs match the code. unsaved-changes.tsx's JSDoc says what is
+        guarded and what is not (browser back/forward, `router.push`,
+        new-tab clicks), that there is one registrant, and that the prompt
+        text is fixed. The AvailabilityWorkspace doc comment no longer says
+        the sidebar, reload or tab close are unguarded. The spec header
+        describes the new coverage. This entry has a Skills line, the
+        Decided lines and this acceptance.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T34 — Calendar update: validate or allow-list keys outside the settings schema
@@ -1417,6 +1495,20 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T41 — Document the Base UI trigger exception in LinkButton JSDoc
 - **Owner:** agent · **Depends:** —
 - **Scope:** LinkButton JSDoc (ui/button.tsx) names the trigger-as-non-button disable exception the lint message allows; tidy eslint-config.test.mjs duplicate trigger asserts + comment; reword link-buttons spec header padding attribution
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T42 — Team settings link: stop 404 prefetch until P9
+- **Owner:** agent · **Depends:** —
+- **Scope:** prefetch={false} on nav-user Team settings Link (or placeholder page); then remove excuseTeamSettingsPrefetch from calendars-availability-editor.spec.ts
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T43 — Unsaved-changes guard: stable guardLeave, menu focus return, mobile Sheet
+- **Owner:** agent · **Depends:** —
+- **Scope:** Keep subject in a ref so guardLeave/context keep identity; finalFocus to user-menu trigger for menu links (fix comment); close mobile Sheet on question; reword A9/'Released first' ordering claim
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

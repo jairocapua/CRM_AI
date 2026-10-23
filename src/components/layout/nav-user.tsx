@@ -9,6 +9,7 @@ import {
   UserIcon,
 } from "lucide-react";
 
+import { useLeaveGuard } from "@/components/providers/unsaved-changes";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -35,6 +36,8 @@ const CURRENT_USER = {
 
 export function NavUser() {
   const { state } = useSidebar();
+  // Each link asks first while a page has unsaved edits.
+  const guardLeave = useLeaveGuard();
 
   return (
     <SidebarMenu>
@@ -80,11 +83,22 @@ export function NavUser() {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem render={<Link href="/settings" />}>
+              <DropdownMenuItem
+                render={
+                  <Link href="/settings" onNavigate={guardLeave("/settings")} />
+                }
+              >
                 <UserIcon className="size-4" />
                 My profile
               </DropdownMenuItem>
-              <DropdownMenuItem render={<Link href="/settings/team" />}>
+              <DropdownMenuItem
+                render={
+                  <Link
+                    href="/settings/team"
+                    onNavigate={guardLeave("/settings/team")}
+                  />
+                }
+              >
                 <SettingsIcon className="size-4" />
                 Team settings
               </DropdownMenuItem>

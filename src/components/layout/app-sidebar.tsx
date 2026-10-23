@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useLeaveGuard } from "@/components/providers/unsaved-changes";
 import {
   Sidebar,
   SidebarContent,
@@ -37,6 +38,8 @@ function UnreadBadge() {
 
 export function AppSidebar() {
   const pathname = usePathname();
+  // Each link asks first while a page has unsaved edits.
+  const guardLeave = useLeaveGuard();
 
   return (
     <Sidebar collapsible="icon">
@@ -56,7 +59,12 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       isActive={isActive}
                       tooltip={item.title}
-                      render={<Link href={item.url} />}
+                      render={
+                        <Link
+                          href={item.url}
+                          onNavigate={guardLeave(item.url)}
+                        />
+                      }
                     >
                       <item.icon />
                       <span>{item.title}</span>

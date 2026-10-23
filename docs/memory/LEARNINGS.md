@@ -191,3 +191,11 @@
 - 2026-10-23 [P7-T32] expectTypeOf assertions are inert under Vitest: a mutant dropping a VARIANTS entry passes vitest and fails only `npm run typecheck` (TS2349).
 - 2026-10-23 [P7-T32] Git Bash on Windows: `python` is the WindowsApps stub and a heredoc-fed `python -` hung. Use Edit or node for scripted edits.
 - 2026-10-23 [P7-T32] A scratch node script outside the repo cannot `import "eslint"`; load it via createRequire(<repo>/package.json).
+- 2026-10-23 [P7-T33] A production build logs a 404 for /settings/team?_rsc when the user menu opens (Next prefetches Team settings; page arrives in P9). Any e2e opening the user menu trips the console watcher.
+- 2026-10-23 [P7-T33] Chromium shows a beforeunload prompt only after a real user gesture: Playwright click() counts, fill() alone does not. Click a field before typing.
+- 2026-10-23 [P7-T33] For a reload whose prompt is dismissed, use page.evaluate(() => setTimeout(() => location.reload())); page.reload() waits forever. page.close({runBeforeUnload:true}) dismissed leaves isClosed() false.
+- 2026-10-23 [P7-T33] Next 16.3.4: viewport prefetch is a /_tree request (next-router-prefetch: 1); each push/link click issues its own ?_rsc= request without it. page.route holds keep the URL unchanged.
+- 2026-10-23 [P7-T33] Base UI AlertDialog without finalFocus, opened from a Link's onNavigate, returns focus to the clicked link.
+- 2026-10-23 [P7-T33] Another local project (ai_project_management) runs next start on 0.0.0.0:3100; E2E_REUSE_SERVER=1 could silently test the wrong app.
+- 2026-10-23 [P7-T33] Bare 'Failed to type check' in Playwright [WebServer] output came from a type error in an e2e spec; run npx tsc --noEmit after spec edits.
+- 2026-10-23 [P7-T33] A provider DOM listener driven by form state reported up through effects lags input by several commits; check it in Playwright with expect.poll, not a one-shot evaluate (also for removal).

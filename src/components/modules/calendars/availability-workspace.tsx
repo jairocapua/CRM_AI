@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState, type ComponentProps, type Ref } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeftIcon, CalendarXIcon } from "lucide-react";
 
 import * as api from "@/lib/api";
@@ -9,6 +9,11 @@ import { useResource } from "@/lib/api";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { LoadError } from "@/components/common/load-error";
+import {
+  DISCARD_QUESTION,
+  useLeaveGuard,
+  useUnsavedChanges,
+} from "@/components/providers/unsaved-changes";
 import { LinkButton } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import {
@@ -25,16 +30,12 @@ import { CalendarName } from "./calendar-name";
 
 const SELECT_ID = "availability-calendar";
 
-/** Where a guarded control was taking the viewer. */
-type LeaveTarget =
-  { kind: "calendar"; slug: string; name: string } | { kind: "back" };
-
-/** The question asked before unsaved edits are dropped: whose edits, and
- *  where the viewer was going. */
+/** The question asked before a calendar switch drops unsaved edits: whose
+ *  edits, and which calendar the viewer chose. */
 interface LeaveQuestion {
   open: boolean;
   from: string;
-  to: LeaveTarget;
+  to: { slug: string; name: string };
 }
 
 /** Shows another calendar's editor by rewriting `?calendar=` in place. */
@@ -47,10 +48,7 @@ function showCalendar(slug: string) {
 }
 
 function leaveDescription({ from, to }: LeaveQuestion): string {
-  const unsaved = `Your changes to ${from} have not been saved.`;
-  return to.kind === "calendar"
-    ? `${unsaved} Switching to ${to.name} will discard them.`
-    : `${unsaved} Leaving this page will discard them.`;
+  return `Your changes to ${from} have not been saved. Switching to ${to.name} will discard them.`;
 }
 
 /**
@@ -71,12 +69,15 @@ function leaveDescription({ from, to }: LeaveQuestion): string {
  * load, never while a save's invalidation refetches the list.
  *
  * Unsaved edits are not dropped without asking. While the form reports
- * unsaved changes (`onDirtyChange`), switching calendars or following Back to
- * calendars opens a `ConfirmDialog` instead: Keep editing (or Escape) changes
- * nothing and puts focus back on the control used; Discard changes goes
- * ahead. A clean form (just loaded, saved or discarded) never asks. Not
- * guarded: the sidebar's links, the browser's back and forward, and a reload
- * or a closed tab still drop unsaved edits.
+ * unsaved changes (`onDirtyChange`), choosing another calendar opens this
+ * component's `ConfirmDialog`: Keep editing (or Escape) changes nothing and
+ * puts focus back on the select; Discard changes switches. Every way out of
+ * the page asks through `UnsavedChangesProvider` instead, which this
+ * component feeds with the calendar's name while the form is dirty: Back to
+ * calendars, the sidebar's links and the user menu's links ask with the same
+ * question, and a reload or a closed tab gets the browser's own prompt. A
+ * clean form (just loaded, saved or discarded) never asks. The browser's
+ * back and forward are still not guarded.
  *
  * When the list fails to load and there is none to show, the page keeps its
  * way back and shows a `LoadError` whose Retry calls `refetch()`; while that
@@ -85,7 +86,6 @@ function leaveDescription({ from, to }: LeaveQuestion): string {
  * list that loaded empty.
  */
 export function AvailabilityWorkspace() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const slug = searchParams.get("calendar");
   const calendars = useResource("calendars", () => api.calendars.list());
@@ -94,11 +94,17 @@ export function AvailabilityWorkspace() {
   // Kept after the dialog closes (only `open` turns false), so its text stays
   // put through the exit animation.
   const [leave, setLeave] = useState<LeaveQuestion | null>(null);
-  // Where focus goes when the question closes: the control that asked it.
+  // Where focus goes when the question closes: the Calendar select.
   // Explicit, because the Select's chosen option, the element focused when
   // the dialog opened, is gone by then.
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const backRef = useRef<HTMLAnchorElement>(null);
+
+  // Sorted by name by the API.
+  const list = calendars.data ?? [];
+  const selected = list.find((c) => c.slug === slug) ?? list[0];
+  // Every link out of the page, and a reload or a closed tab, asks first
+  // while the form is dirty.
+  useUnsavedChanges(dirty ? (selected?.name ?? null) : null);
 
   if (calendars.isLoading) return <AvailabilityWorkspaceSkeleton />;
 
@@ -118,10 +124,6 @@ export function AvailabilityWorkspace() {
     );
   }
 
-  // Sorted by name by the API.
-  const list = calendars.data ?? [];
-  const selected = list.find((c) => c.slug === slug) ?? list[0];
-
   if (!selected) {
     return (
       <EmptyState
@@ -135,14 +137,7 @@ export function AvailabilityWorkspace() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
-        <BackLink
-          ref={backRef}
-          onNavigate={(event) => {
-            if (!dirty) return;
-            event.preventDefault();
-            setLeave({ open: true, from: selected.name, to: { kind: "back" } });
-          }}
-        />
+        <BackLink />
         <Field orientation="horizontal" className="w-auto">
           <FieldLabel htmlFor={SELECT_ID}>Calendar</FieldLabel>
           <Select
@@ -159,11 +154,7 @@ export function AvailabilityWorkspace() {
               setLeave({
                 open: true,
                 from: selected.name,
-                to: {
-                  kind: "calendar",
-                  slug: value,
-                  name: target?.name ?? value,
-                },
+                to: { slug: value, name: target?.name ?? value },
               });
             }}
           >
@@ -193,21 +184,16 @@ export function AvailabilityWorkspace() {
         onDirtyChange={setDirty}
       />
       <ConfirmDialog
+        {...DISCARD_QUESTION}
         open={leave?.open ?? false}
         onOpenChange={(open) =>
           setLeave((prev) => (prev ? { ...prev, open } : prev))
         }
-        title="Discard unsaved changes?"
         description={leave ? leaveDescription(leave) : null}
-        cancelLabel="Keep editing"
-        confirmLabel="Discard changes"
-        confirmVariant="destructive"
-        finalFocus={leave?.to.kind === "back" ? backRef : triggerRef}
+        finalFocus={triggerRef}
         onConfirm={() => {
-          if (!leave) return;
           // The new calendar's form mounts clean (it is keyed on the id).
-          if (leave.to.kind === "calendar") showCalendar(leave.to.slug);
-          else router.push("/calendars");
+          if (leave) showCalendar(leave.to.slug);
         }}
       />
     </div>
@@ -216,22 +202,17 @@ export function AvailabilityWorkspace() {
 
 /**
  * The way back to the calendars page, shown above the editor or the error.
- * `onNavigate` is Next's own Link prop: it runs for a client-side navigation
- * only (not a Ctrl/Cmd-click into a new tab), and `preventDefault()` there
- * cancels it.
+ * While the editor has unsaved edits it asks first, through
+ * `UnsavedChangesProvider`'s question (`useLeaveGuard`, passed as Next's own
+ * Link `onNavigate`, which runs for a client-side navigation only, not a
+ * Ctrl/Cmd-click into a new tab).
  */
-function BackLink({
-  ref,
-  onNavigate,
-}: {
-  ref?: Ref<HTMLAnchorElement>;
-  onNavigate?: ComponentProps<typeof LinkButton>["onNavigate"];
-}) {
+function BackLink() {
+  const guardLeave = useLeaveGuard();
   return (
     <LinkButton
-      ref={ref}
       href="/calendars"
-      onNavigate={onNavigate}
+      onNavigate={guardLeave("/calendars")}
       variant="outline"
     >
       <ArrowLeftIcon data-icon="inline-start" />

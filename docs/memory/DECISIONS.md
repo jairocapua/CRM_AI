@@ -226,3 +226,10 @@
 - 2026-10-23 [P7-T32] button.test.ts 'lists every variant and size' stays, type-only; its expectTypeOf pair is the typecheck guard.
 - 2026-10-23 [P7-T32] The nativeButton message spells the directive form ('eslint-disable-next-line no-restricted-syntax -- why').
 - 2026-10-23 [P7-T32] link-buttons.spec.ts header still explains both causes (P7-T31 A7); only the ESLint block comment shrank to a pointer.
+- 2026-10-23 [P7-T33] BackLink calls useLeaveGuard() itself (onNavigate={guardLeave("/calendars")}); the load-error BackLink is guarded too (no-op there).
+- 2026-10-23 [P7-T33] Provider uses React 19 use(Context) / <Context value>; default context is a no-op.
+- 2026-10-23 [P7-T33] beforeunload listener calls preventDefault() and sets legacy returnValue = true; added only while a subject is registered.
+- 2026-10-23 [P7-T33] T-A excuses only the /settings/team?_rsc 404 via excuseTeamSettingsPrefetch; drop it once P9 adds the page.
+- 2026-10-23 [P7-T33] T-C counts non-prefetch /calendars?_rsc requests: 0 before Discard, 1 after, 2 after the second click.
+- 2026-10-23 [P7-T33] Extra mutants m3b, m5, m5b show each T-E control check fails on its own.
+- 2026-10-23 [P7-T33] beforeUnloadPrevented is read via expect.poll in T-B, T-D and T-E; its JSDoc says so.

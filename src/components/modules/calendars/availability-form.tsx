@@ -93,7 +93,10 @@ const TIME_INPUT_CLASSES =
  * `onDirtyChange` reports whether the form has unsaved changes, so the
  * parent can ask before a switch or a navigation drops them. It reports
  * false again on unmount, so a form that is gone never leaves its page
- * marked dirty.
+ * marked dirty. It must keep one identity across renders (a state setter,
+ * as the workspace's `setDirty` is): the effect that reports re-runs
+ * whenever the callback changes, reporting false and then the current
+ * value, so an inline arrow would report on every render.
  */
 export function AvailabilityForm({
   calendar,
