@@ -231,3 +231,5 @@
 - 2026-10-24 [P7-T43] Writing JS with backslash regex literals through a bash heredoc in the Bash tool lost the backslashes (\/ became /). Write such scripts with the Write tool instead.
 - 2026-10-24 [P7-T44] calendars.test.ts loads the API through seededWorld(), which resets modules: assert errors with toMatchObject({ name: 'ApiError' }), not toBeInstanceOf(ApiError).
 - 2026-10-24 [P7-T44] Year-0100 instants use LMT offsets (LA -7:52:58, Tokyo +9:18:59). Tokyo's 0100-01-01 day goes through freeSlots without throwing and returns no slots, so it is a 409.
+- 2026-10-24 [P7-T45] Mutant "store null" leaves a set-again test green (later values overwrite the nulls); only not.toHaveProperty / toStrictEqual assertions catch a stored null.
+- 2026-10-24 [P7-T45] Vitest can run a new test file against HEAD's src even if it imports a type HEAD lacks (esbuild strips type imports); typecheck/build would fail, so red runs use vitest only.

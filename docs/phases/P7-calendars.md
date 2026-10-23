@@ -1536,8 +1536,8 @@ hours land around midnight–08:00 local; that is expected.
     2026-12-01T00:00:00Z." (label: rule, as in calendars).
   - Decided: `undefined` is unchanged. A missing key means no date, and an
     explicit `undefined` on update clears the date (the deal form's empty
-    field). `null` and every non-string are a 422, because opportunities
-    have no "null removes a field" rule for any field yet (backlog).
+    field). Every non-string other than `null` is a 422. `null` was a 422
+    here too; since P7-T45 it removes the date (see P7-T45).
   - Decided: the instant's date part may be in any year 0000-9999. Local
     midnight of 0100-01-01 east of UTC falls in UTC year 0099, and the form
     accepts that day. book() keeps the 0100 minimum, because its slot engine
@@ -2083,9 +2083,67 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T45 — Opportunities: null removes optional fields (expectedCloseAt, ownerId, lostReason)
 - **Owner:** agent · **Depends:** —
+- **Skills:** `tdd`, `vitest`
 - **Scope:** JSON clients cannot clear these: undefined can't be sent and null is a 422. Adopt calendars' null-removes rule (P7-T22/T34) in one task; update the P7-T35 Decided bullet that says (backlog).
+  - Decided (D1): only `expectedCloseAt`, `ownerId` and `lostReason` can be
+    removed with `null`, on create() and update(). The key is deleted, never
+    stored as `null`. `closedAt`, `status` and the other fields stay with
+    P7-T46, which owns the allow-list and the type checks.
+  - Decided (D2): values for `ownerId` and `lostReason` other than `null`
+    stay unchecked, as before. Checking them is P7-T46's job.
+  - Decided (D3): a non-string `expectedCloseAt` other than `null` is still
+    the P7-T35 422, with the same message. `undefined` behaves as before.
+  - Decided (D4): the 404 check, then the expected-close 422, both still run
+    before `nowIso()`, and a refused call writes nothing, even when a `null`
+    sits beside the bad value.
+  - Decided (D5): a new exported type, `OpportunityPatch`, lets callers send
+    `null` for those three keys without a cast. `OpportunityDraft` is built
+    on it, update() takes it, and both are re-exported from the `@/lib/api`
+    barrel, like `CalendarPatch`. The stored `Opportunity` type stays
+    null-free: one helper is the only place the patch becomes a record.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. null removes each optional field on update(). On a deal holding
+        expectedCloseAt, ownerId and lostReason, `update(id, { [key]: null })`
+        resolves for each of the three keys. The returned and stored deals
+        have no such key (never null). The other two fields and name are
+        kept, and updatedAt is new.
+  - [ ] A2. null on create() stores no key. `create({ ...draft, [key]: null })`
+        resolves for each of the three keys, and the returned and stored
+        deals have no such key.
+  - [ ] A3. A JSON client can clear the fields. A body that went through
+        `JSON.stringify`/`JSON.parse` with all three keys set to null removes
+        all three in one update(), and leaves the rest of the record equal to
+        before except updatedAt. A later update with values sets them again:
+        the expected close is stored in its UTC spelling
+        ('2026-12-01T00:00+08:00' -> '2026-11-30T16:00:00.000Z'), and ownerId
+        and lostReason are stored as sent.
+  - [ ] A4. Everything else stays as it was. A non-null, non-instant expected
+        close is still the exact P7-T35 422 on create and update, and nothing
+        is written: the 8 remaining JUNK rows pass unchanged, only the null
+        row is removed. `{ expectedCloseAt: 'banana', ownerId: null }` is that
+        422, and the deal (ownerId and updatedAt included) and the timeline
+        are unchanged. `undefined` still clears the expected close, a missing
+        key still keeps it, and an unknown id is still a 404 first.
+  - [ ] A5. The types say what the code does. `OpportunityPatch` accepts null
+        only for expectedCloseAt, ownerId and lostReason, `OpportunityDraft`
+        is built on it, update() takes `OpportunityPatch`, and both types are
+        exported from `@/lib/api`. The new tests send null without a cast, the
+        deal form compiles unchanged, and the stored `Opportunity` type stays
+        null-free.
+  - [ ] A6. Every new test has been seen failing, and the docs match the
+        code. On HEAD's src, the expectedCloseAt null rows reject with a 422,
+        the ownerId/lostReason null rows fail at `not.toHaveProperty`, and the
+        JSON-nulls and set-again tests fail. The refused-patch test is a
+        positive control. Mutants each turn their own test red.
+        checkExpectedClose's JSDoc, create()/update()'s JSDoc and the create()
+        comment describe null removal. P7-T35's Decided bullet points to this
+        entry.
+  - [ ] A7. No seed, mock or UI change, and no regression. SEED_VERSION stays
+        4 and no faker call is touched. Nothing under src/lib/mock,
+        src/components or e2e changes. `npm run check` is green with Vitest
+        net +7. The full `npm run e2e` passes with the specs unchanged.
+        `npm ls @tanstack/react-table` prints 8.21.3.
+        `node scripts/progress.mjs --check` is clean.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T46 — Opportunities update(): allow-list the patch, 422 for non-object patch

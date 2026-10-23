@@ -23,20 +23,58 @@ const SEARCH_FIELDS = ["name", "lostReason"];
 const INVALID_EXPECTED_CLOSE =
   "Expected close: Not a valid date and time. Send an ISO date-time ending in Z or an offset, such as 2026-12-01T00:00:00Z.";
 
+/** The optional fields a caller removes by sending `null` (see below). */
+const REMOVABLE = ["expectedCloseAt", "ownerId", "lostReason"] as const;
+type RemovableKey = (typeof REMOVABLE)[number];
+
+/**
+ * What create() and update() accept: any `Opportunity` field, where `null`
+ * removes an optional one, the expected close, the owner or the lost reason
+ * (the key is deleted, never stored as null). A JSON client cannot send
+ * `undefined`, so `null` is how it clears one of these.
+ */
+export type OpportunityPatch = Omit<Partial<Opportunity>, RemovableKey> & {
+  [K in RemovableKey]?: Opportunity[K] | null;
+};
+
+/**
+ * `merged` (a stored or default record with a patch spread over it) without
+ * every removable key the patch set to `null`. The stored record and the
+ * defaults hold no nulls, so a null here always came from the patch. Every
+ * other key is copied as it is, an own `undefined` included.
+ *
+ * The one place a patch holding nulls becomes an `Opportunity`, and it needs
+ * no cast, so no `null` can reach the store.
+ */
+function withoutRemoved(
+  merged: Omit<Opportunity, RemovableKey> & OpportunityPatch,
+): Opportunity {
+  const { expectedCloseAt, ownerId, lostReason, ...rest } = merged;
+  const record: Opportunity = rest;
+  const removable = { expectedCloseAt, ownerId, lostReason };
+  for (const key of REMOVABLE) {
+    const value = removable[key];
+    if (value !== null && Object.hasOwn(merged, key)) record[key] = value;
+  }
+  return record;
+}
+
 /**
  * `value` as the expected close to store. It must name one instant by the
  * shared rule (`parseInstant` in `@/lib/dates`: an ISO date-time ending in
  * `Z` or an offset, on a real date, inside UTC years 0000-9999), and it is
  * stored in the UTC spelling `toISOString()` gives, as book() stores a start.
  *
- * `undefined` gives undefined: a missing key means no date, and an explicit
- * `undefined` on update clears it, which is what the deal form sends for an
- * empty field. Anything else, `null` and non-strings included, is a 422
- * `INVALID_OPPORTUNITY` with `field` "expectedCloseAt" and the
- * `INVALID_EXPECTED_CLOSE` message.
+ * - `undefined` gives undefined: a missing key means no date, and an explicit
+ *   `undefined` on update clears it, which is what the deal form sends for an
+ *   empty field.
+ * - `null` gives null: the caller removes the date (see `withoutRemoved`).
+ * - Anything else that is not one instant, non-strings included, is a 422
+ *   `INVALID_OPPORTUNITY` with `field` "expectedCloseAt" and the
+ *   `INVALID_EXPECTED_CLOSE` message.
  */
-function checkExpectedClose(value: unknown): ISODate | undefined {
-  if (value === undefined) return undefined;
+function checkExpectedClose(value: unknown): ISODate | null | undefined {
+  if (value === undefined || value === null) return value;
   const ms = typeof value === "string" ? parseInstant(value) : null;
   if (ms === null) {
     throw new ApiError(
@@ -95,14 +133,18 @@ export async function get(id: ID): Promise<Opportunity> {
   );
 }
 
-export type OpportunityDraft = Partial<Opportunity> &
+export type OpportunityDraft = OpportunityPatch &
   Pick<Opportunity, "name" | "contactId" | "pipelineId" | "stageId">;
 
 /**
- * Creates a deal and records it on the contact's timeline. The expected
- * close is checked first (see `checkExpectedClose`), before `nowIso()`, so a
- * refused draft is a 422 that writes nothing and does not move the demo
- * clock.
+ * Creates a deal and records it on the contact's timeline.
+ *
+ * - The expected close is checked first (see `checkExpectedClose`), before
+ *   `nowIso()`, so a refused draft is a 422 that writes nothing and does not
+ *   move the demo clock.
+ * - `null` for expectedCloseAt, ownerId or lostReason means the deal has no
+ *   such field: the key is left out, never stored as null. `undefined`
+ *   behaves as it did before.
  */
 export async function create(draft: OpportunityDraft): Promise<Opportunity> {
   const opportunity = await simulate(
@@ -112,7 +154,7 @@ export async function create(draft: OpportunityDraft): Promise<Opportunity> {
       const siblings = Object.values(db.getState().opportunities).filter(
         (o) => o.stageId === draft.stageId,
       );
-      const record: Opportunity = {
+      const record = withoutRemoved({
         id: newId("opp"),
         position: siblings.length,
         value: 0,
@@ -126,9 +168,10 @@ export async function create(draft: OpportunityDraft): Promise<Opportunity> {
         updatedAt: at,
         ...draft,
         // Only when the draft has the key, so a deal with no date gets no
-        // `expectedCloseAt` key at all.
+        // `expectedCloseAt` key at all. A draft with `null` (for this key,
+        // ownerId or lostReason) gets no key either: withoutRemoved drops it.
         ...(Object.hasOwn(draft, "expectedCloseAt") ? { expectedCloseAt } : {}),
-      };
+      });
       db.setState((s) => ({
         opportunities: { ...s.opportunities, [record.id]: record },
       }));
@@ -150,28 +193,32 @@ export async function create(draft: OpportunityDraft): Promise<Opportunity> {
 }
 
 /**
- * Writes `patch` over the deal. Errors, in this order, and nothing is written
- * on either: 404 `NOT_FOUND` for an unknown id, then 422
- * `INVALID_OPPORTUNITY` for an expected close that is not one instant (see
- * `checkExpectedClose`). The check runs before `nowIso()`, so a refused patch
- * does not move the demo clock either.
+ * Writes `patch` over the deal.
+ *
+ * - Errors, in this order, and nothing is written on either: 404 `NOT_FOUND`
+ *   for an unknown id, then 422 `INVALID_OPPORTUNITY` for an expected close
+ *   that is not one instant (see `checkExpectedClose`). The check runs before
+ *   `nowIso()`, so a refused patch does not move the demo clock either.
+ * - `null` removes expectedCloseAt, ownerId or lostReason: the key is
+ *   deleted, never stored as null. `undefined` behaves as it did before, and
+ *   a key the patch leaves out keeps its stored value.
  */
 export async function update(
   id: ID,
-  patch: Partial<Opportunity>,
+  patch: OpportunityPatch,
 ): Promise<Opportunity> {
   const opportunity = await simulate(() => {
     const prev = db.getState().opportunities[id] ?? notFound("Opportunity", id);
     const expectedCloseAt = checkExpectedClose(patch.expectedCloseAt);
-    const next: Opportunity = {
+    const next = withoutRemoved({
       ...prev,
       ...patch,
       // Only when the patch has the key: without it the stored close stays,
-      // and an explicit undefined clears it.
+      // an explicit undefined clears it and null removes it.
       ...(Object.hasOwn(patch, "expectedCloseAt") ? { expectedCloseAt } : {}),
       id,
       updatedAt: nowIso(),
-    };
+    });
     db.setState((s) => ({ opportunities: { ...s.opportunities, [id]: next } }));
     return next;
   });

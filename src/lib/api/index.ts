@@ -36,7 +36,11 @@ export type {
 } from "./analytics";
 export type { ActivityRow } from "./activities";
 export type { AppointmentRow, CalendarPatch } from "./calendars";
-export type { StageRollup } from "./opportunities";
+export type {
+  OpportunityDraft,
+  OpportunityPatch,
+  StageRollup,
+} from "./opportunities";
 export type {
   ChannelOption,
   ComposableChannel,

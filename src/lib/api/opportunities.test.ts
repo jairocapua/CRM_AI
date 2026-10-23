@@ -7,7 +7,11 @@ import { dateInputToIso, isoToDateInput } from "@/lib/validation/opportunity";
 // client-only `use-resource.ts`. Only the pure helpers come from this static
 // import: it loads before any fake clock, so the API calls below import the
 // module afresh inside `world()` (see `mock/testing.ts`).
-import { isDeadDeal, rollupByStage } from "./opportunities";
+import {
+  isDeadDeal,
+  rollupByStage,
+  type OpportunityPatch,
+} from "./opportunities";
 
 const AT = "2026-09-01T09:00:00.000Z";
 
@@ -160,13 +164,13 @@ const INVALID_CLOSE = {
     "Expected close: Not a valid date and time. Send an ISO date-time ending in Z or an offset, such as 2026-12-01T00:00:00Z.",
 };
 
-/** A fresh store holding only the fixture deal. */
-async function world() {
+/** A fresh store holding only `start` (the fixture deal by default). */
+async function world(start: Opportunity = FIXTURE) {
   await freshModules();
   const { db } = await import("@/lib/mock/db");
   const api = await import("./opportunities");
   const activities = await import("./activities");
-  db.setState({ opportunities: { [FIXTURE.id]: FIXTURE } });
+  db.setState({ opportunities: { [start.id]: start } });
   return { api, activities };
 }
 
@@ -210,7 +214,7 @@ const JUNK: { name: string; value: unknown }[] = [
   { name: "an impossible hour", value: "2026-12-01T24:00:00Z" },
   // A real date whose instant is in UTC year 10000.
   { name: "an instant past the year 9999", value: "9999-12-31T23:00:00-12:00" },
-  { name: "null", value: null },
+  // No `null` row: since P7-T45, null removes the date (see below).
   { name: "epoch milliseconds", value: 1764547200000 },
 ];
 
@@ -325,5 +329,126 @@ describe("the expected close when it is left out", () => {
     await expect(
       settle(w.api.update("opp_missing", { expectedCloseAt: "banana" })),
     ).rejects.toMatchObject({ status: 404, code: "NOT_FOUND" });
+  });
+});
+
+/**
+ * `null` removes an optional field (P7-T45), as it does on calendars: a JSON
+ * client cannot send `undefined`, so `null` is how it clears one. The key is
+ * deleted, never stored as null.
+ */
+
+/** A deal holding every field `null` can remove. */
+const FULL = deal({
+  ...FIXTURE,
+  ownerId: "usr_fixture",
+  status: "lost",
+  lostReason: "Went with a competitor",
+  closedAt: AT,
+});
+
+type Removable = "expectedCloseAt" | "ownerId" | "lostReason";
+const REMOVABLE: Removable[] = ["expectedCloseAt", "ownerId", "lostReason"];
+
+/**
+ * One typed patch per key, with no cast: the typecheck proves
+ * `OpportunityPatch` takes null for each of them.
+ */
+const NULL_PATCH: Record<Removable, OpportunityPatch> = {
+  expectedCloseAt: { expectedCloseAt: null },
+  ownerId: { ownerId: null },
+  lostReason: { lostReason: null },
+};
+
+describe("create() removes an optional field sent as null", () => {
+  it.each(REMOVABLE)("%s", async (key) => {
+    const w = await world();
+
+    const created = await settle(
+      w.api.create({ ...DRAFT, ...NULL_PATCH[key] }),
+    );
+
+    expect(created).not.toHaveProperty(key);
+    expect(await settle(w.api.get(created.id))).not.toHaveProperty(key);
+  });
+});
+
+describe("update() removes an optional field sent as null", () => {
+  it.each(REMOVABLE)("%s", async (key) => {
+    const w = await world(FULL);
+
+    const saved = await settle(w.api.update(FULL.id, NULL_PATCH[key]));
+
+    const stored = await settle(w.api.get(FULL.id));
+    for (const record of [saved, stored]) {
+      expect(record).not.toHaveProperty(key);
+      for (const other of REMOVABLE.filter((k) => k !== key)) {
+        expect(record[other]).toBe(FULL[other]);
+      }
+      expect(record.name).toBe(FULL.name);
+      expect(record.updatedAt).not.toBe(FULL.updatedAt);
+    }
+  });
+});
+
+describe("null from a JSON client", () => {
+  it("a JSON body of nulls removes all three in one update", async () => {
+    const w = await world(FULL);
+    const body: OpportunityPatch = JSON.parse(
+      JSON.stringify({
+        expectedCloseAt: null,
+        ownerId: null,
+        lostReason: null,
+      }),
+    );
+
+    await settle(w.api.update(FULL.id, body));
+
+    const stored = await settle(w.api.get(FULL.id));
+    const expected: Partial<Opportunity> = { ...FULL };
+    for (const key of REMOVABLE) delete expected[key];
+    // Strict: a key holding null or undefined would fail here too.
+    expect(stored).toStrictEqual({ ...expected, updatedAt: stored.updatedAt });
+    expect(stored.updatedAt).not.toBe(FULL.updatedAt);
+  });
+
+  it("a value sent after null sets the field again", async () => {
+    const w = await world(FULL);
+    await settle(
+      w.api.update(FULL.id, {
+        expectedCloseAt: null,
+        ownerId: null,
+        lostReason: null,
+      }),
+    );
+
+    await settle(
+      w.api.update(FULL.id, {
+        expectedCloseAt: "2026-12-01T00:00+08:00",
+        ownerId: "usr_other",
+        lostReason: "Budget",
+      }),
+    );
+
+    expect(await settle(w.api.get(FULL.id))).toMatchObject({
+      expectedCloseAt: "2026-11-30T16:00:00.000Z",
+      ownerId: "usr_other",
+      lostReason: "Budget",
+    });
+  });
+
+  it("a refused patch with a null beside it writes nothing", async () => {
+    const w = await world(FULL);
+    const before = await snapshot(w);
+
+    await expect(
+      settle(
+        w.api.update(FULL.id, { expectedCloseAt: "banana", ownerId: null }),
+      ),
+    ).rejects.toMatchObject(INVALID_CLOSE);
+
+    // ownerId kept and updatedAt unchanged: the null was not applied.
+    expect(await settle(w.api.get(FULL.id))).toEqual(FULL);
+    expect(await snapshot(w)).toEqual(before);
   });
 });

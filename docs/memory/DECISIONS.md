@@ -280,3 +280,7 @@
 - 2026-10-24 [P7-T44] parseStart and the string-date check (value.slice(0,10)) are removed: 0099-12-31T20:00-10:00 on Tokyo (0100-01-01 there) is now a 409, not a 422. Supersedes P7-T35 A5's parseStart wording; that done entry stays as written.
 - 2026-10-24 [P7-T44] Two messages, one code (INVALID_START): a non-instant string keeps today's message byte for byte; a day outside 0100-9999 in the calendar's zone gets a new message naming the day and zone.
 - 2026-10-24 [P7-T44] New tests match name: 'ApiError' rather than toBeInstanceOf, because seededWorld() calls vi.resetModules() and a static ApiError import is a different class.
+- 2026-10-24 [P7-T45] withoutRemoved takes only the merged record: stored records and create() defaults hold no nulls, so a merged null came from the patch. Destructuring rebuilds the record with no `as Opportunity` cast.
+- 2026-10-24 [P7-T45] withoutRemoved copies a removable key only when it is an own key of the merged record, so own undefined keys are kept; dropping undefined stays with P7-T46.
+- 2026-10-24 [P7-T45] Tests use a typed Record<Removable, OpportunityPatch> table, not computed { [key]: null } objects (a union computed key widens to an index signature and proves nothing).
+- 2026-10-24 [P7-T45] OpportunityDraft is now exported from the @/lib/api barrel next to OpportunityPatch.
