@@ -93,7 +93,6 @@ test("reopening before the closing popup unmounts starts a fresh form", async ({
 
   // The first open: every field changed, a time chosen.
   await chooseCalendar(page, dialog, CALENDAR);
-  const contactInput = dialog.getByRole("combobox", { name: "Contact" });
   await chooseContact(page, dialog, contact);
   await dialog.getByLabel("Day", { exact: true }).fill(OTHER_DAY);
   const [first] = await openTimes(dialog, OTHER_DAY, ZONE);
@@ -142,6 +141,7 @@ test("reopening before the closing popup unmounts starts a fresh form", async ({
       .getByRole("combobox", { name: "Calendar" })
       .locator('[data-slot="select-value"]'),
   ).toHaveText("Pick a calendar");
+  const contactInput = dialog.getByRole("combobox", { name: "Contact" });
   await expect(contactInput).toHaveValue("");
   await expect(dialog.getByLabel("Day", { exact: true })).toHaveValue(DAY);
   const group = timeGroup(dialog);

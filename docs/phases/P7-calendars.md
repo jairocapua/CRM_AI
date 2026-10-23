@@ -1621,12 +1621,69 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T36 — Booking dialog: error state and Retry when calendars.list fails
 - **Owner:** agent · **Depends:** —
+- **Skills:** `shadcn`, `playwright-cli`
 - **Scope:** booking-dialog.tsx:152 renders calendars.data ?? [], so a failed list leaves the Calendar select empty with no error or Retry; mirror P7-T24.
   - From the P7-T24 review: P7-T24's guard `calendars.error && calendars.data === undefined` (calendars-workspace.tsx) has no test that goes red when `&& calendars.data === undefined` is dropped, because nothing on /calendars refetches the list with it on screen. Prove the same guard here with a test that can go red (a failed refetch with the list loaded keeps the list), or say in this task's acceptance that it holds by construction, as use-resource keeps `data` on a failed refetch.
   - From the P7-T30 review, in calendars-load-errors.spec.ts: before installing the open-times aria-busy observer (~:540), assert `group` is not `aria-busy="true"`, so the "not busy now" comment is enforced (chooseContact and a radio click run between openTimes and the install), and give `__timesWentBusy` a clearer name. Add `exact: true` to the "Month view" region lookup (~:273), as `viewRegion` has. The calendars test's column scope (~:276) also narrows `watchRetry`'s skeleton watch; give `watchRetry` separate alert and skeleton scopes, or say why the column is enough.
   - In e2e/calendar-helpers.ts, fold failReads' new render()/summary()/integrityReport() examples into the paragraph above them, which already makes the "reads through `Object.values` throw too" point. In calendars-booking-dialog.spec.ts (~:96), move `contactInput` next to its use.
+  - Decided: the alert renders inside the Calendar Field under a disabled
+    Select; the field and its label stay.
+  - Decided: the refetch half of the guard holds by construction (see A4);
+    no test hook is added.
+  - Decided: `watchRetry(page, alertScope, skeletonScope = alertScope)`; the
+    calendars test reads its alert in the column and watches skeletons
+    across all of `main`.
+  - Decided: the aria-busy flag is renamed `__timesBusySpellEnded`.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. Booking dialog, calendar list fails: when `calendars.list` fails
+        as the dialog opens, the Calendar field shows a 'Could not load
+        calendars' alert with the error's message and a Retry button. The
+        Calendar select is disabled and reads 'Pick a calendar'; the Time
+        group says 'Pick a calendar to see open times.'; the dialog shows no
+        skeleton.
+  - [ ] A2. While a Retry is in flight the alert stays with its Retry busy
+        (aria-disabled, spinner without an accessible name) and no skeleton
+        appears. A Retry that fails again leaves the alert with Retry
+        enabled. Once the fault clears, Retry removes the alert, enables the
+        select, and Discovery Call can be chosen and lists its 16 open times
+        on 2026-09-09, the first at 12:00 AM.
+  - [ ] A3. At the default 1280x720 viewport, the Retry button covers neither
+        the alert's title nor its message, and the alert has no horizontal
+        overflow inside the dialog.
+  - [ ] A4. The error shows only when the read failed and there is no list
+        (LoadError's contract, DECISIONS P7-T13, P7-T18 and P7-T24). A
+        refetch that fails with the list loaded keeps the list. This holds by
+        construction, and no e2e can drive it: `useResource` keeps `data` for
+        the same query when a refetch fails, and within the dialog nothing
+        refetches "calendars" with the list on screen (only
+        `api.calendars.update` and settings' `invalidateAll` invalidate it,
+        neither can run while the modal is open, and Retry exists only when
+        no list is loaded). The mutant dropping `calendars.data ===
+        undefined` is type-clean and stays green; that is expected.
+  - [ ] A5. Every new assertion has been seen failing. On the current code
+        the new test fails (no alert). The type-clean mutants each turn it
+        red: dropping `retrying` (no busy state), and dropping the error term
+        from the select's `disabled` (select enabled). The calendars-column
+        test still goes red under a skeleton-while-`isRefreshing` mutant, and
+        under a skeleton in the view while the list refreshes, which the
+        wider skeleton scope now catches.
+  - [ ] A6. The P7-T30 review cleanups are in place: the aria-busy observer
+        is installed only after the group is checked not busy, and its flag
+        is `__timesBusySpellEnded`; the 'Month view' lookup has
+        `exact: true`; `watchRetry` takes separate alert and skeleton scopes;
+        failReads' examples are folded into one paragraph; `contactInput` is
+        declared next to its use.
+  - [ ] A7. Comments match the code. The `BookingDialog` doc comment
+        describes the calendar-list error, its Retry, the disabled select,
+        and that a failed refetch keeps the list (never refetched while the
+        dialog is open). The `calendars-load-errors.spec.ts` header lists the
+        booking dialog's calendar list. The watchRetry/RetryWatch docs name
+        both scopes.
+  - [ ] A8. No seed, API, mock or shared-component change and no regression.
+        `SEED_VERSION` stays 4; nothing under `src/lib/api`, `src/lib/mock`
+        or `src/components/common` changes; `npm run check` is green; the
+        full `npm run e2e` suite passes with the existing specs' assertions
+        unchanged except the A6 cleanups.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T37 — Contacts list: error state instead of false 'No contacts found' on list failure

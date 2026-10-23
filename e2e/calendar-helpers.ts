@@ -511,9 +511,10 @@ interface ReadFaultWindow {
  *
  * Limits: the wrapper lives in the current document only. It survives
  * client-side navigation but not `goto` or a reload, so install it after
- * `gotoApp` and trigger the read by a sidebar link, a step, a tab or a link.
- * If the API stops reading tables through `Object.values`, the error never
- * appears and the specs fail loudly; they cannot pass vacuously.
+ * `gotoApp` and trigger the read by a sidebar link, a step, a tab, a link or
+ * opening a dialog. If the API stops reading tables through `Object.values`,
+ * the error never appears and the specs fail loudly; they cannot pass
+ * vacuously.
  *
  * The fault is not limited to the read under test: anything that reads the
  * table through `Object.values` while it is on throws too. For appointments
@@ -521,14 +522,12 @@ interface ReadFaultWindow {
  * always reads every appointment to check the slot (the booking dialog then
  * shows "Could not book the appointment."), and `setStatus()` when it moves a
  * cancelled appointment to another status. `cancel()` and every other status
- * change do not read the table.
- *
- * Any other API call that reads the table through `Object.values` while the
- * fault is on throws too, for example template rendering (`render()` in
- * src/lib/api/templates.ts reads appointments and calendars), the
- * dashboard's analytics (`summary()` in analytics.ts reads appointments) and
- * the settings integrity check (`integrityReport()` in settings.ts reads
- * appointments). Restore reads before a step that reaches them.
+ * change do not read the table. Calls outside calendars.ts are caught too:
+ * template rendering (`render()` in src/lib/api/templates.ts reads
+ * appointments and calendars), the dashboard's analytics (`summary()` in
+ * analytics.ts reads appointments) and the settings integrity check
+ * (`integrityReport()` in settings.ts reads appointments). Restore reads
+ * before a step that reaches them.
  */
 export async function failReads(page: Page, table: FaultTable): Promise<void> {
   await page.evaluate(

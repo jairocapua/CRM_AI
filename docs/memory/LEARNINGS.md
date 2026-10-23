@@ -208,3 +208,6 @@
 - 2026-10-23 [P7-T35] setUTCFullYear(y, m, d) takes years 0-99 literally; Date.UTC, new Date(y,m,d) and new TZDate(...) map them to 1900-1999. Use setUTCFullYear on new Date(0) to probe real dates in 0000-9999.
 - 2026-10-23 [P7-T35] Local midnight 0100-01-01 in Asia/Singapore is 0099-12-31T17:04:35Z (LMT +6:55:25), so instant validation must not reuse isCalendarDay's 0100 minimum.
 - 2026-10-23 [P7-T35] V8 Date.parse reads 1-3 fraction digits and THH:mm without seconds; years outside 0000-9999 UTC give '+010000-…'/'-000001-…' toISOString spellings a 4-digit pattern cannot read back.
+- 2026-10-24 [P7-T36] Base UI Select given `disabled` satisfies Playwright toBeDisabled() on getByRole('combobox'); no data-disabled fallback needed.
+- 2026-10-24 [P7-T36] A skeleton-on-isRefreshing mutant that replaces the alert fails watchRetry at sawBusy, not sawSkeleton; to prove a wider skeleton scope matters, keep the alert and add a skeleton elsewhere.
+- 2026-10-24 [P7-T36] Python is not installed here (the alias opens the Store); use Edit or sed. A stray `cat > file` with no input in Bash blocks until timeout.

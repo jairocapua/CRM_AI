@@ -27,10 +27,12 @@ import { expect, NAVIGATION, test } from "./fixtures";
  * skeleton that stays forever or an empty state that is not true: on the
  * calendars page (the first load, a step to a new range, and its calendar
  * list), on a contact's page and its Appointments tab, on the availability
- * page and in the booking dialog's open times. A contact that does not exist
- * keeps its "Contact not found" state, not the load error. A re-read that
- * fails with a list already on screen keeps the list, with no error in its
- * place (the booking dialog's last test).
+ * page, and in the booking dialog's calendar list and open times. A contact
+ * that does not exist keeps its "Contact not found" state, not the load
+ * error. A re-read that fails with a list already on screen keeps the list,
+ * with no error in its place (the booking dialog's last test). The dialog's
+ * calendar list has no such test: nothing refetches it while the dialog is
+ * open, so that case holds by construction (DECISIONS P7-T36).
  *
  * The mock never fails a read, so `failReads` makes one fail from the page,
  * and `armContactFault` makes one contact's read fail where `failReads`
@@ -58,11 +60,11 @@ const CALENDAR_COLUMN = "[data-e2e-calendar-column]";
 
 interface RetryWatch {
   /**
-   * The Retry button of an alert inside `scope` was seen with
+   * The Retry button of an alert inside the alert scope was seen with
    * aria-disabled="true".
    */
   sawBusy: boolean;
-  /** A skeleton appeared inside `scope`. */
+  /** A skeleton appeared inside the skeleton scope. */
   sawSkeleton: boolean;
   /** While busy, something in the button still carried an aria-label. */
   sawLabelledSpinner: boolean;
@@ -70,37 +72,47 @@ interface RetryWatch {
 
 /**
  * Records, at every DOM change from now on, whether the Retry button of an
- * alert inside `scope` (a CSS selector) went busy and whether a skeleton
- * appeared inside `scope`. Returns a reader for the flags.
+ * alert inside `alertScope` went busy and whether a skeleton appeared inside
+ * `skeletonScope` (both CSS selectors; the skeleton scope defaults to the
+ * alert scope). The watch reads the first alert in its alert scope, so that
+ * scope must hold only the alert under test; the skeleton scope can be wider.
+ * Returns a reader for the flags.
  */
-async function watchRetry(page: Page, scope: string) {
-  await page.evaluate((scope) => {
-    const flags: RetryWatch = {
-      sawBusy: false,
-      sawSkeleton: false,
-      sawLabelledSpinner: false,
-    };
-    const check = () => {
-      if (document.querySelector(`${scope} [data-slot="skeleton"]`)) {
-        flags.sawSkeleton = true;
-      }
-      const button = document.querySelector(
-        `${scope} [data-slot="alert"] [data-slot="button"]`,
-      );
-      if (button?.getAttribute("aria-disabled") === "true") {
-        flags.sawBusy = true;
-        if (button.querySelector('[aria-label]:not([aria-hidden="true"])')) {
-          flags.sawLabelledSpinner = true;
+async function watchRetry(
+  page: Page,
+  alertScope: string,
+  skeletonScope: string = alertScope,
+) {
+  await page.evaluate(
+    ({ alertScope, skeletonScope }) => {
+      const flags: RetryWatch = {
+        sawBusy: false,
+        sawSkeleton: false,
+        sawLabelledSpinner: false,
+      };
+      const check = () => {
+        if (document.querySelector(`${skeletonScope} [data-slot="skeleton"]`)) {
+          flags.sawSkeleton = true;
         }
-      }
-    };
-    new MutationObserver(check).observe(document.body, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-    });
-    Object.assign(window, { __retryWatch: flags });
-  }, scope);
+        const button = document.querySelector(
+          `${alertScope} [data-slot="alert"] [data-slot="button"]`,
+        );
+        if (button?.getAttribute("aria-disabled") === "true") {
+          flags.sawBusy = true;
+          if (button.querySelector('[aria-label]:not([aria-hidden="true"])')) {
+            flags.sawLabelledSpinner = true;
+          }
+        }
+      };
+      new MutationObserver(check).observe(document.body, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+      });
+      Object.assign(window, { __retryWatch: flags });
+    },
+    { alertScope, skeletonScope },
+  );
   return () =>
     page.evaluate(
       () => (window as unknown as { __retryWatch: RetryWatch }).__retryWatch,
@@ -258,11 +270,12 @@ test("calendars page: a failed calendar list shows the error in its column and R
   );
 
   // A Retry that fails again: the button goes busy, and no skeleton appears.
-  // The watch reads the first alert in its scope, and the view beside the
-  // column can hold an alert of its own, so it watches the calendar column
-  // only. The column has no hook of its own, so the test tags it: LoadError's
-  // root is the Alert, whose parent is the column's `<div>`
-  // (calendars-workspace.tsx).
+  // The watch reads the first alert in its alert scope, and the view beside
+  // the column can hold an alert of its own, so it reads the alert inside the
+  // calendar column only. Skeletons are watched across all of main, so
+  // neither the column nor the view may blank during Retry. The column has no
+  // hook of its own, so the test tags it: LoadError's root is the Alert,
+  // whose parent is the column's `<div>` (calendars-workspace.tsx).
   await alert.evaluate((el) =>
     el.parentElement?.setAttribute("data-e2e-calendar-column", ""),
   );
@@ -270,10 +283,10 @@ test("calendars page: a failed calendar list shows the error in its column and R
   await expect(column).toHaveCount(1);
   // One alert in the column (a second would fail strict mode): this one.
   await expect(column.getByRole("alert")).toContainText(CALENDARS_ERROR);
-  await expect(column.getByRole("region", { name: "Month view" })).toHaveCount(
-    0,
-  );
-  const readWatch = await watchRetry(page, CALENDAR_COLUMN);
+  await expect(
+    column.getByRole("region", { name: "Month view", exact: true }),
+  ).toHaveCount(0);
+  const readWatch = await watchRetry(page, CALENDAR_COLUMN, "main");
   await retry.click();
   await expect.poll(async () => (await readWatch()).sawBusy).toBe(true);
   await expect(retry).toBeEnabled();
@@ -508,6 +521,82 @@ test("booking dialog: a failed open-times load shows the error and Retry lists t
   await expect(alert).toHaveCount(0);
 });
 
+test("booking dialog: a failed calendar list shows the error and Retry lists the calendars", async ({
+  page,
+  gotoApp,
+}) => {
+  const DAY = "2026-09-09";
+  await gotoApp(`/calendars?view=month&date=${DAY}`);
+  // The page's own calendar read has settled; the next one is the dialog's,
+  // which mounts its form when it opens.
+  await expectViewLoaded(page, "Month");
+  await failReads(page, "calendars");
+
+  await page.getByRole("button", { name: "Book", exact: true }).click();
+  const dialog = bookingDialog(page);
+  await expect(dialog.getByLabel("Day", { exact: true })).toHaveValue(DAY);
+
+  const alert = dialog.getByRole("alert").filter({ hasText: CALENDARS_ERROR });
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  // The field keeps its select, disabled and empty, and nothing else in the
+  // dialog pretends to load.
+  const select = dialog.getByRole("combobox", {
+    name: "Calendar",
+    exact: true,
+  });
+  await expect(select).toBeDisabled();
+  await expect(select.locator('[data-slot="select-value"]')).toHaveText(
+    "Pick a calendar",
+  );
+  await expect(
+    timeGroup(dialog).getByText("Pick a calendar to see open times.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(dialog.locator('[data-slot="skeleton"]')).toHaveCount(0);
+
+  // The alert fits the dialog: Retry covers neither the title nor the
+  // message, and the alert does not scroll sideways.
+  const retry = alert.getByRole("button", { name: "Retry", exact: true });
+  const [titleBox, messageBox, retryBox] = await Promise.all([
+    boxOf(alert.locator('[data-slot="alert-title"]')),
+    boxOf(alert.locator('[data-slot="alert-description"]')),
+    boxOf(retry),
+  ]);
+  expect(intersects(retryBox, titleBox), "Retry covers the title").toBe(false);
+  expect(intersects(retryBox, messageBox), "Retry covers the message").toBe(
+    false,
+  );
+  expect(await alert.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
+    true,
+  );
+
+  // A Retry that fails again: busy, never a skeleton, then enabled again.
+  const readWatch = await watchRetry(page, '[data-slot="dialog-content"]');
+  await retry.click();
+  await expect.poll(async () => (await readWatch()).sawBusy).toBe(true);
+  await expect(retry).toBeEnabled();
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  expect(await readWatch()).toEqual({
+    sawBusy: true,
+    sawSkeleton: false,
+    sawLabelledSpinner: false,
+  });
+
+  // The fault clears, and Retry lists the calendars: one can be chosen, and
+  // its open times load.
+  await restoreReads(page);
+  await retry.click();
+  await expect(alert).toHaveCount(0);
+  await expect(select).toBeEnabled();
+  await chooseCalendar(page, dialog, "Discovery Call");
+  const times = await openTimes(dialog, DAY, ZONE);
+  expect(times).toHaveLength(16);
+  expect(times[0]?.label).toBe("12:00 AM");
+});
+
 test("booking dialog: a failed re-read of the open times keeps the list on screen", async ({
   page,
   gotoApp,
@@ -537,14 +626,18 @@ test("booking dialog: a failed re-read of the open times keeps the list on scree
   // were read again, rather than passing because nothing happened. It reads
   // the mutation records, not the live attribute, so a spell that starts and
   // ends between two callbacks still counts: its last record's old value is
-  // "true". The group is not busy now (openTimes waited for that).
+  // "true". The group must not be busy when the observer goes in, or the end
+  // of a spell already running would count. openTimes waited for that, but
+  // chooseContact and the radio click ran since, so the check below enforces
+  // it.
   const group = timeGroup(dialog);
+  await expect(group).not.toHaveAttribute("aria-busy", "true");
   await group.evaluate((fieldset) => {
-    const w = window as unknown as { __timesWentBusy?: boolean };
-    w.__timesWentBusy = false;
+    const w = window as unknown as { __timesBusySpellEnded?: boolean };
+    w.__timesBusySpellEnded = false;
     new MutationObserver((records) => {
       if (records.some((record) => record.oldValue === "true")) {
-        w.__timesWentBusy = true;
+        w.__timesBusySpellEnded = true;
       }
     }).observe(fieldset, {
       attributes: true,
@@ -566,7 +659,8 @@ test("booking dialog: a failed re-read of the open times keeps the list on scree
     .poll(() =>
       page.evaluate(
         () =>
-          (window as unknown as { __timesWentBusy?: boolean }).__timesWentBusy,
+          (window as unknown as { __timesBusySpellEnded?: boolean })
+            .__timesBusySpellEnded,
       ),
     )
     .toBe(true);

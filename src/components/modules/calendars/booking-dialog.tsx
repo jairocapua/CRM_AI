@@ -74,6 +74,14 @@ import {
  * resets the form's values, its id, the open-times list and the contact
  * picker's own (uncontrolled) input text, which `form.reset` would not
  * clear. Closing keeps the key, so the closing popup shows the same form.
+ *
+ * When the calendar list fails to load, the Calendar field shows a LoadError
+ * with Retry under its select, which stays disabled until the list loads.
+ * While the retry runs, the alert stays with its button busy, never a
+ * skeleton. A refetch that fails with the list loaded keeps the list, with no
+ * error over it. Nothing in the dialog refetches it then: only a calendar
+ * update or a reset invalidates "calendars", and neither can run while the
+ * dialog is open.
  */
 export function BookingDialog({
   open,
@@ -148,7 +156,11 @@ function BookingForm({
   });
 
   const calendars = useResource("calendars", () => api.calendars.list());
-  // Only active calendars take bookings.
+  // The error shows only with no list loaded: a failed refetch keeps the
+  // list, because useResource holds the last good data for the same query.
+  const calendarsError = calendars.data === undefined ? calendars.error : null;
+  // Only active calendars take bookings. `?? []` covers the first load and a
+  // failed one.
   const active = (calendars.data ?? []).filter((c) => c.isActive);
   const calendar = active.find((c) => c.id === calendarId) ?? null;
   const dayIsValid = isCalendarDay(day);
@@ -229,7 +241,7 @@ function BookingForm({
               render={({ field }) => (
                 <Select
                   value={field.value || null}
-                  disabled={calendars.isLoading}
+                  disabled={calendars.isLoading || calendarsError !== null}
                   onValueChange={(value: string | null) => {
                     field.onChange(value ?? "");
                     clearTime();
@@ -263,6 +275,14 @@ function BookingForm({
                 </Select>
               )}
             />
+            {calendarsError ? (
+              <LoadError
+                title="Could not load calendars"
+                message={calendarsError.message}
+                onRetry={calendars.refetch}
+                retrying={calendars.isRefreshing}
+              />
+            ) : null}
             <FieldError errors={[errors.calendarId]} />
           </Field>
 

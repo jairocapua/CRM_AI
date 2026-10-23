@@ -245,3 +245,7 @@
 - 2026-10-23 [P7-T35] "Writes nothing" is checked through the API (list, activities.listForContact, get toEqual FIXTURE), per calendars.test.ts.
 - 2026-10-23 [P7-T35] "create() without an expected close stores none" asserts the key is absent from Object.keys, so an own undefined key fails it.
 - 2026-10-23 [P7-T35] parseInstant test constant is SPELLINGS so grep INSTANT hits only dates.ts; toParts doc names its 0100-minimum callers.
+- 2026-10-24 [P7-T36] Booking dialog calendar-list failure: the LoadError renders inside the Calendar Field under a disabled Select; field and label stay so FieldLabel htmlFor still points at a control.
+- 2026-10-24 [P7-T36] Guard `calendars.data === undefined ? calendars.error : null`; the failed-refetch-keeps-list half holds by construction (use-resource keeps prev.data; only calendars.update and settings invalidateAll invalidate "calendars", neither runs while the modal is open). No test hook; the drop-data-check mutant stays green by design.
+- 2026-10-24 [P7-T36] watchRetry(page, alertScope, skeletonScope = alertScope): the calendars-column test reads its alert in the column but watches skeletons across main (mutant f proves the wider scope).
+- 2026-10-24 [P7-T36] The aria-busy flag is __timesBusySpellEnded, and its observer installs only after `expect(group).not.toHaveAttribute('aria-busy','true')`.
