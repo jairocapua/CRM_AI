@@ -44,6 +44,14 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0,
+  // Each test gets 60s, twice Playwright's 30s default. Under load (every
+  // worker busy, the build just finished, another dev server running) a whole
+  // first batch of tests timed out at 30s while a plain rerun passed, and
+  // `waitForBoot` (e2e/fixtures.ts) alone may spend 20s of the budget waiting
+  // for the app to boot. The two long booking flows also call `test.slow()`.
+  // Expect's 5s timeout and the worker count are left at their defaults on
+  // purpose.
+  timeout: 60_000,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: BASE_URL,

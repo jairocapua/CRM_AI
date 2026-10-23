@@ -154,6 +154,9 @@ test("a booking appears in every view, on the timeline and the dashboard, and it
   page,
   gotoApp,
 }) => {
+  // About 7s alone on one worker, but about 28s in a full run on 16 workers,
+  // close to Playwright's old 30s default. slow() triples the 60s budget.
+  test.slow();
   await gotoApp(`/calendars?view=month&date=${DAY}`);
   await expectPosition(page, "Month", "September 2026");
   await expectViewLoaded(page, "Month");
@@ -315,6 +318,9 @@ test("a booked slot is not offered until its appointment is cancelled", async ({
   page,
   gotoApp,
 }) => {
+  // About 6s alone on one worker, but about 27s in a full run on 16 workers,
+  // close to Playwright's old 30s default. slow() triples the 60s budget.
+  test.slow();
   const LATER_DAY = "2026-09-10";
 
   await gotoApp(`/calendars?view=day&date=${LATER_DAY}`);

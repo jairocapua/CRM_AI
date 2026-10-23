@@ -433,6 +433,14 @@ interface ReadFaultWindow {
  * `gotoApp` and trigger the read by a sidebar link, a step, a tab or a link.
  * If the API stops reading tables through `Object.values`, the error never
  * appears and the specs fail loudly; they cannot pass vacuously.
+ *
+ * The fault is not limited to the read under test: anything that reads the
+ * table through `Object.values` while it is on throws too. For appointments
+ * that includes two mutations in src/lib/api/calendars.ts: `book()`, which
+ * always reads every appointment to check the slot (the booking dialog then
+ * shows "Could not book the appointment."), and `setStatus()` when it moves a
+ * cancelled appointment to another status. `cancel()` and every other status
+ * change do not read the table.
  */
 export async function failReads(page: Page, table: FaultTable): Promise<void> {
   await page.evaluate(
@@ -462,7 +470,15 @@ export async function failReads(page: Page, table: FaultTable): Promise<void> {
   );
 }
 
-/** Ends the fault `failReads` started: reads succeed again. */
+/**
+ * Ends the fault `failReads` started: reads succeed again.
+ *
+ * It only clears `__e2eReadFault`. The `Object.values` wrapper stays
+ * installed in this document and passes every call through. That is safe
+ * because each test gets a fresh page, and a tab opened with
+ * `context.newPage()` is a separate document the wrapper never reaches (it
+ * would need its own `failReads`).
+ */
 export async function restoreReads(page: Page): Promise<void> {
   await page.evaluate(() => {
     (window as unknown as ReadFaultWindow).__e2eReadFault = null;

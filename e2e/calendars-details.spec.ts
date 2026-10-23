@@ -532,16 +532,21 @@ test.describe("viewed from Asia/Kolkata", () => {
     await expectViewLoaded(page, "Month");
     const rows = await readSeededAppointments(page);
 
-    // The seed's first appointment that crosses local midnight in Kolkata.
+    // The seed's first appointment that crosses local midnight in Kolkata but
+    // not in its calendar's zone. Not vacuous: in the calendar's zone it
+    // starts and ends on one day, so "Calendar time" must show no end date.
+    // Both conditions are in the find, so a reseed cannot pick a row that
+    // fails the second; when no row passes both, the test fails loudly.
     const target = byStart(rows).find(
-      (row) => localDayIn(KOLKATA, row.startAt) < lastDayIn(KOLKATA, row),
+      (row) =>
+        localDayIn(KOLKATA, row.startAt) < lastDayIn(KOLKATA, row) &&
+        localDayIn(row.timezone, row.startAt) === lastDayIn(row.timezone, row),
     );
-    if (!target) throw new Error("No appointment crosses midnight in Kolkata");
-    // Not vacuous: in the calendar's zone it starts and ends on one day, so
-    // "Calendar time" must show no end date.
-    expect(lastDayIn(target.timezone, target)).toBe(
-      localDayIn(target.timezone, target.startAt),
-    );
+    if (!target) {
+      throw new Error(
+        "No appointment crosses midnight in Kolkata but not in its calendar's zone",
+      );
+    }
 
     // Opened from its part after midnight, at the top of the next day's
     // column, rather than from the part before it at the foot of the start

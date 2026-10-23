@@ -202,7 +202,7 @@ describe("zonedTimes", () => {
 
   describe("an appointment that crosses midnight", () => {
     // 23:45 on 7 September to 00:30 on the 8th in Kolkata (GMT+5:30), but
-    // 11:15 AM to noon on the 7th in Los Angeles: the seed's own case.
+    // 11:15 AM to noon on the 7th in Los Angeles: a case like the seed's.
     const KOLKATA_START = "2026-09-07T18:15:00.000Z";
     const KOLKATA_END = "2026-09-07T19:00:00.000Z";
 

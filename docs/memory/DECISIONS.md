@@ -171,3 +171,7 @@
 - 2026-10-23 [P7-T20] Guard scope: only the Calendar select and Back to calendars link are guarded. Sidebar links, back/forward, reload and tab close still drop edits silently (documented in AvailabilityWorkspace).
 - 2026-10-23 [P7-T20] The leave question stores source and target calendar names at open, so the dialog text does not change during its exit animation.
 - 2026-10-23 [P7-T20] Shared ConfirmDialog (components/common): ReactNode title/description, cancelLabel, confirmLabel, confirmVariant, onConfirm, optional finalFocus. Confirm calls onConfirm() then onOpenChange(false). Synchronous for now.
+- 2026-10-23 [P7-T21] The exit-check booking flow stays one test with test.slow() rather than a split: each test starts from a fresh seed, so every piece would have to book again.
+- 2026-10-23 [P7-T21] Only the per-test timeout changed (60s suite-wide, 180s on the two slow-marked flows); expect's 5s timeout and worker count stay default, owned by P7-T27.
+- 2026-10-23 [P7-T21] The other two calendars-booking tests are not marked slow (rule: >20s alone on 1 worker; they took 4.2s/3.5s). :259 hit 24.5s under load, within the 60s budget.
+- 2026-10-23 [P7-T21] failReads' comment states the narrow truth: setStatus() reads the appointments table only when un-cancelling; cancel() never does.

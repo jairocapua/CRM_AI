@@ -675,12 +675,51 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T21 — Raise timeout on long calendars-booking e2e flows
 - **Owner:** agent · **Depends:** —
+- **Skills:** `playwright-cli`
 - **Scope:** calendars-booking.spec.ts:152 (~30s) and :313 hit the 30s default under load; add test.slow()/setTimeout(60_000) or split the :152 flow.
   - From the P7-T13 review: the first full e2e run in P7-T13 timed out 15 tests on a busy machine (a rerun passed), so check the suite-wide timeout too, not only these two flows.
   - Also from P7-T13, two comments in e2e/calendar-helpers.ts: in failReads' Limits paragraph, say that mutations reading the same table (book(), setStatus() call Object.values(state.appointments)) also throw while the fault is on; at restoreReads, say it only clears the flag and leaves the wrapper installed, which is fine because each test gets a fresh page (not shared across context.newPage() tabs).
   - From the P7-T15 review: in e2e/calendars-details.spec.ts (the Asia/Kolkata describe), put both conditions in the `find` (crosses midnight in Kolkata AND does not cross in row.timezone), keeping the throw when nothing matches, so a reseed cannot pick a row that fails the second check. In appointment-display.test.ts, reword "the seed's own case" above KOLKATA_START to "a case like the seed's" (the seed's crossing row is 2026-10-02 18:00Z, not that instant).
+  - The two flows, by title (the line numbers above have moved): "a booking
+    appears in every view, on the timeline and the dashboard, and its slot is
+    no longer offered" and "a booked slot is not offered until its
+    appointment is cancelled".
+  - Decided: the exit-check flow stays one test and gets `test.slow()`
+    instead of a split. Every test starts from a fresh seed, so each piece of
+    a split would have to book again.
+  - Decided: expect's 5s timeout (`toHaveURL` included) and the worker count
+    stay at Playwright's defaults here. P7-T27 owns both.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. The suite-wide test timeout is 60s. `playwright.config.ts` sets a
+        top-level `timeout: 60_000`, with a comment giving the reason (the
+        load evidence and `waitForBoot`'s 20s boot wait). Expect's 5s
+        timeout, `workers`, `retries` and `fullyParallel` are unchanged.
+  - [ ] A2. The two long booking flows are marked slow and stay one test
+        each. Both call `test.slow()` as their first statement, each with a
+        comment giving its measured duration. The other tests in
+        `calendars-booking.spec.ts` are unmarked (each takes under 5s alone on
+        one worker). No test is split and no assertion changes.
+  - [ ] A3. `failReads`' Limits paragraph says that mutations reading the
+        same table also throw while the fault is on: `book()` always, and
+        `setStatus()` only when it moves a cancelled appointment to another
+        status. It does not claim `setStatus()` or `cancel()` always read the
+        table.
+  - [ ] A4. `restoreReads`' doc says it only clears the flag and leaves the
+        `Object.values` wrapper installed, passing every call through. That is
+        safe because each test gets a fresh page, and the wrapper is per
+        document, so it never reaches a `context.newPage()` tab.
+  - [ ] A5. The Kolkata test's `find` holds both conditions: the row crosses
+        midnight in Kolkata and does not cross it in `row.timezone`. The
+        throw is kept when nothing matches, and the separate post-find
+        `expect` is gone. The test passes, and a type-clean mutant (`===` to
+        `!==` on the second condition) fails it at the throw.
+  - [ ] A6. `appointment-display.test.ts`'s comment above `KOLKATA_START`
+        reads "a case like the seed's", and the test values are unchanged.
+  - [ ] A7. No product, seed, API or mock change and no regression. Nothing
+        under `src/` changes except that one test comment, `SEED_VERSION`
+        stays 4, `npm run check` is green, and the full `npm run e2e` suite
+        passes with the same test count and the existing assertions
+        unchanged.
 - **Refs:** added by `progress.mjs add` on 2026-10-22
 
 ### P7-T22 — Calendar update: reject explicit undefined keys and use a plain-language 422 message

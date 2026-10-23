@@ -142,3 +142,6 @@
 - 2026-10-23 [P7-T20] Base UI Switch (nativeButton off): `ref` lands on the role="switch" span (useRef<HTMLSpanElement>); `id` goes to the hidden input, so focus via the ref.
 - 2026-10-23 [P7-T20] While a Base UI alert dialog is open, page-level queries need { includeHidden: true }. A 'no dialog' check only means something after a URL change only the unguarded path makes.
 - 2026-10-23 [P7-T20] calendars-availability.spec.ts:69 (default-5s toHaveURL after clicking Availability) failed 2 of 3 full e2e runs under load: the most frequent P7-T27 flake site.
+- 2026-10-23 [P7-T21] calendars-booking flows take ~6-7s alone on 1 worker but 20-28s in a full 16-worker e2e run: length is machine load, not the flows. Alone: :153 7.1s, :259 4.2s, :317 6.4s, :387 3.5s.
+- 2026-10-23 [P7-T21] Playwright JSON reporter records test.slow() as annotation type 'slow' and the tripled test.timeout (180000 on a 60s base). `npx playwright test --list --reporter=json` gives config.projects[0].timeout without starting the webServer.
+- 2026-10-23 [P7-T21] `node script.cjs arg`: the first argument is process.argv[2]; argv[1] is the script path.
