@@ -1225,6 +1225,8 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** booking-dialog.tsx:152 renders calendars.data ?? [], so a failed list leaves the Calendar select empty with no error or Retry; mirror P7-T24.
   - From the P7-T24 review: P7-T24's guard `calendars.error && calendars.data === undefined` (calendars-workspace.tsx) has no test that goes red when `&& calendars.data === undefined` is dropped, because nothing on /calendars refetches the list with it on screen. Prove the same guard here with a test that can go red (a failed refetch with the list loaded keeps the list), or say in this task's acceptance that it holds by construction, as use-resource keeps `data` on a failed refetch.
+  - From the P7-T30 review, in calendars-load-errors.spec.ts: before installing the open-times aria-busy observer (~:540), assert `group` is not `aria-busy="true"`, so the "not busy now" comment is enforced (chooseContact and a radio click run between openTimes and the install), and give `__timesWentBusy` a clearer name. Add `exact: true` to the "Month view" region lookup (~:273), as `viewRegion` has. The calendars test's column scope (~:276) also narrows `watchRetry`'s skeleton watch; give `watchRetry` separate alert and skeleton scopes, or say why the column is enough.
+  - In e2e/calendar-helpers.ts, fold failReads' new render()/summary()/integrityReport() examples into the paragraph above them, which already makes the "reads through `Object.values` throw too" point. In calendars-booking-dialog.spec.ts (~:96), move `contactInput` next to its use.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
@@ -1263,6 +1265,7 @@ hours land around midnight–08:00 local; that is expected.
 - **Scope:** Edit path still uses each refetch's object; after fetch() swap an invalidation rewrites typed text. Keep first fetched copy per id (contact-picker-value.ts) + unit test.
   - From the P7-T29 review: the held pick (and a held fetched copy) keeps a contact's old name if it is renamed elsewhere while the picker stays mounted. Every consumer unmounts it when its dialog or sheet closes today, so say that in `pickerValue`'s doc rather than adding a refresh.
   - In e2e/calendar-helpers.ts `pauseTimers` (moved there in P7-T30): `pauseAt(now + 1s)` throws "Cannot fast-forward to the past" if more than 1s of page time passes before it runs. Widen the margin to a few seconds, or state the limit in the helper's comment (every timer due inside the margin fires at once on pause).
+  - From the P7-T30 review: contact-picker.spec.ts keeps its own `chooseByName(page, input, contact)`, the same fill and exact-name click as `chooseContact`. Let `chooseContact` take the input locator (or add an input-level variant) so both share one helper.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
