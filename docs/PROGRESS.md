@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 44/74 tasks done (59%) · **Current phase:** P7 · **Next agent task:** P7-T43 · **Awaiting review:** P7-T42 · **Blocked:** none · **Waiting on you:** P7-H4
+**Overall:** 45/74 tasks done (61%) · **Current phase:** P7 · **Next agent task:** P7-T43 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** P7-H4
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 44/53 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 45/53 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -62,7 +62,7 @@ Status: active · Progress: 44/53 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T39 | Name the remaining TagPickers and the contacts search box | agent | done | — | 1f06927 | 2026-10-24 | TagPicker aria-label prop; toolbar/bulk/deal TagPickers + contacts search named; 3 new e2e; P7-T28 doc fixes |
 | P7-T40 | ContactPicker: hold fetched contact for outside-set values | agent | done | — | 6b06212 | 2026-10-24 | useHeldValue hook holds first fetched copy per id; 4 hook tests (mutant-checked); shared e2e pick helpers; check+e2e green |
 | P7-T41 | Document the Base UI trigger exception in LinkButton JSDoc | agent | done | — | 3f4f697 | 2026-10-24 | LinkButton JSDoc names both nativeButton exceptions; lint-message clauses asserted once each; spec padding cause |
-| P7-T42 | Team settings link: stop 404 prefetch until P9 | agent | review | — |  | 2026-10-24 | Placeholder /settings/team page; editor e2e prefetch excuse removed; smoke test proves menu link opens cleanly |
+| P7-T42 | Team settings link: stop 404 prefetch until P9 | agent | done | — | f1e0eb7 | 2026-10-24 | Placeholder /settings/team page; editor e2e prefetch excuse removed; smoke test proves menu link opens cleanly |
 | P7-T43 | Unsaved-changes guard: stable guardLeave, menu focus return, mobile Sheet | agent | todo | — |  |  |  |
 | P7-T44 | book(): check the start's day in the calendar zone (422 INVALID_START, not RangeError) | agent | todo | — |  |  |  |
 | P7-T45 | Opportunities: null removes optional fields (expectedCloseAt, ownerId, lostReason) | agent | todo | — |  |  |  |
