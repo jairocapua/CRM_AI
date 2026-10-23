@@ -5,7 +5,7 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T25 in review.
+- **Status:** P7-T25 approved (Autopilot review, 2026-10-23) with `progress.mjs set`, so no task is running; P7-T26 is next. The session stopped early on a usage limit.
 
 ## Last change
 - contact-detail.tsx: non-404 load failure shows LoadError ('Could not load the contact', Retry) instead of an endless skeleton; 404 branch stays first.
@@ -14,16 +14,13 @@
 - New tasks: P7-T37 (contacts list error state), P7-T38 (useResource refetch unit test).
 
 ## Next up
-- **Agent:** P7-T26 (once P7-T25 is approved).
+- **Agent:** P7-T26 Past appointments: only Showed/No-show; Cancel and Confirmed for future only (P7-H3).
 
 ## Waiting on you
-- Review of P7-T25.
+- None.
 
 ## Open suggestions (non-blocking review notes)
-- Rename calendars-load-errors.spec.ts / move contact fault helpers out of calendar-helpers.ts (not calendar-specific).
-- P7-T27 should also cover the two new cross-route toHaveURL checks in the contact-page test.
-- armContactFault's `set` accessor is effectively unused (writes copy the object): note it as defensive or remove.
-- Not checked in the Browser pane; only the 404 state is checkable by hand there.
+- Folded: P7-T27 covers the contact test's two toHaveURL checks; a docs/BACKLOG.md row covers moving the contact load-error tests/helpers and armContactFault's unused `set` accessor.
 
 ## Blockers
 - None.
