@@ -5,27 +5,22 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T30 in review.
+- **Status:** P7-T25–T30 approved (Autopilot review, 2026-10-23); P7-T30 was approved with `progress.mjs set`, so no task is running. P7-T31 is next. Session handed off to a fresh one after 6 approvals, per CLAUDE.md.
 
 ## Last change
-- One shared `chooseContact` (exact-name, no `.first()`), plus `pauseTimers` and `uniquelyNamedContact`, now in e2e/calendar-helpers.ts; three local copies removed.
-- Folded review notes: column-scoped Retry watch (test-only `data-e2e-calendar-column` tag), aria-busy observer reads `oldValue`, doc fixes, `NAVIGATION` frozen and typed.
-- Gate green (539 Vitest); e2e 103 passed (+1 NAVIGATION self-test). No src change.
+- P7-T30: one shared `chooseContact` (exact-name, no `.first()`), plus `pauseTimers` and `uniquelyNamedContact`, in e2e/calendar-helpers.ts; `NAVIGATION` frozen and typed, with a self-test. e2e 103 passed, 539 Vitest, no src change.
+- P7-T25–T29 in brief: contact page LoadError + Retry; P7-H3 past-appointment rule (API 422 `PAST_APPOINTMENT` + dialog); shared 15s `NAVIGATION` for cross-route e2e waits; named Select triggers and the contact sheet's Tags picker; ContactPicker keeps its pick at once (`pickerValue`).
+- Tasks the runs added: P7-T37 (contacts list error state), P7-T38 (useResource refetch unit test), P7-T39 (remaining TagPickers and contacts search names), P7-T40 (ContactPicker: hold the fetched contact for outside-set values), owner task P7-H4.
+- Review notes from P7-T25–T30 are folded into P7-T36, P7-T39, P7-T40 and docs/BACKLOG.md.
 
 ## Next up
-- **Agent:** P7-T31 LinkButton helper and nativeButton lint rule (once P7-T30 is approved).
+- **Agent:** P7-T31 LinkButton helper and nativeButton lint rule.
 
 ## Waiting on you
-- Review of P7-T30.
-- P7-H4: decide whether an ended, already-Cancelled appointment should stay frozen.
+- P7-H4: should an ended appointment that is already Cancelled stay frozen? Today it can still be marked Showed or No Show (the P7-H3 rule names target statuses only). Not blocking.
 
 ## Open suggestions (non-blocking review notes)
-- load-errors:276 column scope also narrows the skeleton watch; give watchRetry separate alert/skeleton scopes.
-- failReads doc: merge the duplicated "Object.values ... throws too" paragraphs.
-- load-errors:540 assert group not aria-busy before installing the observer; rename `__timesWentBusy`.
-- load-errors:273 Month view region lacks `exact: true`; booking-dialog:96 move `contactInput` near its use.
-- contact-picker `chooseByName` could reuse `chooseContact` if it took an input locator.
-- Planner said four keeps-typed tests; there are three (all pass).
+- All folded into later tasks' Scope sub-bullets or the backlog.
 
 ## Blockers
 - None.
