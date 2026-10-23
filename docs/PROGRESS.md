@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 21/56 tasks done (38%) · **Current phase:** P7 · **Next agent task:** P7-T20 · **Awaiting review:** P7-T19 · **Blocked:** P7-T32 · **Waiting on you:** none
+**Overall:** 21/56 tasks done (38%) · **Current phase:** P7 · **Next agent task:** P7-T20 · **Awaiting review:** P7-T19 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -51,7 +51,7 @@ Status: active · Progress: 21/35 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T29 | Fix ContactPicker selection race after a pick | agent | todo | — |  |  |  |
 | P7-T30 | Shared chooseContact e2e helper | agent | todo | — |  |  |  |
 | P7-T31 | LinkButton helper and nativeButton lint rule | agent | todo | — |  |  |  |
-| P7-T32 | LinkButton helper and nativeButton lint rule | agent | blocked | — |  | 2026-10-23 | Duplicate of P7-T31 (added twice by recorder); remove from the phase file |
+| P7-T32 | Link-button icon padding and link-buttons spec scoping | agent | todo | P7-T31 |  | 2026-10-23 | Repurposed from a duplicate of P7-T31 (P7-T19 review) |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md

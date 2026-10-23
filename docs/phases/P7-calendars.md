@@ -703,16 +703,20 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T31 — LinkButton helper and nativeButton lint rule
 - **Owner:** agent · **Depends:** —
 - **Scope:** Export a cn(buttonVariants()) link helper from ui/button.tsx; no-restricted-syntax for nativeButton={false} in modules; fix pagination.tsx PaginationLink
+  - From the P7-T19 review: move the six P7-T19 links onto the helper, so no caller can drop `cn()` again.
+  - Add a CLAUDE.md "Non-obvious constraints" line: a navigating control is the link helper (or `<Link className={cn(buttonVariants(...))}>`), never `Button render={<Link/>} nativeButton={false}` (role="button") and never a bare `buttonVariants()` string (the outline border is lost in light mode). The shadcn skill recommends `nativeButton={false}`, so agents will keep reaching for it.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
-### P7-T32 — LinkButton helper and nativeButton lint rule
-- **Owner:** agent · **Depends:** —
-- **Scope:** Export a cn(buttonVariants()) link helper from ui/button.tsx; lint ban nativeButton={false} in modules; fix pagination.tsx PaginationLink
+### P7-T32 — Link-button icon padding and link-buttons spec scoping
+- **Owner:** agent · **Depends:** P7-T31
+- **Scope:** From the P7-T19 review (this id was first added by mistake as a duplicate of P7-T31, and was repurposed rather than deleted, since the tracker cannot delete rows).
+  - Give the View contact (contact-panel.tsx) and Open board (pipeline-card.tsx) icons `data-icon="inline-start"` / `"inline-end"`, as the calendars links have, so the size's icon padding applies; update the A2 look values in e2e/link-buttons.spec.ts if they change.
+  - In e2e/link-buttons.spec.ts (~:163), scope the thread-header contact link lookup to the thread header instead of `main ... .first()`, so it does not depend on DOM order.
 - **Acceptance:**
   - [ ] (define before starting)
-- **Refs:** added by `progress.mjs add` on 2026-10-23
+- **Refs:** added by `progress.mjs add` on 2026-10-23; repurposed in the P7-T19 review
 
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
