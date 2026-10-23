@@ -1,5 +1,5 @@
 import type { Activity, Appointment, Calendar, ID, ISODate } from "@/types";
-import { isCalendarDay } from "@/lib/dates";
+import { isCalendarDay, parseInstant } from "@/lib/dates";
 import { db } from "@/lib/mock/db";
 import { newId } from "@/lib/mock/ids";
 import {
@@ -296,24 +296,15 @@ export type AppointmentDraft = Pick<
   >;
 
 /**
- * An ISO date-time that names one instant on its own: "YYYY-MM-DD", a 24-hour
- * time (seconds and up to three fraction digits optional), and `Z` or a
- * `±HH:mm` offset. Whether the date is real is checked separately.
- */
-const INSTANT =
-  /^(\d{4}-\d{2}-\d{2})T([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,3})?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
-
-/**
- * `value` as epoch milliseconds, or null unless it matches `INSTANT`. Without
- * a zone `Date.parse` reads a date-time in the runtime's own zone, so the
- * same string would be a different instant on every machine; it also reads
- * 2026-02-30 as 2 March.
+ * `value` as epoch milliseconds, or null unless it names one instant by the
+ * shared rule (`parseInstant`: an ISO date-time ending in `Z` or an offset,
+ * on a real date, inside UTC years 0000-9999) and its date part is a day in
+ * 0100-9999. The second check is book()'s own: the slot engine reads the
+ * booking's day with `parseCalendarDay`, which takes only 0100-9999.
  */
 function parseStart(value: string): number | null {
-  const match = INSTANT.exec(value);
-  if (!match || !isCalendarDay(match[1]!)) return null;
-  const ms = Date.parse(value);
-  return Number.isNaN(ms) ? null : ms;
+  const ms = parseInstant(value);
+  return ms !== null && isCalendarDay(value.slice(0, 10)) ? ms : null;
 }
 
 /** A 409 unless `calendar` is active: an inactive one neither offers nor books. */

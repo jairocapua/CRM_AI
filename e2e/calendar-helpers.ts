@@ -3,8 +3,8 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "./fixtures";
 
 /**
- * Shared helpers for the calendars specs and contact-picker.spec.ts. Not a
- * spec itself: Playwright only collects `*.spec.ts`.
+ * Shared helpers for the calendars specs, contact-picker.spec.ts and
+ * deal-form.spec.ts. Not a spec itself: Playwright only collects `*.spec.ts`.
  */
 
 export type ViewName = "Month" | "Week" | "Day";
@@ -107,6 +107,10 @@ interface PersistedDb {
       }
     >;
     activities: Record<string, { contactId?: string; summary: string }>;
+    opportunities: Record<
+      string,
+      { name: string; status: string; expectedCloseAt?: string }
+    >;
   };
 }
 
@@ -197,6 +201,27 @@ export async function readContacts(page: Page): Promise<SeededContact[]> {
     jobTitle: contact.jobTitle ?? null,
   }));
   expect(rows.length, "the seed has contacts").toBeGreaterThan(0);
+  return rows;
+}
+
+export interface SeededDeal {
+  id: string;
+  name: string;
+  status: string;
+  /** As stored: a UTC ISO instant, or null when the deal has no date. */
+  expectedCloseAt: string | null;
+}
+
+/** Every deal in the persisted database, in the store's own order. */
+export async function readDeals(page: Page): Promise<SeededDeal[]> {
+  const { opportunities } = await readPersistedDb(page);
+  const rows = Object.entries(opportunities).map(([id, deal]) => ({
+    id,
+    name: deal.name,
+    status: deal.status,
+    expectedCloseAt: deal.expectedCloseAt ?? null,
+  }));
+  expect(rows.length, "the seed has deals").toBeGreaterThan(0);
   return rows;
 }
 

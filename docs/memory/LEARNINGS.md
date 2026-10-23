@@ -204,3 +204,7 @@
 - 2026-10-23 [P7-T34] A zod per-parse error map (safeParse(x, { error })) also replaces default messages of checks without their own text, e.g. z.string().min(1).
 - 2026-10-23 [P7-T34] Prove new tests red on HEAD without stash/reset: copy files to scratchpad, write git show HEAD:<path> over them, run vitest, copy back, confirm with cmp.
 - 2026-10-23 [P7-T34] Mutants that drop a schema key break Record<SettingKey,…>/Pick<Calendar,SettingKey>; run them under vitest only.
+- 2026-10-23 [P7-T35] This machine's zone is Asia/Singapore, so an e2e relying on timezoneId 'Asia/Singapore' still passes with it removed; prove zone dependence by setting 'UTC'.
+- 2026-10-23 [P7-T35] setUTCFullYear(y, m, d) takes years 0-99 literally; Date.UTC, new Date(y,m,d) and new TZDate(...) map them to 1900-1999. Use setUTCFullYear on new Date(0) to probe real dates in 0000-9999.
+- 2026-10-23 [P7-T35] Local midnight 0100-01-01 in Asia/Singapore is 0099-12-31T17:04:35Z (LMT +6:55:25), so instant validation must not reuse isCalendarDay's 0100 minimum.
+- 2026-10-23 [P7-T35] V8 Date.parse reads 1-3 fraction digits and THH:mm without seconds; years outside 0000-9999 UTC give '+010000-…'/'-000001-…' toISOString spellings a 4-digit pattern cannot read back.

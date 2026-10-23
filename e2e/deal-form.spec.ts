@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 
+import { localDayIn, readDeals } from "./calendar-helpers";
 import { expect, test } from "./fixtures";
 
 /**
@@ -9,9 +10,16 @@ import { expect, test } from "./fixtures";
  * saved as "no date". Chromium's date input accepts any year from 0001, so
  * '0099-01-01' is a value a user can really type (`new Date` would read it as
  * 1999).
+ *
+ * The edit round trip depends on the Singapore zone. The seed writes 17:00Z
+ * closes, which fall on the next day in Singapore, so the sheet must show the
+ * viewer's local day and save that day's local midnight. A form that read or
+ * wrote the UTC day would move the close by a day on every save.
  */
 
-test.use({ timezoneId: "Asia/Singapore", locale: "en-US" });
+const ZONE = "Asia/Singapore";
+
+test.use({ timezoneId: ZONE, locale: "en-US" });
 
 const SKELETON = '[data-slot="skeleton"]';
 
@@ -63,4 +71,45 @@ test("Expected close accepts a real day", async ({ page, gotoApp }) => {
   ).toBeVisible();
   await expect(field.getByRole("alert")).toHaveCount(0);
   await expect(input).not.toHaveAttribute("aria-invalid");
+});
+
+test("Edit deal keeps a seeded deal's Expected close day through a save", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/opportunities");
+  await expect(page.locator(SKELETON)).toHaveCount(0, { timeout: 15_000 });
+  const deal = (await readDeals(page)).find(
+    (d) =>
+      d.status === "open" &&
+      d.expectedCloseAt !== null &&
+      localDayIn(ZONE, d.expectedCloseAt) !== d.expectedCloseAt.slice(0, 10),
+  );
+  if (!deal?.expectedCloseAt) {
+    throw new Error(
+      `No open deal whose expected close falls on another day in ${ZONE} than in UTC`,
+    );
+  }
+  const day = localDayIn(ZONE, deal.expectedCloseAt);
+  // Singapore has been UTC+8 all year since 1982.
+  const saved = new Date(`${day}T00:00:00+08:00`).toISOString();
+  const persistedClose = async () =>
+    (await readDeals(page)).find((d) => d.id === deal.id)?.expectedCloseAt;
+
+  // A full load, so no client-side navigation wait is needed.
+  await gotoApp(`/opportunities/${deal.id}`);
+  const edit = page.getByRole("button", { name: "Edit", exact: true });
+  const sheet = page.getByRole("dialog", { name: "Edit deal" });
+  const input = sheet.getByLabel("Expected close", { exact: true });
+
+  await edit.click();
+  // Auto-waits: the sheet fills the form in an effect once it opens.
+  await expect(input).toHaveValue(day);
+  await sheet.getByRole("button", { name: "Save changes" }).click();
+  await expect(sheet).toBeHidden();
+  // Persist writes are debounced, so poll the stored value.
+  await expect.poll(persistedClose).toBe(saved);
+
+  await edit.click();
+  await expect(input).toHaveValue(day);
 });

@@ -239,3 +239,9 @@
 - 2026-10-23 [P7-T34] name trimmed, not blank; color must be a tag-palette value; teamMemberIds checked for shape only (not against users), like contacts' ownerId.
 - 2026-10-23 [P7-T34] A non-object patch is a 422 'Calendar settings: Not a valid value.' with ApiError.field undefined. New labels: Name, Description, Colour, Team members, Active.
 - 2026-10-23 [P7-T34] CALENDAR_COLORS = Object.keys(TAG_COLOR_CLASSES) in availability.ts (contact.ts pattern); availabilitySchema untouched.
+- 2026-10-23 [P7-T35] A6 red proof uses timezoneId 'UTC' (host zone is Singapore, so removing timezoneId still passes); phase wording "timezoneId removed" holds only off UTC+8.
+- 2026-10-23 [P7-T35] deal-form.spec.ts uses const ZONE = "Asia/Singapore" for both timezoneId and localDayIn; existing tests unchanged.
+- 2026-10-23 [P7-T35] Deal-form zone test is describe.each(zones) x it.each(days), 18 named cases, so a failure names zone and day.
+- 2026-10-23 [P7-T35] "Writes nothing" is checked through the API (list, activities.listForContact, get toEqual FIXTURE), per calendars.test.ts.
+- 2026-10-23 [P7-T35] "create() without an expected close stores none" asserts the key is absent from Object.keys, so an own undefined key fails it.
+- 2026-10-23 [P7-T35] parseInstant test constant is SPELLINGS so grep INSTANT hits only dates.ts; toParts doc names its 0100-minimum callers.

@@ -632,6 +632,13 @@ describe.each(ZONES)("book() with the runtime in $zone", (zone) => {
     // `Date.parse` reads this one as 2 March.
     { name: "an impossible date", startAt: "2026-02-30T17:00:00.000Z" },
     { name: "an impossible hour", startAt: "2026-10-27T25:00:00Z" },
+    // The slot engine reads the day with `parseCalendarDay` (0100-9999).
+    { name: "a start before the year 0100", startAt: "0099-12-31T17:00:00Z" },
+    // A real date whose instant is in UTC year 10000.
+    {
+      name: "a start past the year 9999 in UTC",
+      startAt: "9999-12-31T23:00:00-12:00",
+    },
   ])(
     "rejects $name as a start with a 422 and writes nothing",
     async ({ startAt }) => {

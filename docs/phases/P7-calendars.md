@@ -1518,10 +1518,105 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T35 — Validate expectedCloseAt in api.opportunities create/update
 - **Owner:** agent · **Depends:** —
+- **Skills:** `tdd`, `vitest`, `playwright-cli`
 - **Scope:** src/lib/api/opportunities.ts accepts any string for expectedCloseAt; reject non-ISO values with a 422 so non-UI callers cannot store junk. Tests first.
   - From the P7-T23 review: e2e/deal-form.spec.ts sets `timezoneId: 'Asia/Singapore'` but no assertion depends on it. Add an edit-deal round trip (open a seeded deal, save, reopen, the Expected close day is unchanged) so the zone covers the local-midnight rule end to end, or drop the setting.
+  - Decided: the API accepts an expected close that names one instant: an
+    ISO `YYYY-MM-DDTHH:mm[:ss[.fff]]` ending in `Z` or `±HH:mm`, on a real
+    date, inside UTC years 0000-9999. The check is the shared `parseInstant`
+    in `@/lib/dates`, which book() also uses. A date with no time or no zone
+    is refused, because the instant it names would depend on the server's
+    zone.
+  - Decided: the value is stored in the UTC spelling `toISOString()` gives,
+    as book() stores startAt.
+  - Decided: a refusal is a 422 `INVALID_OPPORTUNITY` with `field`
+    "expectedCloseAt" and the message "Expected close: Not a valid date and
+    time. Send an ISO date-time ending in Z or an offset, such as
+    2026-12-01T00:00:00Z." (label: rule, as in calendars).
+  - Decided: `undefined` is unchanged. A missing key means no date, and an
+    explicit `undefined` on update clears the date (the deal form's empty
+    field). `null` and every non-string are a 422, because opportunities
+    have no "null removes a field" rule for any field yet (backlog).
+  - Decided: the instant's date part may be in any year 0000-9999. Local
+    midnight of 0100-01-01 east of UTC falls in UTC year 0099, and the form
+    accepts that day. book() keeps the 0100 minimum, because its slot engine
+    reads the day with `parseCalendarDay`. A start whose instant falls
+    outside UTC years 0000-9999 (9999-12-31T23:00:00-12:00) is now a 422
+    `INVALID_START` instead of a RangeError.
+  - Decided: e2e keeps `timezoneId: 'Asia/Singapore'` and adds the round
+    trip rather than dropping the setting.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. Junk is refused on create and update. Each of "banana", "",
+        "2026-12-01", "2026-12-01T00:00:00", "2026-02-30T00:00:00.000Z",
+        "2026-12-01T24:00:00Z", "9999-12-31T23:00:00-12:00", null and
+        1764547200000, sent as expectedCloseAt to create() and to update()
+        on an existing deal, is a 422 `INVALID_OPPORTUNITY` with field
+        "expectedCloseAt" and message exactly "Expected close: Not a valid
+        date and time. Send an ISO date-time ending in Z or an offset, such
+        as 2026-12-01T00:00:00Z.". Nothing is written: no new deal or
+        activity after create; `get(id)` unchanged, updatedAt included, after
+        update.
+  - [ ] A2. Valid instants are stored in one UTC spelling. create() and
+        update() with "2026-12-01T00:00:00.000Z", "2026-12-01T00:00:00Z",
+        "2026-12-01T00:00+08:00" and "2026-12-01T08:30:15.5-07:00" resolve.
+        The returned and stored expectedCloseAt are
+        "2026-12-01T00:00:00.000Z", "2026-12-01T00:00:00.000Z",
+        "2026-11-30T16:00:00.000Z" and "2026-12-01T15:30:15.500Z".
+  - [ ] A3. Everything the deal form sends still saves. In UTC,
+        Asia/Singapore and America/Los_Angeles, `update(id, {
+        expectedCloseAt: dateInputToIso(day) })` resolves for 2026-09-08,
+        2028-02-29, 2026-03-08, 2026-11-01, 0100-01-01 and 9999-12-31. The
+        stored value equals the sent value, and `isoToDateInput` of it gives
+        the day back. This includes 0100-01-01 in Singapore, whose instant
+        falls in UTC year 0099.
+  - [ ] A4. No date stays no date, and other updates leave it alone.
+        create() without the key stores no expectedCloseAt. `update(id, {
+        expectedCloseAt: undefined })` clears it (the deal form's empty
+        field). `update(id, { name })` keeps the stored value.
+        `update('opp_missing', { expectedCloseAt: 'banana' })` is a 404
+        `NOT_FOUND`, not a 422.
+  - [ ] A5. One shared instant rule. `parseInstant` in src/lib/dates.ts is
+        the only instant pattern under src/; calendars.ts no longer defines
+        INSTANT. book()'s parseStart is parseInstant plus isCalendarDay on
+        the date part. parseInstant accepts the listed spellings (UTC year
+        0099 and 0000 included) with the right instant, refuses the 14 listed
+        strings, behaves the same in Singapore, and accepts its own
+        `toISOString()` spelling of every instant it accepts. The existing
+        isCalendarDay/parseCalendarDay tests and every existing
+        calendars.test.ts INVALID_START row pass unchanged. The new rows "a
+        start before the year 0100" and "a start past the year 9999 in UTC"
+        are 422 `INVALID_START` and write nothing.
+  - [ ] A6. The Singapore zone matters end to end. The new deal-form.spec.ts
+        test opens a seeded open deal whose expected close falls on a
+        different day in Singapore than in UTC, and throws if there is none.
+        Edit deal shows the Singapore day. Save changes persists that day's
+        Singapore midnight (`new Date(`${day}T00:00:00+08:00`).toISOString()`).
+        Reopening shows the same day. `timezoneId: 'Asia/Singapore'` stays,
+        and the two existing tests are unchanged. With timezoneId removed,
+        the new test fails at the first `toHaveValue(day)`.
+  - [ ] A7. Every new test has been seen failing. On HEAD's src, the 18 A1
+        rows resolve, the A2 rows that need a new spelling fail at toBe, the
+        parseInstant describe fails (no export) and the calendars 9999 row is
+        not a 422. Each type-clean mutant turns its own test red: m1 check
+        only in create, m2 raw string stored, m3 isCalendarDay for the
+        instant's date part, m4 no UTC-year bound, m5 parseStart without
+        isCalendarDay, m6 undefined treated as junk.
+  - [ ] A8. Comments match the code. Docs exist and match:
+        `checkExpectedClose` (rule, UTC spelling, undefined kept, 422 code,
+        field and message); create() and update() (checked before nowIso,
+        nothing written on a 422); `parseInstant` (shape, any-year real date,
+        UTC 0000-9999 bound, why); `isRealDate`/`toParts` (why the 0100
+        minimum); `parseStart` (the slot engine needs a 0100-9999 day). The
+        src/lib/dates.ts header covers instants and lists book() and the deal
+        API. The calendar-helpers.ts header names deal-form.spec.ts. The
+        deal-form.spec.ts header says the round trip depends on the Singapore
+        zone.
+  - [ ] A9. No seed, mock or UI change, and no regression. SEED_VERSION
+        stays 4. Nothing under src/lib/mock or src/components changes. `npm
+        run check` is green. The full `npm run e2e` passes with one more test
+        than before and the existing specs' assertions unchanged. `npm ls
+        @tanstack/react-table` prints 8.21.3. `node scripts/progress.mjs
+        --check` is clean.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T36 — Booking dialog: error state and Retry when calendars.list fails
@@ -1592,6 +1687,27 @@ hours land around midnight–08:00 local; that is expected.
 - **Scope:** Keep subject in a ref so guardLeave/context keep identity; finalFocus to user-menu trigger for menu links (fix comment); close mobile Sheet on question; reword A9/'Released first' ordering claim
   - From the P7-T33 review (pre-existing, not caused by P7-T33): on a phone (390px) the sidebar Sheet stays open after any sidebar link navigates, even with no unsaved edits, so the new page sits behind the open panel. Close it (`setOpenMobile(false)` from `useSidebar`) when a sidebar or user-menu link navigates, and when the guard's Discard changes leaves; the question itself already opens over the Sheet and Escape closes only the question. Prove both with an e2e at a phone viewport (clean link click, and Discard from the guard).
   - In unsaved-changes.tsx's JSDoc, name the case where the registration is released while the question is open because a save finished (the question closes and the clicked link is dropped), or go on to `leave.href` then, since nothing is left to lose.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T44 — book(): check the start's day in the calendar zone (422 INVALID_START, not RangeError)
+- **Owner:** agent · **Depends:** —
+- **Scope:** In book(), check isCalendarDay(zonedDay(startMs, calendar.timezone)) and map failure to INVALID_START (e.g. 0100-01-01T05:00Z on an LA calendar, 9999-12-31T20:00Z on Asia). Fix parseStart comment; consider reworded message.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T45 — Opportunities: null removes optional fields (expectedCloseAt, ownerId, lostReason)
+- **Owner:** agent · **Depends:** —
+- **Scope:** JSON clients cannot clear these: undefined can't be sent and null is a 422. Adopt calendars' null-removes rule (P7-T22/T34) in one task; update the P7-T35 Decided bullet that says (backlog).
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T46 — Opportunities update(): allow-list the patch, 422 for non-object patch
+- **Owner:** agent · **Depends:** —
+- **Scope:** update() writes closedAt/createdAt/status/position/stageId raw; a null patch throws TypeError. Mirror P7-T34: save parsed output, 422 with message.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

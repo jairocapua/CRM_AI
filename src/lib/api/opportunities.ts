@@ -1,12 +1,53 @@
-import type { Activity, Cents, ID, Opportunity } from "@/types";
+import type { Activity, Cents, ID, ISODate, Opportunity } from "@/types";
+import { parseInstant } from "@/lib/dates";
 import { db } from "@/lib/mock/db";
 import { newId } from "@/lib/mock/ids";
 import { applyQuery } from "@/lib/mock/query-engine";
 import { cascadeOpportunityDelete } from "@/lib/mock/cascade";
 import { invalidate } from "./cache";
-import { notFound, nowIso, simulate, type ListQuery, type Page } from "./http";
+import {
+  ApiError,
+  notFound,
+  nowIso,
+  simulate,
+  type ListQuery,
+  type Page,
+} from "./http";
 
 const SEARCH_FIELDS = ["name", "lostReason"];
+
+/**
+ * The 422 message for an expected close that is not one instant, written as
+ * "label: rule" like the calendars API's, with an example a caller can copy.
+ */
+const INVALID_EXPECTED_CLOSE =
+  "Expected close: Not a valid date and time. Send an ISO date-time ending in Z or an offset, such as 2026-12-01T00:00:00Z.";
+
+/**
+ * `value` as the expected close to store. It must name one instant by the
+ * shared rule (`parseInstant` in `@/lib/dates`: an ISO date-time ending in
+ * `Z` or an offset, on a real date, inside UTC years 0000-9999), and it is
+ * stored in the UTC spelling `toISOString()` gives, as book() stores a start.
+ *
+ * `undefined` gives undefined: a missing key means no date, and an explicit
+ * `undefined` on update clears it, which is what the deal form sends for an
+ * empty field. Anything else, `null` and non-strings included, is a 422
+ * `INVALID_OPPORTUNITY` with `field` "expectedCloseAt" and the
+ * `INVALID_EXPECTED_CLOSE` message.
+ */
+function checkExpectedClose(value: unknown): ISODate | undefined {
+  if (value === undefined) return undefined;
+  const ms = typeof value === "string" ? parseInstant(value) : null;
+  if (ms === null) {
+    throw new ApiError(
+      INVALID_EXPECTED_CLOSE,
+      422,
+      "INVALID_OPPORTUNITY",
+      "expectedCloseAt",
+    );
+  }
+  return new Date(ms).toISOString();
+}
 
 function pushActivity(activity: Omit<Activity, "id">) {
   const record: Activity = { ...activity, id: newId("act") };
@@ -57,9 +98,16 @@ export async function get(id: ID): Promise<Opportunity> {
 export type OpportunityDraft = Partial<Opportunity> &
   Pick<Opportunity, "name" | "contactId" | "pipelineId" | "stageId">;
 
+/**
+ * Creates a deal and records it on the contact's timeline. The expected
+ * close is checked first (see `checkExpectedClose`), before `nowIso()`, so a
+ * refused draft is a 422 that writes nothing and does not move the demo
+ * clock.
+ */
 export async function create(draft: OpportunityDraft): Promise<Opportunity> {
   const opportunity = await simulate(
     () => {
+      const expectedCloseAt = checkExpectedClose(draft.expectedCloseAt);
       const at = nowIso();
       const siblings = Object.values(db.getState().opportunities).filter(
         (o) => o.stageId === draft.stageId,
@@ -77,6 +125,9 @@ export async function create(draft: OpportunityDraft): Promise<Opportunity> {
         createdAt: at,
         updatedAt: at,
         ...draft,
+        // Only when the draft has the key, so a deal with no date gets no
+        // `expectedCloseAt` key at all.
+        ...(Object.hasOwn(draft, "expectedCloseAt") ? { expectedCloseAt } : {}),
       };
       db.setState((s) => ({
         opportunities: { ...s.opportunities, [record.id]: record },
@@ -98,13 +149,29 @@ export async function create(draft: OpportunityDraft): Promise<Opportunity> {
   return opportunity;
 }
 
+/**
+ * Writes `patch` over the deal. Errors, in this order, and nothing is written
+ * on either: 404 `NOT_FOUND` for an unknown id, then 422
+ * `INVALID_OPPORTUNITY` for an expected close that is not one instant (see
+ * `checkExpectedClose`). The check runs before `nowIso()`, so a refused patch
+ * does not move the demo clock either.
+ */
 export async function update(
   id: ID,
   patch: Partial<Opportunity>,
 ): Promise<Opportunity> {
   const opportunity = await simulate(() => {
     const prev = db.getState().opportunities[id] ?? notFound("Opportunity", id);
-    const next: Opportunity = { ...prev, ...patch, id, updatedAt: nowIso() };
+    const expectedCloseAt = checkExpectedClose(patch.expectedCloseAt);
+    const next: Opportunity = {
+      ...prev,
+      ...patch,
+      // Only when the patch has the key: without it the stored close stays,
+      // and an explicit undefined clears it.
+      ...(Object.hasOwn(patch, "expectedCloseAt") ? { expectedCloseAt } : {}),
+      id,
+      updatedAt: nowIso(),
+    };
     db.setState((s) => ({ opportunities: { ...s.opportunities, [id]: next } }));
     return next;
   });
