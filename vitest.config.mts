@@ -8,7 +8,10 @@ export default defineConfig({
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
   test: {
-    // The API and mock layers are plain TypeScript; no DOM is needed.
+    // The API and mock layers are plain TypeScript; no DOM is needed. Hook
+    // tests that need a real React renderer opt in per file with
+    // `// @vitest-environment happy-dom` (as use-resource.hook.test.ts does);
+    // everything else stays on node.
     environment: "node",
     // Narrowed on purpose: scripts/*.test.mjs run under node:test
     // (`npm run test:scripts`), and the Playwright specs land outside src/.

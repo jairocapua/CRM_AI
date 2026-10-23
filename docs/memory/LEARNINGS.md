@@ -213,3 +213,6 @@
 - 2026-10-24 [P7-T36] Python is not installed here (the alias opens the Store); use Edit or sed. A stray `cat > file` with no input in Bash blocks until timeout.
 - 2026-10-24 [P7-T37] Vitest `it.each([..., [], ...])` spreads each array case into arguments, so an empty-array case arrives as `undefined`; wrap each case in a tuple.
 - 2026-10-24 [P7-T37] A bulk owner assignment (api.contacts.assignOwner) writes contacts by key, then invalidates "contacts": under failReads('contacts') the write succeeds and the list refetch fails, a reliable driver for a failed refetch with rows on screen.
+- 2026-10-24 [P7-T38] A React hook test in Vitest needs a DOM environment (happy-dom) plus `react-dom/client` createRoot and `act` from 'react'; stub `IS_REACT_ACT_ENVIRONMENT` with `vi.stubGlobal` or React 19 warns the environment does not support act(...).
+- 2026-10-24 [P7-T38] Resolving/rejecting a deferred inside `await act(async () => ...)` flushes useResource's `.then().catch()` state update; no fake timers or waitFor needed.
+- 2026-10-24 [P7-T38] `ReturnType<typeof useResource<Payload>>` (instantiation expression) types the hook result in tests without exporting a type.

@@ -1754,8 +1754,23 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T38 — useResource unit test: failed refetch keeps data for same query
 - **Owner:** agent · **Depends:** —
 - **Scope:** Hook test: refetch rejects -> data kept, error set, isRefreshing back to false. Protects every LoadError caller.
+- **Skills:** `vitest`, `tdd`
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] AC1. After a first read has loaded, a `refetch()` whose fetch
+        rejects keeps the same data, sets `error` to the rejection, never
+        shows `isLoading`, is `isRefreshing` while in flight and false
+        after, and `loadErrorOf` is null.
+  - [ ] AC2. The same holds when the refetch comes from `invalidate(key)`,
+        the path every mutation takes.
+  - [ ] AC3. The boundary: a new `cacheKey` whose fetch fails gives `data`
+        undefined, `error` set, `isRefreshing` false, and `loadErrorOf`
+        returns the error.
+  - [ ] AC4. Each test goes red on a named mutant of `use-resource.ts`
+        (M1 always drop data, M2 keep data across queries, M3 a failure
+        leaves `forRequest` stale, M4 `isLoading` keyed on the request), and
+        the file is restored byte-identical.
+  - [ ] AC5. No production code change, `happy-dom` is the only new
+        dependency, vite stays 7.x, and `npm run check` is green.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-H4 — Decide: should an ended, already-Cancelled appointment stay frozen?
@@ -1832,6 +1847,13 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T47 — Contacts: surface tags.list load failure (tag badges/filter silently empty)
 - **Owner:** agent · **Depends:** —
 - **Scope:** tags.list counts tags via contacts; on failure /contacts tag badges and tag filter show nothing with no error or Retry. Add an error state.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-24
+
+### P7-T48 — Bump next to patch npm audit critical findings
+- **Owner:** agent · **Depends:** —
+- **Scope:** npm audit: 9 findings, 2 critical (next 16.3.4 direct, proxy-addr transitive). Patch-bump next, rerun check + e2e.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-24

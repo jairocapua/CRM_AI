@@ -5,26 +5,26 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T37 in review.
+- **Status:** P7-T38 in review.
 
 ## Last change
-- P7-T37: /contacts shows "Could not load contacts" with Retry when contacts.list fails with no rows loaded (also on a failed page/search/filter change); the count/pager footer hides, the toolbar stays. A failed re-read with rows on screen keeps them.
-- New `loadErrorOf(resource)` in src/lib/api/use-resource.ts (unit-tested) replaces every inline `error && data === undefined` guard; calendars-workspace's range-keyed guard stays.
-- e2e: failReads supports 'contacts'; `readFaultThrows(page)` counts failed reads. check green, e2e 114/114.
-- Added P7-T47 (surface tags.list load failure on /contacts).
+- P7-T38: new src/lib/api/use-resource.hook.test.ts (happy-dom, createRoot + act): failed refetch()/invalidate keeps data, isLoading never shown; new failing cacheKey drops data and loadErrorOf returns the error.
+- Mutants M1-M4 of use-resource.ts each turn a test red; use-resource.ts unchanged. Only new devDependency: happy-dom ^21.0.4 (vite stays 7.3.7). check green.
+- Added P7-T48 (bump next for npm audit critical findings).
 
 ## Next up
-- **Agent:** P7-T38 (useResource hook test; add cases alongside the `describe('loadErrorOf')` block in use-resource.test.ts).
+- **Agent:** P7-T39.
 
 ## Waiting on you
-- Review of P7-T37 (deep review).
+- Review of P7-T38 (deep review).
 - P7-H4: should an ended appointment that is already Cancelled stay frozen? Not blocking.
 
 ## Open suggestions (non-blocking review notes)
-- A failed page change hides Previous/Next too; consider a "Back to page 1" action or keeping Previous visible.
-- Row selection survives while the error shows, so BulkActionsBar may act on hidden rows; clear selection or hide the bar.
-- Failed re-read test: disconnect() the MutationObserver after the check.
-- Same-query-keeps-data / new-query-drops-data in useResource has no unit test yet: P7-T38 scope.
+- Hook test: assert error/loadErrorOf null while a new query loads (data still shows old page's data then: intended?).
+- Hook test: new query fails, then refetch() succeeds -> error clears (LoadError Retry path).
+- Comment that invalidate() revisions in cache.ts persist across tests.
+- Consider documenting the `*.hook.test.ts` + happy-dom convention in CLAUDE.md Commands.
+- Contacts list (P7-T37): failed page change hides Previous/Next; selection survives under the error; disconnect the MutationObserver in the re-read test.
 
 ## Blockers
 - None.

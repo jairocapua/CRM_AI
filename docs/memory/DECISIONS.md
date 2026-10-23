@@ -253,3 +253,6 @@
 - 2026-10-24 [P7-T37] `loadErrorOf(resource)` (use-resource.ts, exported from @/lib/api) returns `data === undefined ? error : null` and replaces every inline guard; loaded falsy data (e.g. slots `null`) counts as loaded. calendars-workspace's appointments guard keeps `shown === null ? appointments.error : null` (keys on the shown range).
 - 2026-10-24 [P7-T37] Contacts-list e2e tests live in calendars-load-errors.spec.ts (P7-T25 precedent). failReads counts its failures (`__e2eReadFaultThrows`, `readFaultThrows(page)`); T3 polls it, then waits two frames and a setTimeout before reading its MutationObserver flag.
 - 2026-10-24 [P7-T37] loadErrorOf unit (e) cases are tuples (`it.each<[unknown]>([[null], [0], [''], [[]], [false]])`).
+- 2026-10-24 [P7-T38] Hook tests use happy-dom, opted in per file with `// @vitest-environment happy-dom`; global env stays node. Not jsdom: jsdom 30 needs Node >=22.22.2, this machine has 22.21.0.
+- 2026-10-24 [P7-T38] No @testing-library/react: a small in-file harness (createRoot + act + a Probe reporting renders via an onRender prop, which keeps React-compiler lint quiet) covers it.
+- 2026-10-24 [P7-T38] Hook tests assert in afterEach that console.error was never called, so act or other React warnings fail the test.

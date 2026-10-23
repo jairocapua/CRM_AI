@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 39/72 tasks done (54%) · **Current phase:** P7 · **Next agent task:** P7-T38 · **Awaiting review:** P7-T37 · **Blocked:** none · **Waiting on you:** P7-H4
+**Overall:** 40/73 tasks done (55%) · **Current phase:** P7 · **Next agent task:** P7-T39 · **Awaiting review:** P7-T38 · **Blocked:** none · **Waiting on you:** P7-H4
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 39/51 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 40/52 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -56,8 +56,8 @@ Status: active · Progress: 39/51 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T34 | Calendar update: validate or allow-list keys outside the settings schema | agent | done | — | 1278157 | 2026-10-23 | update() saves parsed allow-list; name/colour/team/active/description checked; null patch 422; +13 tests |
 | P7-T35 | Validate expectedCloseAt in api.opportunities create/update | agent | done | — | 9a47e88 | 2026-10-23 | parseInstant shared in dates.ts; deal API 422s bad expectedCloseAt, stores UTC; +79 tests, +1 e2e |
 | P7-T36 | Booking dialog: error state and Retry when calendars.list fails | agent | done | — | 3e7c603 | 2026-10-24 | Calendar field LoadError + busy Retry, disabled select; e2e red on 3 mutants; P7-T30 e2e cleanups |
-| P7-T37 | Contacts list: error state instead of false 'No contacts found' on list failure | agent | review | — |  | 2026-10-24 | Contacts list shows LoadError+Retry on failed load/page change; new loadErrorOf helper replaces inline guards |
-| P7-T38 | useResource unit test: failed refetch keeps data for same query | agent | todo | — |  |  |  |
+| P7-T37 | Contacts list: error state instead of false 'No contacts found' on list failure | agent | done | — | 128a5a3 | 2026-10-24 | Contacts list shows LoadError+Retry on failed load/page change; new loadErrorOf helper replaces inline guards |
+| P7-T38 | useResource unit test: failed refetch keeps data for same query | agent | review | — |  | 2026-10-24 | useResource hook test (happy-dom): failed refetch keeps data, new failing query drops it; 4 mutants red |
 | P7-H4 | Decide: should an ended, already-Cancelled appointment stay frozen? | human | todo | — |  |  |  |
 | P7-T39 | Name the remaining TagPickers and the contacts search box | agent | todo | — |  |  |  |
 | P7-T40 | ContactPicker: hold fetched contact for outside-set values | agent | todo | — |  |  |  |
@@ -68,6 +68,7 @@ Status: active · Progress: 39/51 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T45 | Opportunities: null removes optional fields (expectedCloseAt, ownerId, lostReason) | agent | todo | — |  |  |  |
 | P7-T46 | Opportunities update(): allow-list the patch, 422 for non-object patch | agent | todo | — |  |  |  |
 | P7-T47 | Contacts: surface tags.list load failure (tag badges/filter silently empty) | agent | todo | — |  |  |  |
+| P7-T48 | Bump next to patch npm audit critical findings | agent | todo | — |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md
