@@ -284,3 +284,8 @@
 - 2026-10-24 [P7-T45] withoutRemoved copies a removable key only when it is an own key of the merged record, so own undefined keys are kept; dropping undefined stays with P7-T46.
 - 2026-10-24 [P7-T45] Tests use a typed Record<Removable, OpportunityPatch> table, not computed { [key]: null } objects (a union computed key widens to an index signature and proves nothing).
 - 2026-10-24 [P7-T45] OpportunityDraft is now exported from the @/lib/api barrel next to OpportunityPatch.
+- 2026-10-24 [P7-T46] D1-D7 recorded under P7-T46 in docs/phases/P7-calendars.md: allow-list keys, checks, error format, undefined/null rules, clearing lostReason on a lost deal allowed (D5), setStatus uses a private writer (D6), setStatus/move argument checks go to the backlog (D7).
+- 2026-10-24 [P7-T46] applyPatch drops removable keys with a generic withoutKeys(value, keys): Omit<T, K> (copy then delete), not rest-destructuring (unused bindings trip no-unused-vars); no cast.
+- 2026-10-24 [P7-T46] Expected close is checked in the schema (z.unknown().transform(checkExpectedClose) adds an issue with EXPECTED_CLOSE_RULE), rebuilding P7-T35's message exactly; INVALID_EXPECTED_CLOSE replaced by EXPECTED_CLOSE_RULE.
+- 2026-10-24 [P7-T46] currency uses a mapped `{ [K in CurrencyCode]: K }` object for z.enum (complete, no cast); source reuses the `Object.keys(LEAD_SOURCE_LABELS) as [LeadSource, ...]` pattern.
+- 2026-10-24 [P7-T46] An empty or unknown issue path gets label 'Deal' and no field; a no-issue failure yields the same 'Deal: Not a valid value.', so no separate untestable branch.

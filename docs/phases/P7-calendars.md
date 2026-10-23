@@ -2152,8 +2152,96 @@ hours land around midnight–08:00 local; that is expected.
   - From the P7-T35 review, in src/lib/api/opportunities.ts (~:128): the create() comment says a deal with no date "gets no `expectedCloseAt` key at all", but the deal form sends `expectedCloseAt: undefined`, which leaves an own undefined key; drop undefined values (as calendars' `withoutUndefined` does) or reword. create()/update() promise the expected-close check runs before `nowIso()` so a refused call does not move the demo clock, but no test pins it (moving the check below `nowIso()` stays green): add one, e.g. calendars.test.ts ~:1370's pattern.
   - In e2e/deal-form.spec.ts's round trip, add a line saying the persisted-value poll carries the proof (the reopen `toHaveValue(day)` would pass on a stale prop) and why it filters `status === "open"`.
   - From the P7-T45 review: create() still spreads `...draft` after its defaults, so a draft can overwrite `id`, `createdAt` or `position`; the allow-list covers create() as well as update(). Say whether clearing `lostReason` on a deal whose status is "lost" is allowed (P7-T45 D2 leaves it unchecked). `withoutRemoved()` can loop over `REMOVABLE` reading `merged[key]` instead of destructuring and rebuilding a `removable` object, still with no cast; and note in opportunities.test.ts that its `REMOVABLE` copy must stay in step with the module's.
+- **Skills:** `tdd`, `vitest`
+  - Decided (D1): create() and update() save what one zod schema parses,
+    never the raw input. Editable keys: name, contactId, pipelineId, value,
+    currency, source, ownerId, tagIds, customFields, expectedCloseAt,
+    lostReason; create() also requires name, contactId, pipelineId and
+    stageId. id, position, status, closedAt, stageEnteredAt, createdAt,
+    createdBy, updatedAt, unknown keys, and stageId on update() are ignored.
+    move() owns stage and position; setStatus() owns status, closedAt and
+    the won/lost activity.
+  - Decided (D2): the checks. name is a trimmed non-empty string ("Can't be
+    empty."). contactId, pipelineId, stageId and ownerId are non-empty
+    strings, checked for shape only, not against stored records (as
+    teamMemberIds in P7-T34). value is a whole number of cents, 0 or more
+    ("Not a valid amount."). currency is a `CurrencyCode`, source a
+    `LeadSource`, tagIds an array of non-empty strings, customFields a record
+    of `CustomFieldValue`s (shape only). lostReason is a string, stored as
+    sent. Everything else fails as "Not a valid value.".
+  - Decided (D3): errors are a 422 `INVALID_OPPORTUNITY` whose message is
+    "<label>: <rule>" and whose `field` is the dotted issue path. Labels
+    follow the deal form: Deal name, Contact, Pipeline, Stage, Value,
+    Currency, Source, Owner, Tags, Deal details, Expected close, Lost reason.
+    A non-object input is "Deal: Not a valid value." with `field` unset. The
+    expected-close message stays exactly as in P7-T35. On update() the 404
+    comes first. Every 422 is raised before `nowIso()`.
+  - Decided (D4): `undefined` on a required or defaulted key is ignored
+    (update keeps the stored value; create uses the default). On
+    expectedCloseAt, ownerId or lostReason it deletes the key, which is what
+    the deal form's empty fields send. `null` also deletes those three
+    (P7-T45). Neither is ever stored.
+  - Decided (D5): clearing lostReason on a "lost" deal is allowed, because
+    the form already saves lost deals with no reason (`trim() || undefined`).
+    It stays unchecked against status.
+  - Decided (D6): setStatus() writes status, closedAt and lostReason through
+    a private writer, not the public update(). Its signature and activity
+    entries are unchanged, and a cleared closedAt or lostReason is deleted,
+    not stored as undefined.
+  - Decided (D7): setStatus() and move() arguments stay unchecked; checking
+    them for JSON clients is a backlog entry.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. Wrong-typed or null values never write a deal. Every BAD_PATCHES
+        row is a 422 `INVALID_OPPORTUNITY` with its exact field and message on
+        create() and on update(), and nothing is written (no new deal or
+        activity; get(id) unchanged, updatedAt included). The create-only rows
+        (no name, stageId '') behave the same.
+  - [ ] A2. An input that is not an object (JSON null) is a 422 "Deal: Not a
+        valid value." with `field` unset on create() and update(), not a
+        TypeError, and nothing is written. `update('opp_missing', null)` is
+        still a 404.
+  - [ ] A3. API-owned and unknown keys are ignored. update() with id,
+        stageId, position, status, closedAt, stageEnteredAt, createdAt,
+        createdBy, updatedAt and foo changes only value and updatedAt.
+        create() keeps its own id, createdAt = updatedAt = stageEnteredAt,
+        position 1 and status "open", and stores no closedAt, createdBy or foo
+        key.
+  - [ ] A4. Valid values still save: the name is trimmed and the other
+        editable values are stored as sent. Every seeded deal, sent back JSON
+        round-tripped through update(), re-saves unchanged except updatedAt.
+  - [ ] A5. `undefined` on a required or defaulted key is ignored. On
+        expectedCloseAt, ownerId or lostReason it deletes the key on update(),
+        and create() stores no such key. A missing key keeps the stored value.
+        All P7-T35 and P7-T45 tests pass with their assertions unchanged.
+  - [ ] A6. Clearing lostReason on a deal whose status is "lost" is allowed
+        (D5), and status stays "lost".
+  - [ ] A7. setStatus() still owns status, closedAt and lostReason through a
+        private writer. lost (with reason), won and open store the right
+        fields; cleared closedAt and lostReason keys are deleted, not stored
+        as undefined. Activities and summaries are unchanged.
+  - [ ] A8. Every refusal runs before `nowIso()`, so a refused create() or
+        update() (bad close, bad type, non-object) does not move the demo
+        clock.
+  - [ ] A9. The types say what the code does. `OpportunityPatch` is a
+        `Partial<Pick<Opportunity, …>>` of the editable keys, with null
+        accepted only on expectedCloseAt, ownerId and lostReason.
+        `OpportunityDraft` adds required name, contactId, pipelineId and
+        stageId. `FIELD_LABELS` is a Record keyed by the schema's keys.
+        `withoutUndefined` is shared from src/lib/api/patch.ts. The deal form
+        and setStatus/move compile with unchanged code.
+  - [ ] A10. Every new test has been seen failing (or is a named positive
+        control), and each mutant M1-M7 turns its own test red.
+  - [ ] A11. Comments match the code: create()/update() JSDoc, applyPatch's
+        doc (the one place a patch becomes a record, no cast),
+        checkExpectedClose's doc, the deal form's comment on what update()
+        ignores, the test's REMOVABLE copy note, and deal-form.spec.ts's lines
+        on the poll's proof and the `status === "open"` filter.
+  - [ ] A12. No seed or mock change and no regression. SEED_VERSION stays 4
+        and no faker call is touched; nothing under src/lib/mock changes;
+        src/components and e2e change only in comments. `npm run check` is
+        green with Vitest up by exactly the new case count. The full
+        `npm run e2e` passes. `npm ls @tanstack/react-table` prints 8.21.3.
+        `node scripts/progress.mjs --check` is clean.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T47 — Contacts: surface tags.list load failure (tag badges/filter silently empty)

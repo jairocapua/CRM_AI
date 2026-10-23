@@ -16,6 +16,7 @@ import {
 } from "@/lib/validation/availability";
 import { invalidate } from "./cache";
 import { ApiError, apiNowMs, notFound, nowIso, simulate } from "./http";
+import { withoutUndefined } from "./patch";
 
 export async function list(): Promise<Calendar[]> {
   return simulate(
@@ -49,20 +50,6 @@ export type CalendarPatch = Partial<
   maxBookingsPerDay?: number | null;
   description?: string | null;
 };
-
-/**
- * `value` without the keys whose value is `undefined`. JSON drops such keys
- * on the way to a server (`JSON.stringify({ timezone: undefined })` is "{}"),
- * so a `fetch()` client could never send them. `update()` runs this on the
- * parsed patch, so a spread can never write `undefined` over a stored value.
- */
-function withoutUndefined<T extends object>(
-  value: T,
-): { [K in keyof T]?: Exclude<T[K], undefined> } {
-  return Object.fromEntries(
-    Object.entries(value).filter(([, entry]) => entry !== undefined),
-  ) as { [K in keyof T]?: Exclude<T[K], undefined> };
-}
 
 /**
  * Each setting `calendarSettingsSchema` checks, in the availability editor's

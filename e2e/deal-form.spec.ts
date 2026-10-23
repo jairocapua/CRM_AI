@@ -79,6 +79,10 @@ test("Edit deal keeps a seeded deal's Expected close day through a save", async 
 }) => {
   await gotoApp("/opportunities");
   await expect(page.locator(SKELETON)).toHaveCount(0, { timeout: 15_000 });
+  // "open" follows P7-T35 A6: the expected close is the planning date of a
+  // deal still in play (a closed deal is dated by closedAt). A deal of any
+  // status saves through the same single update(), so this picks a realistic
+  // deal; it is not a workaround.
   const deal = (await readDeals(page)).find(
     (d) =>
       d.status === "open" &&
@@ -107,7 +111,9 @@ test("Edit deal keeps a seeded deal's Expected close day through a save", async 
   await expect(input).toHaveValue(day);
   await sheet.getByRole("button", { name: "Save changes" }).click();
   await expect(sheet).toBeHidden();
-  // Persist writes are debounced, so poll the stored value.
+  // Persist writes are debounced, so poll the stored value. This poll carries
+  // the proof: the reopened sheet's toHaveValue(day) below would also pass
+  // on a stale `opportunity` prop that never saw the save.
   await expect.poll(persistedClose).toBe(saved);
 
   await edit.click();

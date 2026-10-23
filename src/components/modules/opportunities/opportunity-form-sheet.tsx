@@ -162,12 +162,11 @@ export function OpportunityFormSheet({
     };
 
     /**
-     * `status` and `stageId` are deliberately not in that patch. `update()` is
-     * a dumb field write, so patching either one directly would skip the
-     * bookkeeping the API keeps for them: `move()` owns column `position` and
-     * `stageEnteredAt`, and `setStatus()` owns `closedAt` and the won/lost
-     * activity. Writing them through `update()` leaves a duplicated position,
-     * a stale "N days in stage", and no timeline entry.
+     * `status` and `stageId` are not in that patch: `update()` ignores both,
+     * because the API keeps bookkeeping for them that a field write would
+     * skip. `move()` owns column `position` and `stageEnteredAt`, and
+     * `setStatus()` owns `closedAt` and the won/lost activity, so a stage or
+     * status change goes through those two below.
      */
     const record = opportunity
       ? await api.opportunities.update(opportunity.id, patch)

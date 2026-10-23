@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 47/74 tasks done (64%) · **Current phase:** P7 · **Next agent task:** P7-T46 · **Awaiting review:** P7-T45 · **Blocked:** none · **Waiting on you:** P7-H4
+**Overall:** 48/74 tasks done (65%) · **Current phase:** P7 · **Next agent task:** P7-T47 · **Awaiting review:** P7-T46 · **Blocked:** none · **Waiting on you:** P7-H4
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 47/53 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 48/53 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -65,8 +65,8 @@ Status: active · Progress: 47/53 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T42 | Team settings link: stop 404 prefetch until P9 | agent | done | — | f1e0eb7 | 2026-10-24 | Placeholder /settings/team page; editor e2e prefetch excuse removed; smoke test proves menu link opens cleanly |
 | P7-T43 | Unsaved-changes guard: stable guardLeave, menu focus return, mobile Sheet | agent | done | — | bc9db75 | 2026-10-24 | Stable guardLeave (ref), onLeave/returnFocus options, phone Sheet closes on leave; 4 hook tests + 2 phone e2e |
 | P7-T44 | book(): check the start's day in the calendar zone (422 INVALID_START, not RangeError) | agent | done | — | dd2b77d | 2026-10-24 | book() checks start day in calendar zone: 422 INVALID_START (new msg) not RangeError; string-date check removed; +10 tests |
-| P7-T45 | Opportunities: null removes optional fields (expectedCloseAt, ownerId, lostReason) | agent | review | — |  | 2026-10-24 | null removes expectedCloseAt/ownerId/lostReason on create/update; OpportunityPatch type; 9 new tests, mutants red |
-| P7-T46 | Opportunities update(): allow-list the patch, 422 for non-object patch | agent | todo | — |  |  |  |
+| P7-T45 | Opportunities: null removes optional fields (expectedCloseAt, ownerId, lostReason) | agent | done | — | e6bab1a | 2026-10-24 | null removes expectedCloseAt/ownerId/lostReason on create/update; OpportunityPatch type; 9 new tests, mutants red |
+| P7-T46 | Opportunities update(): allow-list the patch, 422 for non-object patch | agent | review | — |  | 2026-10-24 | create/update allow-list via zod; 422 for bad types and non-object input; setStatus private writer; Vitest 676->730 |
 | P7-T47 | Contacts: surface tags.list load failure (tag badges/filter silently empty) | agent | todo | — |  |  |  |
 | P7-T48 | Bump next to patch npm audit critical findings | agent | todo | — |  |  |  |
 | P7-T49 | Shared userMenu(page) e2e helper | agent | todo | — |  |  |  |

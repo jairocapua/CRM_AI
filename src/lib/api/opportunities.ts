@@ -1,4 +1,15 @@
-import type { Activity, Cents, ID, ISODate, Opportunity } from "@/types";
+import { z } from "zod";
+
+import {
+  LEAD_SOURCE_LABELS,
+  type Activity,
+  type Cents,
+  type CurrencyCode,
+  type ID,
+  type ISODate,
+  type LeadSource,
+  type Opportunity,
+} from "@/types";
 import { parseInstant } from "@/lib/dates";
 import { db } from "@/lib/mock/db";
 import { newId } from "@/lib/mock/ids";
@@ -13,79 +24,212 @@ import {
   type ListQuery,
   type Page,
 } from "./http";
+import { withoutUndefined } from "./patch";
 
 const SEARCH_FIELDS = ["name", "lostReason"];
 
 /**
- * The 422 message for an expected close that is not one instant, written as
- * "label: rule" like the calendars API's, with an example a caller can copy.
+ * Why an expected close was refused, with an example a caller can copy. The
+ * 422 reads "Expected close: <this>", "label: rule" like every other field.
  */
-const INVALID_EXPECTED_CLOSE =
-  "Expected close: Not a valid date and time. Send an ISO date-time ending in Z or an offset, such as 2026-12-01T00:00:00Z.";
+const EXPECTED_CLOSE_RULE =
+  "Not a valid date and time. Send an ISO date-time ending in Z or an offset, such as 2026-12-01T00:00:00Z.";
 
-/** The optional fields a caller removes by sending `null` (see below). */
+/** The optional fields a caller removes by sending `null` or `undefined`. */
 const REMOVABLE = ["expectedCloseAt", "ownerId", "lostReason"] as const;
 type RemovableKey = (typeof REMOVABLE)[number];
 
 /**
- * What create() and update() accept: any `Opportunity` field, where `null`
- * removes an optional one, the expected close, the owner or the lost reason
- * (the key is deleted, never stored as null). A JSON client cannot send
- * `undefined`, so `null` is how it clears one of these.
+ * `value` as the expected close to store, run inside the schema below. It
+ * must name one instant by the shared rule (`parseInstant` in `@/lib/dates`:
+ * an ISO date-time ending in `Z` or an offset, on a real date, inside UTC
+ * years 0000-9999), and it is stored in the UTC spelling `toISOString()`
+ * gives, as book() stores a start.
+ *
+ * - `undefined` and `null` come back as they are: both remove the date (see
+ *   `applyPatch`).
+ * - Anything else that is not one instant, non-strings included, adds an
+ *   issue whose message is `EXPECTED_CLOSE_RULE`, so the 422 is
+ *   `INVALID_OPPORTUNITY` with `field` "expectedCloseAt" and the message
+ *   P7-T35 set, word for word.
  */
-export type OpportunityPatch = Omit<Partial<Opportunity>, RemovableKey> & {
-  [K in RemovableKey]?: Opportunity[K] | null;
+function checkExpectedClose(
+  value: unknown,
+  ctx: z.RefinementCtx,
+): ISODate | null | undefined {
+  if (value === undefined || value === null) return value;
+  const ms = typeof value === "string" ? parseInstant(value) : null;
+  if (ms === null) {
+    ctx.addIssue({ code: "custom", message: EXPECTED_CLOSE_RULE });
+    return z.NEVER;
+  }
+  return new Date(ms).toISOString();
+}
+
+/** Every currency, as `z.enum` takes them. The mapped type keeps it complete. */
+const CURRENCIES: { [K in CurrencyCode]: K } = {
+  USD: "USD",
+  EUR: "EUR",
+  GBP: "GBP",
+  CAD: "CAD",
+  AUD: "AUD",
+  PHP: "PHP",
 };
 
+const LEAD_SOURCES = Object.keys(LEAD_SOURCE_LABELS) as [
+  LeadSource,
+  ...LeadSource[],
+];
+
+const NOT_AN_AMOUNT = "Not a valid amount.";
+
 /**
- * `merged` (a stored or default record with a patch spread over it) without
- * every removable key the patch set to `null`. The stored record and the
- * defaults hold no nulls, so a null here always came from the patch. Every
- * other key is copied as it is, an own `undefined` included.
- *
- * The one place a patch holding nulls becomes an `Opportunity`, and it needs
- * no cast, so no `null` can reach the store.
+ * The keys create() and update() let a caller change, and the check each
+ * value must pass. Every key is optional; `draftSchema` makes create()'s
+ * required ones required. A key not named here is stripped by the parse, so
+ * it can never reach the store. Ids are checked for shape only, not against
+ * stored records, as `teamMemberIds` is on calendars.
  */
-function withoutRemoved(
-  merged: Omit<Opportunity, RemovableKey> & OpportunityPatch,
+const editableSchema = z.object({
+  name: z.string().trim().min(1, "Can't be empty.").optional(),
+  contactId: z.string().min(1).optional(),
+  pipelineId: z.string().min(1).optional(),
+  value: z
+    .number({ error: NOT_AN_AMOUNT })
+    .int({ error: NOT_AN_AMOUNT })
+    .min(0, { error: NOT_AN_AMOUNT })
+    .optional(),
+  currency: z.enum(CURRENCIES).optional(),
+  source: z.enum(LEAD_SOURCES).optional(),
+  ownerId: z.string().min(1).nullable().optional(),
+  tagIds: z.array(z.string().min(1)).optional(),
+  customFields: z
+    .record(
+      z.string(),
+      z.union([
+        z.string(),
+        z.number(),
+        z.boolean(),
+        z.array(z.string()),
+        z.null(),
+      ]),
+    )
+    .optional(),
+  expectedCloseAt: z.unknown().transform(checkExpectedClose).optional(),
+  lostReason: z.string().nullable().optional(),
+});
+
+/** create()'s input: the editable keys, with the four a deal needs required. */
+const draftSchema = editableSchema.extend({
+  name: z.string().trim().min(1, "Can't be empty."),
+  contactId: z.string().min(1),
+  pipelineId: z.string().min(1),
+  stageId: z.string().min(1),
+});
+
+type EditableKey = keyof typeof editableSchema.shape;
+type FieldKey = keyof typeof draftSchema.shape;
+
+/**
+ * Each key a 422 can be about, in the deal form's words. Typed by the schema's
+ * keys, so a new key cannot be added without a label.
+ */
+const FIELD_LABELS: Record<FieldKey, string> = {
+  name: "Deal name",
+  contactId: "Contact",
+  pipelineId: "Pipeline",
+  stageId: "Stage",
+  value: "Value",
+  currency: "Currency",
+  source: "Source",
+  ownerId: "Owner",
+  tagIds: "Tags",
+  customFields: "Deal details",
+  expectedCloseAt: "Expected close",
+  lostReason: "Lost reason",
+};
+
+function isFieldKey(key: unknown): key is FieldKey {
+  return typeof key === "string" && Object.hasOwn(FIELD_LABELS, key);
+}
+
+/**
+ * `input` parsed by `schema`, or a 422 `INVALID_OPPORTUNITY` about the first
+ * issue: "<label>: <rule>" ("Value: Not a valid amount."), with `field` the
+ * dotted path to the bad value ("tagIds.0"). An issue about no one field (an
+ * input that is not an object) is "Deal: Not a valid value." with `field`
+ * unset.
+ */
+function parse<S extends z.ZodType>(schema: S, input: unknown): z.output<S> {
+  // A per-parse error map ranks below every message the schema sets itself,
+  // so this replaces only zod's built-in wording ("Invalid input: expected
+  // string, received number"), which a wrong type would show.
+  const checked = schema.safeParse(input, {
+    error: () => "Not a valid value.",
+  });
+  if (checked.success) return checked.data;
+  const [issue] = checked.error.issues;
+  const path = issue?.path ?? [];
+  const [key] = path;
+  throw new ApiError(
+    `${isFieldKey(key) ? FIELD_LABELS[key] : "Deal"}: ${issue?.message ?? "Not a valid value."}`,
+    422,
+    "INVALID_OPPORTUNITY",
+    path.length > 0 ? path.join(".") : undefined,
+  );
+}
+
+/** `value` without the given keys, as a new object. */
+function withoutKeys<T extends object, K extends keyof T>(
+  value: T,
+  keys: readonly K[],
+): Omit<T, K> {
+  const copy = { ...value };
+  for (const key of keys) delete copy[key];
+  return copy;
+}
+
+/**
+ * `base` (the stored deal, or create()'s defaults) with a parsed patch
+ * applied. The one place a patch becomes an `Opportunity`, and it needs no
+ * cast, so no `null` or `undefined` can reach the store:
+ *
+ * - every key but the removable three is copied when it holds a value; an
+ *   `undefined` one is skipped, the same as a missing key;
+ * - expectedCloseAt, ownerId and lostReason are set when they hold a value,
+ *   and deleted when they are `null` or when `sent` (the caller's own input)
+ *   holds the key as `undefined`, which is what the deal form's empty fields
+ *   send. A key `sent` leaves out keeps its stored value.
+ */
+function applyPatch(
+  base: Opportunity,
+  parsed: z.output<typeof editableSchema>,
+  sent: object,
 ): Opportunity {
-  const { expectedCloseAt, ownerId, lostReason, ...rest } = merged;
-  const record: Opportunity = rest;
-  const removable = { expectedCloseAt, ownerId, lostReason };
+  const record: Opportunity = {
+    ...base,
+    ...withoutUndefined(withoutKeys(parsed, REMOVABLE)),
+  };
   for (const key of REMOVABLE) {
-    const value = removable[key];
-    if (value !== null && Object.hasOwn(merged, key)) record[key] = value;
+    const value = parsed[key];
+    if (value !== null && value !== undefined) record[key] = value;
+    else if (value === null || Object.hasOwn(sent, key)) delete record[key];
   }
   return record;
 }
 
 /**
- * `value` as the expected close to store. It must name one instant by the
- * shared rule (`parseInstant` in `@/lib/dates`: an ISO date-time ending in
- * `Z` or an offset, on a real date, inside UTC years 0000-9999), and it is
- * stored in the UTC spelling `toISOString()` gives, as book() stores a start.
- *
- * - `undefined` gives undefined: a missing key means no date, and an explicit
- *   `undefined` on update clears it, which is what the deal form sends for an
- *   empty field.
- * - `null` gives null: the caller removes the date (see `withoutRemoved`).
- * - Anything else that is not one instant, non-strings included, is a 422
- *   `INVALID_OPPORTUNITY` with `field` "expectedCloseAt" and the
- *   `INVALID_EXPECTED_CLOSE` message.
+ * What update() accepts: the keys `editableSchema` names, where `null`
+ * removes an optional one, the expected close, the owner or the lost reason
+ * (the key is deleted, never stored as null). A JSON client cannot send
+ * `undefined`, so `null` is how it clears one of these. `Pick` makes every
+ * schema key an `Opportunity` key.
  */
-function checkExpectedClose(value: unknown): ISODate | null | undefined {
-  if (value === undefined || value === null) return value;
-  const ms = typeof value === "string" ? parseInstant(value) : null;
-  if (ms === null) {
-    throw new ApiError(
-      INVALID_EXPECTED_CLOSE,
-      422,
-      "INVALID_OPPORTUNITY",
-      "expectedCloseAt",
-    );
-  }
-  return new Date(ms).toISOString();
-}
+export type OpportunityPatch = Partial<
+  Pick<Opportunity, Exclude<EditableKey, RemovableKey>>
+> & {
+  [K in RemovableKey]?: Opportunity[K] | null;
+};
 
 function pushActivity(activity: Omit<Activity, "id">) {
   const record: Activity = { ...activity, id: newId("act") };
@@ -133,45 +277,58 @@ export async function get(id: ID): Promise<Opportunity> {
   );
 }
 
+/** What create() accepts: a patch plus the four keys every deal needs. */
 export type OpportunityDraft = OpportunityPatch &
   Pick<Opportunity, "name" | "contactId" | "pipelineId" | "stageId">;
 
 /**
  * Creates a deal and records it on the contact's timeline.
  *
- * - The expected close is checked first (see `checkExpectedClose`), before
- *   `nowIso()`, so a refused draft is a 422 that writes nothing and does not
- *   move the demo clock.
- * - `null` for expectedCloseAt, ownerId or lostReason means the deal has no
- *   such field: the key is left out, never stored as null. `undefined`
- *   behaves as it did before.
+ * - Only the keys `draftSchema` names are saved: name, contactId, pipelineId
+ *   and stageId (all required), plus value, currency, source, ownerId,
+ *   tagIds, customFields, expectedCloseAt and lostReason. What is saved is
+ *   the parsed draft, never the draft itself, so id, position, status,
+ *   closedAt, stageEnteredAt, createdAt, createdBy, updatedAt and any key the
+ *   API does not know are ignored: the deal's id, position (the end of its
+ *   column), status ("open") and timestamps always come from the API.
+ * - A wrong-typed value is a 422 `INVALID_OPPORTUNITY`, "<label>: <rule>" in
+ *   the deal form's words, with `field` the dotted path (see `parse`). A
+ *   draft that is not an object is "Deal: Not a valid value." with no field.
+ *   An expected close that is not one instant keeps P7-T35's message.
+ * - Every check runs before `nowIso()`, so a refused draft writes nothing and
+ *   does not move the demo clock.
+ * - `null` or `undefined` for expectedCloseAt, ownerId or lostReason means
+ *   the deal has no such field: the key is left out, never stored.
  */
 export async function create(draft: OpportunityDraft): Promise<Opportunity> {
   const opportunity = await simulate(
     () => {
-      const expectedCloseAt = checkExpectedClose(draft.expectedCloseAt);
+      const parsed = parse(draftSchema, draft);
       const at = nowIso();
       const siblings = Object.values(db.getState().opportunities).filter(
-        (o) => o.stageId === draft.stageId,
+        (o) => o.stageId === parsed.stageId,
       );
-      const record = withoutRemoved({
-        id: newId("opp"),
-        position: siblings.length,
-        value: 0,
-        currency: "USD",
-        status: "open",
-        source: "manual",
-        tagIds: [],
-        customFields: {},
-        stageEnteredAt: at,
-        createdAt: at,
-        updatedAt: at,
-        ...draft,
-        // Only when the draft has the key, so a deal with no date gets no
-        // `expectedCloseAt` key at all. A draft with `null` (for this key,
-        // ownerId or lostReason) gets no key either: withoutRemoved drops it.
-        ...(Object.hasOwn(draft, "expectedCloseAt") ? { expectedCloseAt } : {}),
-      });
+      const record = applyPatch(
+        {
+          id: newId("opp"),
+          name: parsed.name,
+          contactId: parsed.contactId,
+          pipelineId: parsed.pipelineId,
+          stageId: parsed.stageId,
+          position: siblings.length,
+          value: 0,
+          currency: "USD",
+          status: "open",
+          source: "manual",
+          tagIds: [],
+          customFields: {},
+          stageEnteredAt: at,
+          createdAt: at,
+          updatedAt: at,
+        },
+        parsed,
+        draft,
+      );
       db.setState((s) => ({
         opportunities: { ...s.opportunities, [record.id]: record },
       }));
@@ -195,13 +352,26 @@ export async function create(draft: OpportunityDraft): Promise<Opportunity> {
 /**
  * Writes `patch` over the deal.
  *
+ * - Only the keys `editableSchema` names can change: name, contactId,
+ *   pipelineId, value, currency, source, ownerId, tagIds, customFields,
+ *   expectedCloseAt and lostReason. What is saved is the parsed patch, never
+ *   the patch itself, so id, stageId, position, status, closedAt,
+ *   stageEnteredAt, createdAt, createdBy, updatedAt and any key the API does
+ *   not know are ignored, and a client that sends the whole record back
+ *   still saves. move() owns the stage and position, and setStatus() owns
+ *   the status, the close date and the won/lost activity.
  * - Errors, in this order, and nothing is written on either: 404 `NOT_FOUND`
- *   for an unknown id, then 422 `INVALID_OPPORTUNITY` for an expected close
- *   that is not one instant (see `checkExpectedClose`). The check runs before
- *   `nowIso()`, so a refused patch does not move the demo clock either.
- * - `null` removes expectedCloseAt, ownerId or lostReason: the key is
- *   deleted, never stored as null. `undefined` behaves as it did before, and
- *   a key the patch leaves out keeps its stored value.
+ *   for an unknown id, then 422 `INVALID_OPPORTUNITY` for a wrong-typed
+ *   value, "<label>: <rule>" with `field` the dotted path (see `parse`). A
+ *   patch that is not an object is "Deal: Not a valid value." with no field;
+ *   an expected close that is not one instant keeps P7-T35's message. Both
+ *   run before `nowIso()`, so a refused patch does not move the demo clock.
+ * - `undefined` on any other key is ignored, the same as a missing key, so
+ *   it never erases a stored value. On expectedCloseAt, ownerId or
+ *   lostReason, `undefined` (the deal form's empty field) or `null` (a JSON
+ *   client's) removes the field: the key is deleted, never stored.
+ * - The lost reason is not checked against the status: clearing it on a lost
+ *   deal is allowed, as the deal form already saves a loss with no reason.
  */
 export async function update(
   id: ID,
@@ -209,16 +379,8 @@ export async function update(
 ): Promise<Opportunity> {
   const opportunity = await simulate(() => {
     const prev = db.getState().opportunities[id] ?? notFound("Opportunity", id);
-    const expectedCloseAt = checkExpectedClose(patch.expectedCloseAt);
-    const next = withoutRemoved({
-      ...prev,
-      ...patch,
-      // Only when the patch has the key: without it the stored close stays,
-      // an explicit undefined clears it and null removes it.
-      ...(Object.hasOwn(patch, "expectedCloseAt") ? { expectedCloseAt } : {}),
-      id,
-      updatedAt: nowIso(),
-    });
+    const parsed = parse(editableSchema, patch);
+    const next = applyPatch({ ...prev, updatedAt: nowIso() }, parsed, patch);
     db.setState((s) => ({ opportunities: { ...s.opportunities, [id]: next } }));
     return next;
   });
@@ -294,13 +456,45 @@ export async function move(
   return opportunity;
 }
 
+/**
+ * setStatus()'s write: the status, plus the close date and lost reason that
+ * go with it. Not the public update(), which ignores status and closedAt. A
+ * close date or reason given as `undefined` is deleted, never stored as an
+ * `undefined` key.
+ */
+async function writeStatus(
+  id: ID,
+  fields: {
+    status: Opportunity["status"];
+    closedAt: ISODate | undefined;
+    lostReason: string | undefined;
+  },
+): Promise<Opportunity> {
+  const opportunity = await simulate(() => {
+    const prev = db.getState().opportunities[id] ?? notFound("Opportunity", id);
+    const next: Opportunity = {
+      ...prev,
+      status: fields.status,
+      updatedAt: nowIso(),
+    };
+    if (fields.closedAt === undefined) delete next.closedAt;
+    else next.closedAt = fields.closedAt;
+    if (fields.lostReason === undefined) delete next.lostReason;
+    else next.lostReason = fields.lostReason;
+    db.setState((s) => ({ opportunities: { ...s.opportunities, [id]: next } }));
+    return next;
+  });
+  invalidate("opportunities", "analytics");
+  return opportunity;
+}
+
 export async function setStatus(
   id: ID,
   status: Opportunity["status"],
   lostReason?: string,
 ): Promise<Opportunity> {
   const at = nowIso();
-  const opportunity = await update(id, {
+  const opportunity = await writeStatus(id, {
     status,
     lostReason: status === "lost" ? lostReason : undefined,
     closedAt: status === "open" ? undefined : at,
