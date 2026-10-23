@@ -1138,6 +1138,7 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T39 — Name the remaining TagPickers and the contacts search box
 - **Owner:** agent · **Depends:** —
 - **Scope:** Deal sheet TagPicker: id + FieldLabel htmlFor (opportunity-form-sheet.tsx ~499); contacts-toolbar and bulk Tags popover TagPickers need an aria-label prop; contacts search Input (contacts-toolbar.tsx:38) needs aria-label; extend select-a11y.spec.ts
+  - From the P7-T28 review, in e2e/select-a11y.spec.ts: retitle the per-route tests (~:240) from "Chromium ignores every Select's hidden input" to say they also pin the names (e.g. "every Select is named and its hidden input ignored", as the Owner-popover test reads). In `expectNamedControls`' doc, say the count is checked once the named triggers are present, so a Select that mounts later is not caught. Cite the TAG_COMBOBOX source as AriaCombobox.mjs's `${id}-hidden-input` expression, not a line range, so a Base UI patch bump does not stale it.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
