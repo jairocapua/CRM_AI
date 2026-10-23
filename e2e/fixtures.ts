@@ -9,6 +9,9 @@ import { test as base, expect, type Page } from "@playwright/test";
  *   error or hydration message;
  * - `gotoApp(path)`, which navigates and waits for the app to boot.
  *
+ * It also exports `NAVIGATION`, the expect timeout for the first wait after a
+ * client-side navigation to another route.
+ *
  * These apply to the `page` fixture only: a tab opened with
  * `context.newPage()` gets neither the storage clearing nor the console
  * watcher.
@@ -21,6 +24,22 @@ export const BOOT_SKELETON = '[aria-busy="true"][aria-label="Loading"]';
 /** The error screen `DbGate` (src/components/providers/db-gate.tsx) shows when
  *  the mock database fails to start. */
 export const BOOT_FAILED = "Could not start the demo workspace";
+
+/**
+ * Expect options for the first wait after a client-side navigation to another
+ * route: a link, a list row or a sidebar link. Pass it to that wait, e.g.
+ * `await expect(page).toHaveURL(/\/dashboard$/, NAVIGATION)`.
+ *
+ * Such a navigation fetches the new route from the `next start` server, and
+ * under a full e2e run (every worker busy) that took 4-6s, past expect's 5s
+ * default (LEARNINGS P7-T15, P7-T16, P7-T20).
+ *
+ * A URL change within the same route needs no server and keeps the default:
+ * the calendars' view and date, and the availability editor's `?calendar=`,
+ * both go through `history.pushState`/`replaceState`. So do "the URL did not
+ * change" checks. Decided in P7-T27, instead of capping the worker count.
+ */
+export const NAVIGATION = { timeout: 15_000 };
 
 /**
  * Waits until the boot skeleton is gone, then fails if the app landed on the

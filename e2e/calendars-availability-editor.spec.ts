@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 
 import { readCalendarAvailability } from "./calendar-helpers";
-import { expect, test } from "./fixtures";
+import { expect, NAVIGATION, test } from "./fixtures";
 
 /**
  * The availability editor's two safety rules (P7-T20).
@@ -34,10 +34,6 @@ const FIRST = "Discovery Call";
 const OTHER = "Strategy Session";
 const TUESDAY = 2;
 const DIALOG_TITLE = "Discard unsaved changes?";
-
-/** Cross-route navigations can be slow on a loaded machine (LEARNINGS
- *  P7-T15/T16). */
-const NAVIGATION = { timeout: 15_000 };
 
 /** For checks on the page while the modal dialog hides it. */
 const HIDDEN = { includeHidden: true };

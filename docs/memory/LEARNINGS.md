@@ -161,3 +161,6 @@
 - 2026-10-23 [P7-T26] With setTuning({ latencyMs: 0, jitter: 0 }), simulate() via settle() does not advance the fake clock, so after setDemoNow(t) and no writes nowIso() returns exactly t; a stray nowIso() in a refused path shows as t + 1ms.
 - 2026-10-23 [P7-T26] Base UI disabled SelectItems read correctly via getByRole('option', { disabled: false }) and toBeDisabled(); option text has no stray glyph, so toHaveText([...]) works.
 - 2026-10-23 [P7-T26] Python is not installed in this machine's Git Bash; use heredocs, sed or the Edit tool.
+- 2026-10-23 [P7-T27] The stress run (six specs x3, 16 workers) loads the first batch heavily: calendars-load-errors tests took 11-13s in batch one, 4-6s later. All 96 passed; no NAVIGATION site needed over 15s.
+- 2026-10-23 [P7-T27] Only six e2e specs click links or the sidebar (calendars-availability, -availability-editor, -booking, -details, -load-errors, link-buttons): the whole set of cross-route navigation sites today.
+- 2026-10-23 [P7-T27] e2e/fixtures.ts already had two lines over 80 columns (the BOOT_FAILED throw message and one more); left alone.

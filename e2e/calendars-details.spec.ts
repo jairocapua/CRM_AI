@@ -14,15 +14,16 @@ import {
   viewRegion,
   type SeededAppointment,
 } from "./calendar-helpers";
-import { expect, test } from "./fixtures";
+import { expect, NAVIGATION, test } from "./fixtures";
 
 /**
  * Appointment details: a chip or block opens a dialog with the contact, the
  * time in the viewer's zone and in the calendar's, the calendar, location and
  * status. The status changes there and the appointment can be cancelled.
  * Once an appointment has ended, only Showed and No Show are offered and it
- * cannot be cancelled (P7-H3). Within a day, live appointments are listed before cancelled ones in every
- * view, so a cancellation never pushes a live booking behind "+N more".
+ * cannot be cancelled (P7-H3). Within a day, live appointments are listed
+ * before cancelled ones in every view, so a cancellation never pushes a live
+ * booking behind "+N more".
  *
  * Checked against an oracle the UI does not share: the persisted database.
  * The viewer is in Singapore while every seeded calendar is in Los Angeles,
@@ -358,7 +359,7 @@ test("cancelling removes it from the Upcoming card and frees its slot", async ({
     .locator('[data-slot="sidebar"]')
     .getByRole("link", { name: "Dashboard", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard$/, NAVIGATION);
   await expect(cardRows).toHaveCount(6);
   await expect(
     card.locator(`li[data-appointment-id="${target.id}"]`),
@@ -411,7 +412,10 @@ test("a status change appears on the contact's activity timeline", async ({
   await detail(dialog, "Contact")
     .getByRole("link", { name: target.contactName, exact: true })
     .click();
-  await expect(page).toHaveURL(new RegExp(`/contacts/${target.contactId}$`));
+  await expect(page).toHaveURL(
+    new RegExp(`/contacts/${target.contactId}$`),
+    NAVIGATION,
+  );
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
   // The Activity tab, newest first: the change is on top.

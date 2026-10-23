@@ -5,26 +5,26 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T26 in review.
+- **Status:** P7-T27 in review.
 
 ## Last change
-- New pure rule `hasEnded` / `canMoveToStatus` in src/lib/validation/appointment.ts (ended = end strictly before demo now).
-- calendars.ts setStatus()/cancel(): ended appointment to Confirmed/Cancelled throws ApiError 422 PAST_APPOINTMENT, nothing written, clock high-water mark untouched.
-- Details dialog: ended appointments get Confirmed/Cancelled disabled and no Cancel button.
-- Gate green; 11 new API Vitest cases, rule tables, 1 e2e; mutants each red. SEED_VERSION 4.
+- One shared `NAVIGATION = { timeout: 15_000 }` in e2e/fixtures.ts; local copies in the editor and link-buttons specs removed.
+- Every first wait after a cross-route navigation (availability, booking, details, load-errors specs) now passes it; same-route checks keep 5s.
+- playwright.config.ts comment: no worker cap, no expect key (decided). test.slow() comments and details header rewrapped.
+- Gate green; full e2e 93 passed; stress run (6 specs x3) 96 passed. src/ untouched, SEED_VERSION 4.
 
 ## Next up
-- **Agent:** P7-T27 (once P7-T26 is approved).
+- **Agent:** P7-T28 (once P7-T27 is approved).
 
 ## Waiting on you
-- Review of P7-T26.
+- Review of P7-T27.
 - P7-H4: decide whether an ended, already-Cancelled appointment should stay frozen.
 
 ## Open suggestions (non-blocking review notes)
-- e2e/calendars-details.spec.ts header comment (lines 23-25): rewrap the over-long line by hand.
-- Dialog reads apiNow() at render: an appointment ending while its dialog is open keeps Cancel/Confirmed (and Undo) until re-render; API 422 catches it. Timer only if noticed.
-- calendars.test.ts first test flaked once on a cold cache (5s timeout); consider raising its timeout or warming the import.
-- If more appointment rules arrive, move them out of validation/ (e.g. src/lib/appointments/rules.ts).
+- fixtures.ts:39-40: reword "So do 'the URL did not change' checks." to "'The URL did not change' checks keep it too."
+- fixtures.ts:42: make NAVIGATION `as const` / `Object.freeze` so no spec can mutate it.
+- Nothing enforces NAVIGATION in new specs: note it in CLAUDE.md/LEARNINGS e2e section, or a lint rule / `navigateVia(link)` helper (BACKLOG).
+- Earlier: dialog reads apiNow() at render (no timer); calendars.test.ts cold-cache flake; move appointment rules out of validation/ if more arrive.
 
 ## Blockers
 - None.

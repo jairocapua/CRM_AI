@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 
-import { expect, test } from "./fixtures";
+import { expect, NAVIGATION, test } from "./fixtures";
 
 /**
  * Links drawn as buttons stay links: an `<a href>` with no role, so screen
@@ -32,10 +32,6 @@ test.use({ colorScheme: "light", locale: "en-US" });
 
 /** `getComputedStyle` reads `transparent` back as this. */
 const TRANSPARENT = "rgba(0, 0, 0, 0)";
-
-/** Cross-route navigations can be slow on a loaded machine (LEARNINGS
- *  P7-T15/T16). */
-const NAVIGATION = { timeout: 15_000 };
 
 interface ButtonLook {
   height: string;

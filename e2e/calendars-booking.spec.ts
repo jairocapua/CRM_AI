@@ -21,7 +21,7 @@ import {
   type SeededAppointment,
   type SeededContact,
 } from "./calendar-helpers";
-import { expect, test } from "./fixtures";
+import { expect, NAVIGATION, test } from "./fixtures";
 
 /**
  * Booking: the dialog opened from the Calendars toolbar or from a contact's
@@ -154,8 +154,9 @@ test("a booking appears in every view, on the timeline and the dashboard, and it
   page,
   gotoApp,
 }) => {
-  // About 7s alone on one worker, but about 28s in a full run on 16 workers,
-  // close to Playwright's old 30s default. slow() triples the 60s budget.
+  // About 7s alone on one worker, but about 28s in a full run on 16 workers
+  // (measured in P7-T21), close to the 30s Playwright default this suite used
+  // before. slow() triples the 60s budget.
   test.slow();
   await gotoApp(`/calendars?view=month&date=${DAY}`);
   await expectPosition(page, "Month", "September 2026");
@@ -232,7 +233,10 @@ test("a booking appears in every view, on the timeline and the dashboard, and it
   const details = page.getByRole("dialog");
   await expect(details.getByRole("heading")).toHaveText(row.title);
   await details.getByRole("link", { name: contact.name, exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/contacts/${contact.id}$`));
+  await expect(page).toHaveURL(
+    new RegExp(`/contacts/${contact.id}$`),
+    NAVIGATION,
+  );
   await expect(page.locator('[data-slot="item-title"]').first()).toHaveText(
     `Booked "${row.title}"`,
   );
@@ -242,7 +246,7 @@ test("a booking appears in every view, on the timeline and the dashboard, and it
     .locator('[data-slot="sidebar"]')
     .getByRole("link", { name: "Dashboard", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard$/, NAVIGATION);
   const card = page
     .locator('[data-slot="card"]')
     .filter({ has: page.getByText("Upcoming appointments", { exact: true }) });
@@ -318,8 +322,9 @@ test("a booked slot is not offered until its appointment is cancelled", async ({
   page,
   gotoApp,
 }) => {
-  // About 6s alone on one worker, but about 27s in a full run on 16 workers,
-  // close to Playwright's old 30s default. slow() triples the 60s budget.
+  // About 6s alone on one worker, but about 27s in a full run on 16 workers
+  // (measured in P7-T21), close to the 30s Playwright default this suite used
+  // before. slow() triples the 60s budget.
   test.slow();
   const LATER_DAY = "2026-09-10";
 

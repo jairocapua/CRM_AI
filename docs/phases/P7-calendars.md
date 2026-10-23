@@ -922,12 +922,63 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T27 — e2e: longer toHaveURL timeout for cross-route navigation
 - **Owner:** agent · **Depends:** —
+- **Skills:** `playwright-cli`
 - **Scope:** Two specs flaked once at 5s toHaveURL after leaving /calendars under full-suite load; raise timeout for cross-route nav or cap Playwright workers on Windows.
   - From the P7-T21 review: the playwright.config.ts comment above `timeout: 60_000` says expect's timeout and the worker count are "left at their defaults on purpose"; update it to say what this task decided (and name P7-T27). In calendars-booking.spec.ts, the two `test.slow()` comments say "Playwright's old 30s default": 30s is still Playwright's default, so say "the 30s Playwright default this suite used before", and date the measured durations ("measured in P7-T21").
   - From the P7-T25 review: the contact-page test in calendars-load-errors.spec.ts has two `toHaveURL` checks after client-side navigation (`/contacts$` and `/contacts/${id}$`); cover them with the same timeout.
   - From the P7-T26 review: e2e/calendars-details.spec.ts's header comment (~:23-25) had a sentence spliced into one line, which now runs past the block's wrap width; rewrap it by hand (Prettier does not rewrap comments).
+  - Decided: the worker count and expect's 5s timeout stay at Playwright's
+    defaults, with no Windows worker cap. Only client-side navigations to
+    another route were slow (the new route is fetched from `next start`,
+    4-6s under full-suite load), and a cap would slow every run to fix that
+    one kind of wait.
+  - Decided: one shared `NAVIGATION = { timeout: 15_000 }` in
+    `e2e/fixtures.ts` covers the first wait after every client-side
+    navigation to another route (a link, a list row, the sidebar).
+    Same-route URL changes (the calendars' view and date, the availability
+    editor's `?calendar=`, both through `history.pushState`/`replaceState`)
+    and "URL unchanged" checks keep the 5s default.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. There is one shared navigation timeout. `e2e/fixtures.ts`
+        exports `NAVIGATION = { timeout: 15_000 }`, with a doc comment that
+        gives the reason (a navigation to another route fetches from
+        `next start`, 4-6s under load), says that same-route URL changes keep
+        the default and why (pushState/replaceState), and names P7-T27. The
+        local copies in `calendars-availability-editor.spec.ts` and
+        `link-buttons.spec.ts` are gone; both import it from `./fixtures`.
+  - [ ] A2. Every first wait after a client-side navigation to another route
+        uses `NAVIGATION`: in `calendars-availability.spec.ts`, after
+        Availability and after Back to calendars; in
+        `calendars-booking.spec.ts`, the contact page and the dashboard; in
+        `calendars-details.spec.ts`, the dashboard and the contact page; in
+        `calendars-load-errors.spec.ts`, both `/calendars` checks, the
+        contact page test's heading, `/contacts` and `/contacts/${id}`
+        checks, and `/calendars/availability`. The editor and link-buttons
+        sites already had it. Same-route URL checks (`calendars.spec.ts`,
+        `calendars-month.spec.ts`, the editor's `?calendar=` checks), "URL
+        unchanged" checks and `smoke.spec.ts`'s server redirect on `goto`
+        keep the 5s default. No assertion's target or URL pattern changes.
+  - [ ] A3. In `playwright.config.ts`, `timeout: 60_000`, `retries: 0` and
+        `fullyParallel: true` are unchanged and there is still no `expect` or
+        `workers` key. The comment above `timeout` says what P7-T27 decided:
+        expect's 5s timeout and the worker count stay at the defaults, waits
+        after a navigation to another route use `NAVIGATION` from
+        `e2e/fixtures.ts`, and a worker cap was rejected because it would
+        slow every run.
+  - [ ] A4. Both `test.slow()` comments in `calendars-booking.spec.ts` say
+        "the 30s Playwright default this suite used before" and "(measured in
+        P7-T21)". The durations (7s/28s and 6s/27s) are unchanged, and
+        `test.slow()` is still the first statement of both tests.
+  - [ ] A5. The `calendars-details.spec.ts` header comment is rewrapped by
+        hand: no line in the block is longer than 80 columns, and its words
+        are unchanged.
+  - [ ] A6. No product change and no regression. Nothing under `src/`
+        changes, `SEED_VERSION` stays 4, and `npm run check` is green. The
+        full `npm run e2e` passes with the same test count as before, and a
+        stress run of the six touched specs (`--repeat-each=3`, default
+        worker count) passes.
+  - [ ] A7. This entry carries a Skills line, this acceptance and the two
+        decisions.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T28 — Name the unlabelled Select triggers

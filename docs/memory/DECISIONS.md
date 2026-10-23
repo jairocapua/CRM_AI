@@ -197,3 +197,7 @@
 - 2026-10-23 [P7-T26] Rule names target statuses only: an ended Cancelled appointment can still go to Showed/No Show (subject to 409), not Confirmed. Re-setting the same blocked status is also 422. Flagged to owner.
 - 2026-10-23 [P7-T26] Dialog lists all four statuses and disables unoffered ones, so Base UI Select's alignItemWithTrigger always finds the selected item.
 - 2026-10-23 [P7-T26] The rule lives in src/lib/validation/appointment.ts, shared by API and dialog like calendarSettingsSchema.
+- 2026-10-23 [P7-T27] No Playwright worker cap and expect's 5s default stays: only client-side navigations to another route were slow, and a cap would slow every run.
+- 2026-10-23 [P7-T27] One shared NAVIGATION = { timeout: 15_000 } in e2e/fixtures.ts covers the first wait after every cross-route navigation; same-route (pushState/replaceState) and "URL unchanged" checks keep 5s.
+- 2026-10-23 [P7-T27] In the calendars-load-errors contact-page test, the heading check right after the first row.click() gets NAVIGATION (first wait after navigation, no URL check before it), like link-buttons.spec.ts:159.
+- 2026-10-23 [P7-T27] The playwright.config.ts comment names NAVIGATION and e2e/fixtures.ts but not the 15s value, so the two cannot drift.

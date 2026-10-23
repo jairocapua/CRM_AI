@@ -7,7 +7,7 @@ import {
   readCalendarAvailability,
   timeRadio,
 } from "./calendar-helpers";
-import { expect, test } from "./fixtures";
+import { expect, NAVIGATION, test } from "./fixtures";
 
 /**
  * The availability editor: a calendar's weekly hours, saved through the API,
@@ -66,7 +66,7 @@ test("shortening a day's window removes the later slots from booking", async ({
 
   // The editor, from the Calendars toolbar, opens on the first calendar.
   await page.getByRole("link", { name: "Availability", exact: true }).click();
-  await expect(page).toHaveURL(/\/calendars\/availability$/);
+  await expect(page).toHaveURL(/\/calendars\/availability$/, NAVIGATION);
   await expect(
     page
       .getByRole("combobox", { name: "Calendar" })
@@ -104,7 +104,7 @@ test("shortening a day's window removes the later slots from booking", async ({
   // Back on the calendars (a client navigation, so nothing reloads), the
   // dialog offers only the slots that end by 12:00 PDT.
   await page.getByRole("link", { name: "Back to calendars" }).click();
-  await expect(page).toHaveURL(/\/calendars$/);
+  await expect(page).toHaveURL(/\/calendars$/, NAVIGATION);
   await page.getByRole("button", { name: "Book", exact: true }).click();
   dialog = bookingDialog(page);
   await chooseCalendar(page, dialog, CALENDAR);

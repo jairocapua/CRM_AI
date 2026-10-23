@@ -18,7 +18,7 @@ import {
   timeRadio,
   viewRegion,
 } from "./calendar-helpers";
-import { expect, test } from "./fixtures";
+import { expect, NAVIGATION, test } from "./fixtures";
 
 /**
  * A read that fails with nothing on screen shows an error with Retry, never a
@@ -111,7 +111,7 @@ test("calendars page: a failed first load shows the error and Retry loads the mo
     .locator('[data-slot="sidebar"]')
     .getByRole("link", { name: "Calendars", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/calendars$/);
+  await expect(page).toHaveURL(/\/calendars$/, NAVIGATION);
   await expectPosition(page, "Month", "September 2026");
 
   const alert = loadErrorAlert(page, APPOINTMENTS_ERROR);
@@ -210,7 +210,7 @@ test("calendars page: a failed calendar list shows the error in its column and R
     .locator('[data-slot="sidebar"]')
     .getByRole("link", { name: "Calendars", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/calendars$/);
+  await expect(page).toHaveURL(/\/calendars$/, NAVIGATION);
   await expectPosition(page, "Month", "September 2026");
 
   const alert = loadErrorAlert(page, CALENDARS_ERROR);
@@ -337,13 +337,13 @@ test("contact page: a failed load shows the error and Retry loads the contact", 
   // so the fault can go on once the list's row shows.
   await armContactFault(page, id);
   await row.click();
-  await expect(heading).toBeVisible();
+  await expect(heading).toBeVisible(NAVIGATION);
   await back.click();
-  await expect(page).toHaveURL(/\/contacts$/);
+  await expect(page).toHaveURL(/\/contacts$/, NAVIGATION);
   await expect(row).toBeVisible();
   await failContactRead(page);
   await row.click();
-  await expect(page).toHaveURL(new RegExp(`/contacts/${id}$`));
+  await expect(page).toHaveURL(new RegExp(`/contacts/${id}$`), NAVIGATION);
 
   // The error stands alone: the back link, and no skeleton, no not-found
   // state, no contact header and no tabs.
@@ -410,7 +410,7 @@ test("availability page: a failed calendars load offers Retry", async ({
 
   await failReads(page, "calendars");
   await page.getByRole("link", { name: "Availability", exact: true }).click();
-  await expect(page).toHaveURL(/\/calendars\/availability$/);
+  await expect(page).toHaveURL(/\/calendars\/availability$/, NAVIGATION);
 
   const alert = loadErrorAlert(page, CALENDARS_ERROR);
   await expect(alert).toBeVisible();

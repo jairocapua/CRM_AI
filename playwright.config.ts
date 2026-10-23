@@ -49,8 +49,12 @@ export default defineConfig({
   // first batch of tests timed out at 30s while a plain rerun passed, and
   // `waitForBoot` (e2e/fixtures.ts) alone may spend 20s of the budget waiting
   // for the app to boot. The two long booking flows also call `test.slow()`.
-  // Expect's 5s timeout and the worker count are left at their defaults on
-  // purpose.
+  // Expect's 5s timeout and the worker count stay at Playwright's defaults
+  // (decided in P7-T27). Under the same load, the one kind of wait that ran
+  // past 5s was the first one after a client-side navigation to another
+  // route, which waits on this server, so those checks pass `NAVIGATION`
+  // (e2e/fixtures.ts) instead. Capping the workers would slow every run to fix
+  // that one kind of wait.
   timeout: 60_000,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
