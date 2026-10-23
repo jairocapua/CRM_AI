@@ -921,6 +921,7 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T35 — Validate expectedCloseAt in api.opportunities create/update
 - **Owner:** agent · **Depends:** —
 - **Scope:** src/lib/api/opportunities.ts accepts any string for expectedCloseAt; reject non-ISO values with a 422 so non-UI callers cannot store junk. Tests first.
+  - From the P7-T23 review: e2e/deal-form.spec.ts sets `timezoneId: 'Asia/Singapore'` but no assertion depends on it. Add an edit-deal round trip (open a seeded deal, save, reopen, the Expected close day is unchanged) so the zone covers the local-midnight rule end to end, or drop the setting.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
