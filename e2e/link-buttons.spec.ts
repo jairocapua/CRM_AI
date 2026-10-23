@@ -21,8 +21,10 @@ import { expect, NAVIGATION, test } from "./fixtures";
  *   both, and Tailwind's CSS order picks the winner: `border-transparent`
  *   beats the outline variant's `border-border` (no visible border),
  *   `rounded-lg` beats size sm/icon-sm's 8px radius, and the base 16px icon
- *   rule beats size sm's 14px. So each link is checked against the size,
- *   corners, padding, icon and border of the button it replaced.
+ *   rule beats size sm's 14px. Padding has a cause of its own: sm narrows a
+ *   side's padding to 6px only beside an icon that carries `data-icon`, so a
+ *   link icon without it keeps the full 10px. So each link is checked against
+ *   the size, corners, padding, icon and border of the button it replaced.
  *
  * Light mode is pinned, with a tripwire on `<html>`: in dark mode the outline
  * variant's `dark:border-input` paints a border anyway, so a dark run would

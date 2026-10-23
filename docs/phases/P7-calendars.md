@@ -1898,9 +1898,49 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T41 — Document the Base UI trigger exception in LinkButton JSDoc
 - **Owner:** agent · **Depends:** —
+- **Skills:** `writing-for-agents`
 - **Scope:** LinkButton JSDoc (ui/button.tsx) names the trigger-as-non-button disable exception the lint message allows; tidy eslint-config.test.mjs duplicate trigger asserts + comment; reword link-buttons spec header padding attribution
+  - Decided: the JSDoc names both exceptions the lint message allows, with
+    the exact directive spelling, and says why `role="button"` is right
+    there (the element opens or acts, it does not navigate). A link is
+    never an exception.
+  - Decided: in eslint-config.test.mjs each message clause is asserted
+    exactly once. Test 1 (span) asserts the non-link clause; test 2
+    (PopoverTrigger as div) asserts the trigger clause, the disable phrase
+    and the working directive.
+  - Decided: the spec header keeps its "Two causes" structure (role, look).
+    Under "The look" it names padding's own cause (`data-icon`), separate
+    from the cn() conflicts.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. LinkButton's JSDoc (src/components/ui/button.tsx) names both
+        exceptions the lint message allows: a non-link element that really
+        is a button, and a Base UI trigger (Menu, Popover, Dialog, Select)
+        that renders a non-button element, each kept behind
+        `eslint-disable-next-line no-restricted-syntax -- <why>`. It says
+        why `role="button"` is right there and that a navigating control is
+        never an exception. Only comment lines change.
+  - [ ] A2. In scripts/eslint-config.test.mjs each clause of the
+        nativeButton message is asserted exactly once. Test 1 (span) asserts
+        the non-link clause. Test 2 (PopoverTrigger as div) asserts the
+        trigger clause and "disable this line with a reason". The duplicate
+        asserts in test 1 are gone.
+  - [ ] A3. The test comments are accurate. The span block's comment no
+        longer makes "a non-link element" the subject of "disables the
+        line". The TRIGGER_DIV_DISABLED comment says the case passes only
+        when the rule fires on the line and the directive silences it (an
+        empty result alone could mean the selector missed).
+  - [ ] A4. Each remaining message assertion can go red. Mutant M1 (non-link
+        clause deleted from the lint message) fails test 1; M2 (trigger
+        clause deleted) and M3 ("disable this line with a reason" reworded)
+        fail test 2; M4 (`nativeButton={false}` removed from
+        TRIGGER_DIV_DISABLED) fails test 2 on the unused-directive report.
+  - [ ] A5. The e2e/link-buttons.spec.ts header no longer credits padding to
+        the cn() class conflicts. "The look" names padding's own cause (sm
+        narrows side padding only beside an icon carrying `data-icon`) and
+        still lists padding among the checked properties. Only comment lines
+        change.
+  - [ ] A6. This entry carries a Skills line, the three decisions and this
+        acceptance, and `npm run check` is green.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T42 — Team settings link: stop 404 prefetch until P9

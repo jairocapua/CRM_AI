@@ -68,6 +68,16 @@ function Button({
  *   `border-border` (no border in light mode), `rounded-lg` beats sm and
  *   icon-sm's 8px radius, and the base 16px icon rule beats sm's 14px.
  *
+ * The lint rule (`no-restricted-syntax` in eslint.config.mjs) rejects
+ * `nativeButton={false}` outside `ui/`, and its message allows two
+ * exceptions, each kept behind
+ * `// eslint-disable-next-line no-restricted-syntax -- <why>`: a non-link
+ * element that really is a button, and a Base UI trigger (Menu, Popover,
+ * Dialog, Select) that renders a non-button element, such as a Popover
+ * trigger drawn as a div inside an input group. There `role="button"` is
+ * right, because the element opens something rather than navigating. A
+ * control that navigates is never an exception: it is a LinkButton.
+ *
  * A local addition, not from the shadcn registry: keep it when this file is
  * updated from upstream (`shadcn add button --overwrite` would drop it).
  */

@@ -265,3 +265,5 @@
 - 2026-10-24 [P7-T40] e2e pauseTimers margin is PAUSE_MARGIN_MS = 5_000; its doc states both limits.
 - 2026-10-24 [P7-T40] Input-level pick is chooseContactIn(page, input, contact) + contactOption(page, contact) in calendar-helpers.ts; chooseContact delegates, calendars specs unchanged; the race test keeps its own fill/pause/click sequence. chooseContactIn relies on click auto-wait (no separate toBeVisible).
 - 2026-10-24 [P7-T40] Today's mock returns store records by reference, so no e2e can show the refetch bug; the happy-dom hook test is the only guard.
+- 2026-10-24 [P7-T41] LinkButton JSDoc names both lint exceptions (non-link real button; Base UI trigger rendering a non-button) with the exact disable directive; each message clause asserted exactly once; link-buttons spec keeps "Two causes" and gives padding's data-icon cause its own sentence.
+- 2026-10-24 [P7-T41] Phase A4 also lists mutant M4, which proves the reworded TRIGGER_DIV_DISABLED comment.

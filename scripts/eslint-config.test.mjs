@@ -154,16 +154,17 @@ test("nativeButton={false} is an error in app code", async () => {
     assert.match(messages[0].message, /CLAUDE\.md/, relPath);
   }
 
-  // A blanket ban: a non-link element is flagged too, and disables the line
-  // with a reason when it really is a button.
+  // A blanket ban: a non-link element is flagged too. The message lets one
+  // that really is a button keep the prop behind a reasoned disable.
   const messages = await restricted(
     NATIVE_BUTTON_SPAN,
     "src/components/modules/demo/demo.tsx",
   );
   assert.equal(messages.length, 1);
-  assert.match(messages[0].message, /trigger/);
-  assert.match(messages[0].message, /non-button element/);
-  assert.match(messages[0].message, /disable this line with a reason/);
+  assert.match(
+    messages[0].message,
+    /non-link element that really is a button may keep it/,
+  );
 });
 
 test("a Base UI trigger that renders a non-button element is flagged; a reasoned disable comment silences it", async () => {
@@ -172,11 +173,16 @@ test("a Base UI trigger that renders a non-button element is flagged; a reasoned
   const messages = await restricted(TRIGGER_DIV, relPath);
   assert.equal(messages.length, 1);
   assert.equal(messages[0].severity, 2);
-  assert.match(messages[0].message, /trigger/);
+  assert.match(
+    messages[0].message,
+    /a Base UI trigger \(Menu, Popover, Dialog, Select\) that renders a non-button element/,
+  );
   assert.match(messages[0].message, /disable this line with a reason/);
 
-  // restricted() fails on an unused-directive report (it has no ruleId), so
-  // this passes only when the comment really silences the line below it.
+  // An empty result alone could mean the selector missed the line.
+  // restricted() also fails on an unused-directive report (it has no ruleId),
+  // so this passes only when the rule fires on the line below and the comment
+  // silences it.
   assert.deepEqual(await restricted(TRIGGER_DIV_DISABLED, relPath), []);
 });
 
