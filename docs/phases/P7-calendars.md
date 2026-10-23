@@ -2280,6 +2280,7 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T51 — Contact detail + opportunity board/detail: surface tags.list load failure
 - **Owner:** agent · **Depends:** —
 - **Scope:** Info panel and opportunity board/detail read tags with ?? [] and stay silently empty on failure; show LoadError + Retry like P7-T47.
+  - From the P7-T47 review: in src/components/modules/contacts/contacts-table.tsx (~:175) the tags alert is gated only on `!loadError`, so it can show above the skeleton during the contacts first load (a fault can fail tags.list before contacts.list lands). Gate it on the rows being on screen (`contactsPage.data !== undefined && !loadError`), matching its doc comment, and do the same on the new pages. TagPicker's "Could not load tags." state also appears in the contact and deal form sheets and the bulk Tags popover with no way to retry: add a small Retry in its ComboboxEmpty that calls `invalidate("tags")`. Add a comment that the "failed tag re-read with badges on screen keeps them" e2e is a regression guard (it passes without P7-T47's fix).
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-24
