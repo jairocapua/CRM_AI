@@ -874,6 +874,7 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T34 — Calendar update: validate or allow-list keys outside the settings schema
 - **Owner:** agent · **Depends:** —
 - **Scope:** update() passes name/color/teamMemberIds/isActive/description unchecked (null or wrong type overwrites required fields) and lets createdAt be overwritten; validate the merged record or allow-list, always keep prev.createdAt (calendars.ts:163-164).
+  - From the P7-T22 review, in the same file: add one BAD_PATCHES row whose issue path is top-level and unlabelled (e.g. a non-object patch, as a JSON client might send) to pin the "Calendar settings" fallback label. Type `withoutUndefined` as `{ [K in keyof T]?: Exclude<T[K], undefined> }` so TypeScript enforces what it guarantees. Note at `settingLabel` that "window N" counts windows in the order sent, while the editor's `toAvailabilityPatch` sorts them by start time, so whoever wires `ApiError.field` into the form maps it through the same order.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
