@@ -239,3 +239,6 @@
 - 2026-10-24 [P7-T47] Base UI Combobox inside a Popover: while the list is open, the popover's other controls drop out of the a11y tree (getByRole misses them); press Escape to close the list, the popover stays open.
 - 2026-10-24 [P7-T47] Clicking a TagPicker's chips input opens its list in Playwright; ComboboxEmpty shows when items is empty, so an error message can live there.
 - 2026-10-24 [P7-T47] TagBadge renders data-slot='badge'; scope e2e to td:nth-child(4) so status badges are excluded.
+- 2026-10-24 [P7-T48] npm audit says "fix via --force / outside range" for next only because it is exact-pinned; `npm install --save-exact next@X` fixes it without --force touching vite or the react-table pin.
+- 2026-10-24 [P7-T48] The e2e _rsc / next-router-prefetch interception in calendars-availability-editor.spec.ts still works on Next 16.4.3 (wire format unchanged from 16.3.4).
+- 2026-10-24 [P7-T48] On Windows the `crm` preview dev server holds node_modules/next open; preview_stop it before npm install of next, then preview_start crm.

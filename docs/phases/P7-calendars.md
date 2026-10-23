@@ -2258,9 +2258,15 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T48 — Bump next to patch npm audit critical findings
 - **Owner:** agent · **Depends:** —
-- **Scope:** npm audit: 9 findings, 2 critical (next 16.3.4 direct, proxy-addr transitive). Patch-bump next, rerun check + e2e.
+- **Scope:** npm audit: 11 findings (3 moderate, 6 high), 2 critical (next 16.3.4 direct, proxy-addr transitive via shadcn → @modelcontextprotocol/sdk → express). A patch bump is not enough: the Next RCE advisories (GHSA-2464-fhr4-w9xw, GHSA-673q-mjm6-r5xr) and the Server Actions DoS (GHSA-p3m5-59mp-jv5r) cover `>=16.0.0 <=16.4.0`, and the latest 16.3.x (16.3.8) is still inside that range. So it is a minor bump to next 16.4.3 (eslint-config-next with it), both exact-pinned, plus `npm audit fix` (never `--force`) for the transitive findings. Then rerun check + e2e.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] `npm audit` reports no critical findings; `next` and `proxy-addr` are absent from the report.
+  - [ ] Every finding `npm audit fix` can fix without `--force` is fixed (target: "found 0 vulnerabilities"); anything left over is listed with a reason and is not critical.
+  - [ ] `next` and `eslint-config-next` are exact-pinned at 16.4.3; the existing pins survive (`@tanstack/react-table` 8.21.3 + override, `vite` ^7).
+  - [ ] `npm run check` is green on the new versions.
+  - [ ] The full `npm run e2e` suite is green on a 16.4.3 production build (including `e2e/calendars-availability-editor.spec.ts`, which reads Next's `_rsc` / `next-router-prefetch` internals).
+  - [ ] Docs match the code: the `docs/spec.md` stack table shows next 16.4.3.
+  - [ ] No app behaviour change: no `src/` file changes unless a 16.4 deprecation forces it (then named and explained).
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
 ### P7-T49 — Shared userMenu(page) e2e helper

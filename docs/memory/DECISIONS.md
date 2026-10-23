@@ -294,3 +294,5 @@
 - 2026-10-24 [P7-T47] TagPicker hides Create while its read has failed with no data (cannot check duplicates); applies to every TagPicker.
 - 2026-10-24 [P7-T47] e2e TABLE_SHAPES is now { has, lacks? }; tags = name+slug+color without timezone (Calendar is the only other record with slug).
 - 2026-10-24 [P7-T47] No new Vitest tests: no pure logic added; component branches proven red/green by e2e mutants (a)-(f).
+- 2026-10-24 [P7-T48] next 16.3.4 -> 16.4.3 (minor, not patch): the Image-Optimization and use-cache RCE advisories plus the Server Actions DoS cover <=16.4.0. eslint-config-next moves with it; both stay exact-pinned. Transitive fixes via npm audit fix, no --force.
+- 2026-10-24 [P7-T48] shadcn lockfile resolution moved 4.21.0 -> 4.22.1 via npm audit fix (within ^4.21.0), dropping its nested zod 3.25.76; zod root 4.5.4 -> 4.6.7. package.json not edited for either.

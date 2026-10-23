@@ -34,7 +34,7 @@ Versions verified against the npm registry today (2026-09-08).
 
 | Package | Version | Note |
 |---|---|---|
-| `next` | 16.3.4 | App Router, `src/`, Turbopack |
+| `next` | 16.4.3 | App Router, `src/`, Turbopack. Bumped from 16.3.4 in P7-T48 for security advisories |
 | `react` | 19.x | CNA default |
 | Tailwind CSS | v4 | CSS-first config, **no** `tailwind.config.ts` |
 | shadcn/ui | CLI 4.21 | style `new-york` (only style now), baseColor `zinc` |
