@@ -761,6 +761,7 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T27 — e2e: longer toHaveURL timeout for cross-route navigation
 - **Owner:** agent · **Depends:** —
 - **Scope:** Two specs flaked once at 5s toHaveURL after leaving /calendars under full-suite load; raise timeout for cross-route nav or cap Playwright workers on Windows.
+  - From the P7-T21 review: the playwright.config.ts comment above `timeout: 60_000` says expect's timeout and the worker count are "left at their defaults on purpose"; update it to say what this task decided (and name P7-T27). In calendars-booking.spec.ts, the two `test.slow()` comments say "Playwright's old 30s default": 30s is still Playwright's default, so say "the 30s Playwright default this suite used before", and date the measured durations ("measured in P7-T21").
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
@@ -786,6 +787,7 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** Move the three copies of booking-dialog contact pick (fill + option click) into e2e/calendar-helpers.ts chooseContact and use it in calendars-booking, calendars-booking-dialog, calendars-load-errors specs.
   - From the P7-T18 review, in the same spec files: in calendars-load-errors.spec.ts, the RetryWatch.sawSkeleton doc should say "inside `scope`" (watchRetry now takes a scope), and the aria-busy MutationObserver should read the mutation records (attributeOldValue: true) rather than the live attribute. In calendars-booking-dialog.spec.ts, the header claims sixteen times on both 9 and 10 September but only the 9th is checked: trim the claim or assert it.
+  - From the P7-T21 review: failReads' Limits paragraph in calendar-helpers.ts names only calendars.ts. Add that any other API call reading the table through `Object.values` throws too while the fault is on, e.g. template rendering (templates.ts), analytics (analytics.ts) and the settings integrity check (settings.ts).
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
