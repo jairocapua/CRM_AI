@@ -99,7 +99,7 @@ export function BulkActionsBar({
               if (value) void assignOwner(value);
             }}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full" aria-label="Assign owner">
               <SelectValue placeholder="Assign owner">
                 {(value: string) => {
                   if (value === "unassigned") return "Unassigned";

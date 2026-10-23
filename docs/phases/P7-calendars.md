@@ -983,11 +983,64 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T28 — Name the unlabelled Select triggers
 - **Owner:** agent · **Depends:** —
+- **Skills:** `shadcn`, `playwright-cli`, `webapp-testing`
 - **Scope:** Add aria-label to SelectTriggers in contacts-toolbar.tsx:52, board-toolbar.tsx:43, bulk-actions-bar.tsx:102; add non-empty-name check in e2e/select-a11y.spec.ts
   - From the P7-T16 review: CLAUDE.md's read_page note says Chromium ignores the hidden input behind every Select *and Combobox*, citing e2e/select-a11y.spec.ts, but the spec checks only Selects. Add one Combobox case (the TagPicker in the Add contact sheet) so the note is proven, or narrow the note to Select.
   - Also from P7-T16: the per-route tests wait only for the first trigger, so a Select that mounts after the skeletons clear would go unchecked; pin the expected trigger count (or names) per route, as the Add contact test already does.
+  - Decided: each new aria-label is the trigger's own placeholder text
+    ("Status", "Pipeline", "Assign owner"), so the visible text and the
+    spoken name agree (WCAG's label-in-name rule). Both pipeline switchers
+    (dashboard and opportunities board) are named "Pipeline".
+  - Decided: the Combobox case is the Add contact TagPicker. It is named
+    through the sheet's existing `FieldLabel htmlFor="tagIds"`, with
+    TagPicker passing an optional `id` to its text input, not through an
+    aria-label. The contacts-toolbar, bulk Tags popover and deal-sheet
+    TagPickers, and the contacts search input, go to a follow-up task.
+  - Decided: the CLAUDE.md read_page note keeps "Select and Combobox"; the
+    new TagPicker case proves it.
+  - Decided: expected names are pinned twice: waited for with `getByRole`
+    (which catches a late-mounting Select), and compared as Chromium's own
+    names, read through CDP, in page order.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. The three unnamed Select triggers get names that match their
+        placeholders: the contacts status filter is "Status"
+        (contacts-toolbar.tsx:52), the opportunities pipeline switcher is
+        "Pipeline" (board-toolbar.tsx:43) and the bulk-actions Owner Select
+        is "Assign owner" (bulk-actions-bar.tsx:102). No other change in
+        those files.
+  - [ ] A2. The spec fails for any checked trigger with an empty accessible
+        name in Chromium's tree: `controlAxProblems` reports `<Noun> trigger
+        N is exposed combobox named "", expected a non-empty name`.
+  - [ ] A3. Each per-route test pins its expected triggers by name:
+        /dashboard [Pipeline], /conversations [Filter by channel], /contacts
+        [Status], /opportunities [Pipeline], /calendars/availability
+        [Calendar]. It waits for each by role and name, the trigger count
+        equals the list length, and Chromium's CDP names equal the list in
+        page order with no problems. A late Select is waited for, and a
+        missing or extra one fails.
+  - [ ] A4. Bulk-actions Owner popover: after a row is selected and Owner is
+        opened, the popover holds exactly one Select, an exposed combobox
+        named "Assign owner" whose hidden input Chromium ignores because of
+        its own aria-hidden.
+  - [ ] A5. Combobox case: in the Add contact sheet, the TagPicker's text
+        input is an exposed combobox named "Tags" (the existing `FieldLabel
+        htmlFor="tagIds"` reaches it because TagPicker passes an optional
+        `id` to its input), and its Base UI hidden input
+        (`[data-slot="combobox-chips"] ~ input[id$="-hidden-input"]`) is
+        ignored for its own aria-hidden, count 1 to 1. CLAUDE.md's "Select
+        and Combobox" read_page note is unchanged and now backed by this
+        test.
+  - [ ] A6. The Add contact Selects test keeps its six names (Status,
+        Source, Owner, Budget Range, Company Size, Preferred Contact Method)
+        and its count of 6, and now also pins Chromium's names in page order
+        through the shared helper.
+  - [ ] A7. No seed, API or mock change, and no regression. Only
+        contacts-toolbar, board-toolbar, bulk-actions-bar, tag-picker and
+        contact-form-sheet change under `src/`, nothing under `src/lib`
+        changes, `SEED_VERSION` stays 4, `npm run check` is green, and the
+        full `npm run e2e` passes with the previous test count + 3.
+  - [ ] A8. This entry carries a Skills line, this acceptance and the four
+        decisions.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T29 — Fix ContactPicker selection race after a pick
@@ -1078,6 +1131,13 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-H4 — Decide: should an ended, already-Cancelled appointment stay frozen?
 - **Owner:** human · **Depends:** —
 - **Scope:** Today it can be marked Showed/No Show (target-only rule); 409 message reads oddly when slot rebooked. If frozen, change canMoveToStatus + its Vitest row.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T39 — Name the remaining TagPickers and the contacts search box
+- **Owner:** agent · **Depends:** —
+- **Scope:** Deal sheet TagPicker: id + FieldLabel htmlFor (opportunity-form-sheet.tsx ~499); contacts-toolbar and bulk Tags popover TagPickers need an aria-label prop; contacts search Input (contacts-toolbar.tsx:38) needs aria-label; extend select-a11y.spec.ts
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

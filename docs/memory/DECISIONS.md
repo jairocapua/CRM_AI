@@ -201,3 +201,8 @@
 - 2026-10-23 [P7-T27] One shared NAVIGATION = { timeout: 15_000 } in e2e/fixtures.ts covers the first wait after every cross-route navigation; same-route (pushState/replaceState) and "URL unchanged" checks keep 5s.
 - 2026-10-23 [P7-T27] In the calendars-load-errors contact-page test, the heading check right after the first row.click() gets NAVIGATION (first wait after navigation, no URL check before it), like link-buttons.spec.ts:159.
 - 2026-10-23 [P7-T27] The playwright.config.ts comment names NAVIGATION and e2e/fixtures.ts but not the 15s value, so the two cannot drift.
+- 2026-10-23 [P7-T28] Each new Select aria-label is the trigger's placeholder (Status, Pipeline, Assign owner); both pipeline switchers are named "Pipeline".
+- 2026-10-23 [P7-T28] TagPicker is named via the existing FieldLabel htmlFor="tagIds" (new optional id prop passed to ComboboxChipsInput), not aria-label; other TagPickers left for a follow-up.
+- 2026-10-23 [P7-T28] CLAUDE.md read_page note keeps "Select and Combobox"; the new TagPicker test backs it.
+- 2026-10-23 [P7-T28] Names are pinned twice in e2e: waited for by role (catches late mounts) and compared to Chromium CDP names in page order.
+- 2026-10-23 [P7-T28] Pure self-test also asserts TAG_COMBOBOX's zero-trigger message says "found no Combobox triggers"; both Add contact tests first wait for the "Add contact" dialog.

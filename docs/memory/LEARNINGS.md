@@ -164,3 +164,7 @@
 - 2026-10-23 [P7-T27] The stress run (six specs x3, 16 workers) loads the first batch heavily: calendars-load-errors tests took 11-13s in batch one, 4-6s later. All 96 passed; no NAVIGATION site needed over 15s.
 - 2026-10-23 [P7-T27] Only six e2e specs click links or the sidebar (calendars-availability, -availability-editor, -booking, -details, -load-errors, link-buttons): the whole set of cross-route navigation sites today.
 - 2026-10-23 [P7-T27] e2e/fixtures.ts already had two lines over 80 columns (the BOOT_FAILED throw message and one more); left alone.
+- 2026-10-23 [P7-T28] Base UI chips Combobox: its hidden input is a later sibling of [data-slot="combobox-chips"], id ending -hidden-input (multiple never gets a name). Passing id to ComboboxChipsInput sets only the text input's id.
+- 2026-10-23 [P7-T28] With aria-label removed, a Base UI Select trigger's Chromium name is "" (no fallback to the selected value), so the empty-name rule catches it.
+- 2026-10-23 [P7-T28] The bulk-actions PopoverContent is role=dialog, so [role="dialog"] also matches an open popover; scope popover tests to [data-slot="popover-content"].
+- 2026-10-23 [P7-T28] The Contacts table's Owner header is plain text (enableSorting: false), so getByRole('button', { name: 'Owner', exact: true }) on /contacts finds only the bulk bar's button.

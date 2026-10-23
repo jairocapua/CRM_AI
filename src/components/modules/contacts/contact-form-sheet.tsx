@@ -381,7 +381,11 @@ export function ContactFormSheet({
                   control={form.control}
                   name="tagIds"
                   render={({ field }) => (
-                    <TagPicker value={field.value} onChange={field.onChange} />
+                    <TagPicker
+                      id="tagIds"
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
                   )}
                 />
               </Field>

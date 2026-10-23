@@ -40,7 +40,7 @@ export function BoardToolbar({
         value={pipelineId}
         onValueChange={(value) => onPipelineChange(value ?? pipelineId)}
       >
-        <SelectTrigger className="w-56">
+        <SelectTrigger className="w-56" aria-label="Pipeline">
           <SelectValue placeholder="Pipeline">
             {(value: string) =>
               pipelines.find((p) => p.id === value)?.name ?? "Pipeline"

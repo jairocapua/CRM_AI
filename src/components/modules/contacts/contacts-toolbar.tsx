@@ -49,7 +49,7 @@ export function ContactsToolbar({
           onStatusChange(value as ContactStatus | "all")
         }
       >
-        <SelectTrigger className="w-40">
+        <SelectTrigger className="w-40" aria-label="Status">
           <SelectValue placeholder="Status">
             {(value: ContactStatus | "all") =>
               value === "all" ? "All statuses" : CONTACT_STATUS_LABELS[value]
