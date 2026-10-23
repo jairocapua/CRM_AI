@@ -155,3 +155,6 @@
 - 2026-10-23 [P7-T24] Before the fix, a failed calendars.list() rendered the 'Calendars' fieldset with an empty <ul> while the month view drew normally beside it.
 - 2026-10-23 [P7-T24] A mutant showing the skeleton while `isRefreshing` fails at the sawBusy poll, not sawSkeleton: the alert unmounts during Retry, so its button never reaches aria-disabled.
 - 2026-10-23 [P7-T24] With the Turbopack build cached, `npx playwright test <spec> -g ...` rebuilds and starts in ~12s, so running mutants through the real webServer is cheap.
+- 2026-10-23 [P7-T25] `contacts.get` reads `contacts[id]` by key, so `failReads` (wraps Object.values) cannot fail it; a per-record accessor armed from the Object.values wrapper can.
+- 2026-10-23 [P7-T25] The contact page itself reads the whole contacts table (ContactInfoPanel's `tags.list`), so a fault keyed on the next table read arms there first.
+- 2026-10-23 [P7-T25] useResource turns a plain Error in simulate() into ApiError 500 'Something went wrong.', which drives the error branch, not 'Contact not found'.

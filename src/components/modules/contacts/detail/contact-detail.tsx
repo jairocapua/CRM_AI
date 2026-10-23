@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import * as api from "@/lib/api";
 import { useAction, useResource } from "@/lib/api";
 import { EmptyState } from "@/components/common/empty-state";
+import { LoadError } from "@/components/common/load-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ContactFormSheet } from "../contact-form-sheet";
@@ -21,6 +22,19 @@ import { ContactNotesPanel } from "./contact-notes-panel";
 import { ContactOpportunitiesPanel } from "./contact-opportunities-panel";
 import { ContactTasksPanel } from "./contact-tasks-panel";
 
+/**
+ * One contact's page: header, details, opportunities and the activity tabs.
+ *
+ * - A missing contact (a 404) shows "Contact not found", on the first load
+ *   or a refetch.
+ * - Any other failed load, with no contact on screen, shows a `LoadError`
+ *   whose Retry calls `refetch()`. While a retry runs, the alert stays with
+ *   its button busy; it never turns into a skeleton.
+ * - A refetch that fails for any other reason with the contact on screen
+ *   keeps the contact: `useResource` holds the last good result for the
+ *   same id, so the error branch, which needs `data` to be undefined, does
+ *   not apply.
+ */
 export function ContactDetail({ id }: { id: string }) {
   const router = useRouter();
   const contact = useResource("contacts", () => api.contacts.get(id), id);
@@ -66,6 +80,23 @@ export function ContactDetail({ id }: { id: string }) {
     );
   }
 
+  if (contact.error && contact.data === undefined) {
+    return (
+      <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+        {backLink}
+        <LoadError
+          title="Could not load the contact"
+          message={contact.error.message}
+          onRetry={contact.refetch}
+          retrying={contact.isRefreshing}
+        />
+      </div>
+    );
+  }
+
+  // `!contact.data` only narrows the type: a finished read has either data or
+  // an error, and the error case is handled above. While `isLoading` the
+  // error is null, so the first load still shows the skeleton.
   if (contact.isLoading || !contact.data) {
     return (
       <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">

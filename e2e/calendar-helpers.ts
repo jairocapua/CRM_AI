@@ -485,6 +485,157 @@ export async function restoreReads(page: Page): Promise<void> {
   });
 }
 
+interface ContactFaultWindow {
+  /** The contact whose read can be made to fail, or null when none. */
+  __e2eContactFault?: {
+    id: string;
+    /** While true, reading the record by key throws. */
+    failing: boolean;
+    /** The store's contacts object and the record, once armed. */
+    armed: { table: object; record: object } | null;
+    /** True while `Object.values` reads the armed table. */
+    listing: boolean;
+  } | null;
+  /** Set once `Object.values` has been wrapped for this fault. */
+  __e2eContactFaultInstalled?: boolean;
+}
+
+/**
+ * Prepares one contact's read to fail, so a spec can drive the contact page's
+ * load error. `failContactRead` turns it on; `restoreContactRead` ends it.
+ *
+ * Why: `contacts.get` reads the record by key
+ * (`db.getState().contacts[id]`), not through `Object.values`, so
+ * `failReads` cannot reach it.
+ *
+ * How: it wraps the page's built-in `Object.values`, layered over whatever
+ * is there, as `failReads` does. The first read of the store's contacts
+ * object after this call (the contacts list, or the tag counts) runs as
+ * normal, then swaps that one record's plain property for a getter. The
+ * getter returns the record until `failContactRead`, and throws after it,
+ * so `contacts.get` rejects with a plain Error, which `useResource` reports
+ * as "Something went wrong.". Reads of the whole table through
+ * `Object.values` never throw, so the contacts list keeps working.
+ *
+ * Arming: it needs one such read after the call, for example the contact
+ * page's tag counts or opening the contacts list again by a client-side
+ * link. `failContactRead` waits for it.
+ *
+ * Limits: the wrapper lives in the current document only, like `failReads`.
+ * Any contact write copies the contacts object (`{ ...s.contacts }`), which
+ * drops the fault, so the test then fails loudly, never quietly. While the
+ * fault is on, every other by-key read of that record throws too: the
+ * activity, appointment and conversation rows that look it up, the copy in
+ * any contact write, and persist's `JSON.stringify` on any store write. So
+ * turn it on only while the page is idle; the fixture's console watcher
+ * turns any such throw outside a read into a test failure.
+ */
+export async function armContactFault(page: Page, id: string): Promise<void> {
+  await page.evaluate((id) => {
+    const w = window as unknown as ContactFaultWindow;
+    if (!w.__e2eContactFaultInstalled) {
+      const real = Object.values;
+      Object.values = function values(o: object) {
+        const fault = w.__e2eContactFault;
+        if (fault?.armed && o === fault.armed.table) {
+          fault.listing = true;
+          try {
+            return real(o);
+          } finally {
+            fault.listing = false;
+          }
+        }
+        const result = real(o);
+        // Only the contacts object has the contact's id as a key holding a
+        // plain record with that id.
+        const record: unknown =
+          fault && !fault.armed && typeof o === "object" && o !== null
+            ? Object.getOwnPropertyDescriptor(o, fault.id)?.value
+            : undefined;
+        if (
+          fault &&
+          typeof record === "object" &&
+          record !== null &&
+          (record as { id?: unknown }).id === fault.id
+        ) {
+          Object.defineProperty(o, fault.id, {
+            enumerable: true,
+            configurable: true,
+            get() {
+              if (fault.failing && !fault.listing) {
+                throw new Error(`e2e: reading contact ${fault.id} failed`);
+              }
+              return record;
+            },
+            set(value: unknown) {
+              Object.defineProperty(o, fault.id, {
+                value,
+                writable: true,
+                enumerable: true,
+                configurable: true,
+              });
+            },
+          });
+          fault.armed = { table: o, record };
+        }
+        return result;
+      } as typeof Object.values;
+      w.__e2eContactFaultInstalled = true;
+    }
+    w.__e2eContactFault = { id, failing: false, armed: null, listing: false };
+  }, id);
+}
+
+/**
+ * Turns the fault `armContactFault` prepared on: reading that contact by key
+ * throws from now on. Waits until the fault is armed first.
+ */
+export async function failContactRead(page: Page): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            !!(window as unknown as ContactFaultWindow).__e2eContactFault
+              ?.armed,
+        ),
+      {
+        message: "armContactFault was never armed: no contacts list read since",
+      },
+    )
+    .toBe(true);
+  await page.evaluate(() => {
+    const fault = (window as unknown as ContactFaultWindow).__e2eContactFault;
+    if (fault) fault.failing = true;
+  });
+}
+
+/**
+ * Ends the fault: the record is a plain property on the store's contacts
+ * object again, and reads succeed. The `Object.values` wrapper stays
+ * installed and passes every call through, as after `restoreReads`.
+ */
+export async function restoreContactRead(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const w = window as unknown as ContactFaultWindow;
+    const fault = w.__e2eContactFault;
+    // Only while the getter is still there: once the setter has run, the
+    // property already holds a newer plain value.
+    if (
+      fault?.armed &&
+      Object.getOwnPropertyDescriptor(fault.armed.table, fault.id)?.get
+    ) {
+      Object.defineProperty(fault.armed.table, fault.id, {
+        value: fault.armed.record,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
+    }
+    w.__e2eContactFault = null;
+  });
+}
+
 /**
  * The `LoadError` alert with this title. Filtered by text because Next's
  * route announcer also has role="alert".

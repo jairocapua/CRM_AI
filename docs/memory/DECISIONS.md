@@ -188,3 +188,6 @@
 - 2026-10-23 [P7-T24] e2e records the month chip count while the list is down and checks it unchanged after recovery with all 4 calendars checked, proving the error hid no calendar.
 - 2026-10-23 [P7-T24] Bounding-box helpers (`boxOf`, `intersects`, `Box`) live in the spec, not calendar-helpers.ts; boxes use locator.boundingBox().
 - 2026-10-23 [P7-T24] Not verified in the Browser pane (fault needs the e2e Object.values wrapper); the Playwright test covers behaviour and layout at 1280x720.
+- 2026-10-23 [P7-T25] Contact fault: Object.values reads of the armed table do not throw (a `listing` flag); only by-key reads of that contact throw, so an in-flight tag count cannot fail silently.
+- 2026-10-23 [P7-T25] `restoreContactRead` restores the plain property only if the getter is still there, so a newer written value is never replaced by a stale one.
+- 2026-10-23 [P7-T25] A refetch that 404s still shows 'Contact not found' (404 branch first, no data check); A4 (refetch failure keeps the contact) holds by construction, not e2e.

@@ -869,9 +869,48 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T25 — Contact detail: error state instead of endless skeleton on non-404 load failure
 - **Owner:** agent · **Depends:** —
+- **Skills:** `shadcn`, `playwright-cli`
 - **Scope:** contact-detail.tsx shows a skeleton forever on non-404 errors; reuse LoadError with Retry.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. Contact page, first load: when `contacts.get` fails with an error
+        that is not a 404, the page shows the 'Contacts' back link and a
+        'Could not load the contact' alert with the error's message and a
+        Retry button. No skeleton, no 'Contact not found' state, no contact
+        header and no tabs are shown.
+  - [ ] A2. While a Retry is in flight, the alert stays with Retry busy
+        (aria-disabled, and a spinner with no accessible name) and no skeleton
+        appears. A Retry that fails again leaves the alert with Retry enabled.
+        Once the fault clears, Retry shows the contact (its name heading and
+        the Activity tab) and the alert is gone.
+  - [ ] A3. A contact that does not exist (a 404) still shows 'Contact not
+        found' and 'It may have been deleted.' with the back link, and no
+        load-error alert and no skeleton.
+  - [ ] A4. The error shows only when the read failed and no contact is on
+        screen (LoadError's contract, DECISIONS P7-T13, P7-T18 and P7-T24). A
+        refetch that fails with the contact on screen, with any error other
+        than a 404, keeps the contact. This holds by construction
+        (`useResource` keeps `data` for the same query when a refetch fails,
+        and the error branch requires `contact.data === undefined`); no e2e
+        can drive it, because only writes refetch the contact and each write
+        drops the per-record fault.
+  - [ ] A5. Every new assertion has been seen failing. On the current code the
+        new failed-load test fails because no alert appears. Each type-clean
+        mutant turns a test red: `retrying={false}`; a skeleton on
+        `isLoading || isRefreshing` placed above the error branch;
+        `onRetry={() => {}}`; and the error branch moved above the 404 check,
+        which turns the not-found test red.
+  - [ ] A6. Comments match the code. The `ContactDetail` doc comment describes
+        the not-found state, the load error and its Retry (busy, never a
+        skeleton), and that a failed refetch keeps the contact. The
+        `calendars-load-errors.spec.ts` header lists the contact page and the
+        not-found case. The `armContactFault` doc comment says why `failReads`
+        cannot reach `contacts.get`, how the fault works, when it is armed,
+        and its limits.
+  - [ ] A7. No seed, API, mock or shared-component change and no regression.
+        `SEED_VERSION` stays 4; nothing under `src/lib/api`, `src/lib/mock` or
+        `src/components/common` changes; `npm run check` is green; the full
+        `npm run e2e` suite passes with the existing specs' assertions
+        unchanged.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T26 — Past appointments: only Showed/No-show; Cancel and Confirmed for future only (P7-H3)
@@ -964,6 +1003,20 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** booking-dialog.tsx:152 renders calendars.data ?? [], so a failed list leaves the Calendar select empty with no error or Retry; mirror P7-T24.
   - From the P7-T24 review: P7-T24's guard `calendars.error && calendars.data === undefined` (calendars-workspace.tsx) has no test that goes red when `&& calendars.data === undefined` is dropped, because nothing on /calendars refetches the list with it on screen. Prove the same guard here with a test that can go red (a failed refetch with the list loaded keeps the list), or say in this task's acceptance that it holds by construction, as use-resource keeps `data` on a failed refetch.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T37 — Contacts list: error state instead of false 'No contacts found' on list failure
+- **Owner:** agent · **Depends:** —
+- **Scope:** contacts-table.tsx renders data?.rows ?? [] on a failed contacts.list; add LoadError + Retry like P7-T24/T25, with e2e red/green.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
+### P7-T38 — useResource unit test: failed refetch keeps data for same query
+- **Owner:** agent · **Depends:** —
+- **Scope:** Hook test: refetch rejects -> data kept, error set, isRefreshing back to false. Protects every LoadError caller.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23

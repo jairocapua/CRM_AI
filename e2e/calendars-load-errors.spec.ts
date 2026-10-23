@@ -1,15 +1,18 @@
 import type { Locator, Page } from "@playwright/test";
 
 import {
+  armContactFault,
   bookingDialog,
   chooseCalendar,
   expectPosition,
   expectViewLoaded,
+  failContactRead,
   failReads,
   loadErrorAlert,
   openTimes,
   readContacts,
   readSeededAppointments,
+  restoreContactRead,
   restoreReads,
   timeGroup,
   timeRadio,
@@ -21,15 +24,18 @@ import { expect, test } from "./fixtures";
  * A read that fails with nothing on screen shows an error with Retry, never a
  * skeleton that stays forever or an empty state that is not true: on the
  * calendars page (the first load, a step to a new range, and its calendar
- * list), on a contact's Appointments tab, on the availability page and in the
- * booking dialog's open times. A re-read that fails with a list already on screen keeps the
- * list, with no error in its place (the booking dialog's last test).
+ * list), on a contact's page and its Appointments tab, on the availability
+ * page and in the booking dialog's open times. A contact that does not exist
+ * keeps its "Contact not found" state, not the load error. A re-read that
+ * fails with a list already on screen keeps the list, with no error in its
+ * place (the booking dialog's last test).
  *
- * The mock never fails a read, so `failReads` makes one fail from the page
- * (see calendar-helpers.ts). It can be switched off, so each test proves both
- * halves: the error appears, and once the fault is off, Retry brings the data
- * back. The fault is a plain Error, which `useResource` reports as "Something
- * went wrong.".
+ * The mock never fails a read, so `failReads` makes one fail from the page,
+ * and `armContactFault` makes one contact's read fail where `failReads`
+ * cannot reach it (see calendar-helpers.ts). Both can be switched off, so
+ * each test proves both halves: the error appears, and once the fault is off,
+ * Retry brings the data back. The fault is a plain Error, which
+ * `useResource` reports as "Something went wrong.".
  *
  * Pinned to Singapore and en-US, like the other calendar specs: the demo
  * clock's today is 2026-09-08, so the default month is September 2026. The
@@ -43,6 +49,7 @@ test.use({ timezoneId: ZONE, locale: "en-US" });
 const APPOINTMENTS_ERROR = "Could not load appointments";
 const CALENDARS_ERROR = "Could not load calendars";
 const SLOTS_ERROR = "Could not load the open times";
+const CONTACT_ERROR = "Could not load the contact";
 const FAULT_MESSAGE = "Something went wrong.";
 
 interface RetryWatch {
@@ -299,6 +306,98 @@ test("contact Appointments tab: a failed load shows the error, not an empty list
     panel.locator(`li[data-appointment-id="${row.id}"]`),
   ).toBeVisible();
   await expect(alert).toHaveCount(0);
+});
+
+test("contact page: a failed load shows the error and Retry loads the contact", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/contacts");
+  const main = page.locator("main");
+  const href = await main
+    .locator('a[href^="/contacts/"]')
+    .first()
+    .getAttribute("href");
+  const id = href?.split("/").at(-1);
+  if (!id) throw new Error("The contacts list has no contact link");
+  const contact = (await readContacts(page)).find((c) => c.id === id);
+  if (!contact) throw new Error(`No persisted contact ${id}`);
+
+  const heading = page.getByRole("heading", {
+    level: 1,
+    name: contact.name,
+    exact: true,
+  });
+  const back = main.getByRole("link", { name: "Contacts", exact: true });
+  const row = main.locator(`a[href="/contacts/${id}"]`).first();
+
+  // The page works before the fault. The next read of the whole contacts
+  // table (the page's tag counts, or the list opened again by its link) arms
+  // the fault. Those reads never throw, and the list reads no contact by key,
+  // so the fault can go on once the list's row shows.
+  await armContactFault(page, id);
+  await row.click();
+  await expect(heading).toBeVisible();
+  await back.click();
+  await expect(page).toHaveURL(/\/contacts$/);
+  await expect(row).toBeVisible();
+  await failContactRead(page);
+  await row.click();
+  await expect(page).toHaveURL(new RegExp(`/contacts/${id}$`));
+
+  // The error stands alone: the back link, and no skeleton, no not-found
+  // state, no contact header and no tabs.
+  const alert = loadErrorAlert(page, CONTACT_ERROR);
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  await expect(back).toBeVisible();
+  await expect(main.locator('[data-slot="skeleton"]')).toHaveCount(0);
+  await expect(page.getByText("Contact not found")).toHaveCount(0);
+  await expect(heading).toHaveCount(0);
+  await expect(page.getByRole("tab")).toHaveCount(0);
+
+  // A Retry that fails again: the button goes busy, and no skeleton appears.
+  // The load error is the only alert in main.
+  const readWatch = await watchRetry(page, "main");
+  const retry = alert.getByRole("button", { name: "Retry", exact: true });
+  await retry.click();
+  await expect.poll(async () => (await readWatch()).sawBusy).toBe(true);
+  await expect(retry).toBeEnabled();
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  expect(await readWatch()).toEqual({
+    sawBusy: true,
+    sawSkeleton: false,
+    sawLabelledSpinner: false,
+  });
+
+  // The fault clears, and Retry shows the contact.
+  await restoreContactRead(page);
+  await retry.click();
+  await expect(heading).toBeVisible();
+  await expect(
+    page.getByRole("tab", { name: "Activity", exact: true }),
+  ).toBeVisible();
+  await expect(alert).toHaveCount(0);
+});
+
+test("contact page: a contact that does not exist shows Contact not found, not the load error", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/contacts/e2e-no-such-contact");
+  const main = page.locator("main");
+  await expect(
+    page.getByText("Contact not found", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("It may have been deleted.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    main.getByRole("link", { name: "Contacts", exact: true }),
+  ).toBeVisible();
+  await expect(loadErrorAlert(page, CONTACT_ERROR)).toHaveCount(0);
+  await expect(main.locator('[data-slot="skeleton"]')).toHaveCount(0);
 });
 
 test("availability page: a failed calendars load offers Retry", async ({
