@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useId, useRef } from "react";
+import { Fragment, useEffect, useId, useRef } from "react";
 import {
   Controller,
   useFieldArray,
@@ -79,6 +79,8 @@ const TIME_INPUT_CLASSES =
  * - A day switched off is saved with no windows, and its windows are not
  *   checked, so a hidden error can never block Save. Switching a day on with
  *   no windows starts it at 09:00–17:00.
+ * - Removing a day's last window switches the day off (focus moves to its
+ *   switch), so the editor never saves an open day with no hours.
  * - `calendars.update` checks these same rules itself (a 422
  *   `INVALID_CALENDAR`), so the form's checks are there to put each message
  *   beside its field before anything is sent.
@@ -87,8 +89,19 @@ const TIME_INPUT_CLASSES =
  * overlap error moves or clears as the windows change rather than waiting
  * for the next save. The parent keys this form on the calendar's id, so
  * switching calendars starts from that calendar's saved values.
+ *
+ * `onDirtyChange` reports whether the form has unsaved changes, so the
+ * parent can ask before a switch or a navigation drops them. It reports
+ * false again on unmount, so a form that is gone never leaves its page
+ * marked dirty.
  */
-export function AvailabilityForm({ calendar }: { calendar: Calendar }) {
+export function AvailabilityForm({
+  calendar,
+  onDirtyChange,
+}: {
+  calendar: Calendar;
+  onDirtyChange?: (dirty: boolean) => void;
+}) {
   const formId = useId();
   const form = useForm<AvailabilityFormValues>({
     resolver: zodResolver(availabilitySchema),
@@ -96,6 +109,13 @@ export function AvailabilityForm({ calendar }: { calendar: Calendar }) {
   });
   const { errors, isDirty } = form.formState;
   const [save, saving] = useAction(api.calendars.update);
+
+  // `isDirty` lives in react-hook-form's store, outside React state, so an
+  // effect is where it reaches the parent.
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+    return () => onDirtyChange?.(false);
+  }, [isDirty, onDirtyChange]);
 
   async function submit(values: AvailabilityFormValues) {
     // Enter in a field submits too, and the button's disabled state does not
@@ -218,6 +238,9 @@ function DayHours({
   const { errors, isSubmitted } = useFormState({ control, name: dayPath });
   const windowErrors = errors.availability?.[index]?.windows;
   const addRef = useRef<HTMLButtonElement>(null);
+  // Focused through a ref: with `nativeButton` off, Base UI puts the `id` on
+  // the switch's hidden input, not on its role="switch" element.
+  const switchRef = useRef<HTMLSpanElement>(null);
 
   /**
    * Once a save has failed, re-checks the whole day after a change, so an
@@ -241,6 +264,7 @@ function DayHours({
           name={`${dayPath}.enabled`}
           render={({ field }) => (
             <Switch
+              ref={switchRef}
               id={switchId}
               checked={field.value}
               onCheckedChange={(checked) => {
@@ -314,10 +338,24 @@ function DayHours({
                       size="icon-sm"
                       aria-label={`Remove window ${n} on ${label}`}
                       onClick={() => {
+                        // Read before the removal changes it.
+                        const wasLast =
+                          form.getValues(windowsPath).length === 1;
                         remove(i);
-                        recheckDay();
-                        // The button is gone: keep focus in the day.
-                        addRef.current?.focus();
+                        if (wasLast) {
+                          // An open day with no hours would save as open but
+                          // offer nothing: switch it off instead. "Add hours"
+                          // goes with it, so focus moves to the switch.
+                          form.setValue(`${dayPath}.enabled`, false, {
+                            shouldDirty: true,
+                          });
+                          recheckDay();
+                          switchRef.current?.focus();
+                        } else {
+                          recheckDay();
+                          // The button is gone: keep focus in the day.
+                          addRef.current?.focus();
+                        }
                       }}
                     >
                       <XIcon />

@@ -137,3 +137,8 @@
 - 2026-10-23 [P7-T19] Base UI useButton sets role="button" on any non-native element, including `<a href>`; `nativeButton={false}` on a link always makes it a button to assistive tech.
 - 2026-10-23 [P7-T19] Computed-style e2e checks: page.mouse.move(0, 0) before reading, or a leftover hover state leaks into the reading.
 - 2026-10-23 [P7-T19] next build (Next 16) runs TypeScript but not ESLint, and tsconfig has no noUnusedLocals: a red-proof edit can leave unused imports, but must stay type-clean.
+- 2026-10-23 [P7-T20] Base UI AlertDialog opened from a Base UI Select's onValueChange: the dialog's first-tabbable focus (Cancel) wins over the Select's focus return; no race, no initialFocus ref needed.
+- 2026-10-23 [P7-T20] Next 16 Link onNavigate also fires for keyboard Enter (Enter dispatches a click); preventDefault in it cancels navigation (next/dist/client/app-dir/link.js ~l.51-88). Not called for modifier clicks.
+- 2026-10-23 [P7-T20] Base UI Switch (nativeButton off): `ref` lands on the role="switch" span (useRef<HTMLSpanElement>); `id` goes to the hidden input, so focus via the ref.
+- 2026-10-23 [P7-T20] While a Base UI alert dialog is open, page-level queries need { includeHidden: true }. A 'no dialog' check only means something after a URL change only the unguarded path makes.
+- 2026-10-23 [P7-T20] calendars-availability.spec.ts:69 (default-5s toHaveURL after clicking Availability) failed 2 of 3 full e2e runs under load: the most frequent P7-T27 flake site.

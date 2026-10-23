@@ -617,9 +617,60 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T20 — Availability editor: unsaved-changes guard and empty open day
 - **Owner:** agent · **Depends:** —
+- **Skills:** `shadcn`, `playwright-cli`
 - **Scope:** Confirm when isDirty on calendar Select change / Back link; switch day off (or schema message) when last window removed while enabled
+  - Decided: removing an enabled day's last window switches the day off
+    (focus moves to its switch). No schema message: the zod schema and
+    `calendars.update` stay unchanged.
+  - Decided: only the Calendar select and the Back to calendars link are
+    guarded. The sidebar's links, browser back/forward and reload or tab
+    close are not.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. Switching calendars with unsaved edits asks first. On
+        /calendars/availability (Discovery Call), after Tuesday's end is
+        changed to 12:00, choosing Strategy Session in the Calendar select
+        opens the "Discard unsaved changes?" alert dialog. It names Discovery
+        Call and Strategy Session and has "Keep editing" focused. Until a
+        choice is made, the URL, the select and the form stay on Discovery
+        Call.
+  - [ ] A2. Keep editing, or Escape, keeps the edit. The dialog closes, the
+        URL has no calendar param, the select reads Discovery Call, Tuesday
+        still ends at 12:00, the form's "Discard changes" is still enabled,
+        and focus is back on the Calendar select trigger.
+  - [ ] A3. Discard changes switches and drops the edit. The URL reads
+        `?calendar=strategy`, the select reads Strategy Session, the form
+        shows Strategy Session's saved Tuesday (09:00–16:00), and focus is on
+        the Calendar select. The stored Discovery Call hours are unchanged.
+        Switching back to Discovery Call asks nothing and shows 09:00–17:00.
+  - [ ] A4. Back to calendars with unsaved edits asks first, by focus +
+        Enter and by pointer. Keep editing stays on /calendars/availability
+        with the edit (Slot duration 45) intact and focus on the Back link.
+        Discard changes goes to /calendars, and reopening the editor shows
+        Slot duration 30 (nothing was saved).
+  - [ ] A5. A clean editor never asks. Right after load, after the form's
+        "Discard changes", and after "Save availability", switching calendars
+        and Back to calendars act at once with no alert dialog. The existing
+        shortening spec (save, then Back) passes unchanged.
+  - [ ] A6. Removing an enabled day's last window switches the day off. With
+        two Tuesday windows, removing one leaves the day on with the other.
+        Removing the last one turns "Available on Tuesday" off, shows
+        "Unavailable", moves focus to that switch and enables Discard
+        changes. Saving stores Tuesday as
+        `{ weekday: 2, enabled: false, windows: [] }` with every other day
+        unchanged. Switching Tuesday back on offers 09:00–17:00.
+  - [ ] A7. Every new test has been seen failing. On the old code, the three
+        guard tests fail at the alert-dialog check and the day-off test fails
+        at the switch check. The clean-editor test fails against a type-clean
+        mutant that always reports dirty.
+  - [ ] A8. No seed, API or mock change and no regression. SEED_VERSION stays
+        4, nothing under src/lib or src/components/ui changes, `npm run check`
+        is green, and the full `npm run e2e` suite passes with the existing
+        specs unchanged.
+  - [ ] A9. Docs match the code. The AvailabilityWorkspace doc comment
+        describes the guard and what it does not cover (sidebar, browser
+        back/forward, reload). The AvailabilityForm doc comment says removing
+        the last window switches the day off. ConfirmDialog has a doc
+        comment. This entry carries the acceptance and the two decisions.
 - **Refs:** added by `progress.mjs add` on 2026-10-22
 
 ### P7-T21 — Raise timeout on long calendars-booking e2e flows
@@ -717,6 +768,13 @@ hours land around midnight–08:00 local; that is expected.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23; repurposed in the P7-T19 review
+
+### P7-T33 — App-wide unsaved-changes guard (sidebar links, reload, tab close)
+- **Owner:** agent · **Depends:** —
+- **Scope:** Extend the availability guard via Next Link onNavigate + context blocker (link.md 'Blocking navigation') and a beforeunload handler while dirty.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact

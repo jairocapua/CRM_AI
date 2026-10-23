@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 21/56 tasks done (38%) · **Current phase:** P7 · **Next agent task:** P7-T20 · **Awaiting review:** P7-T19 · **Blocked:** none · **Waiting on you:** none
+**Overall:** 22/57 tasks done (39%) · **Current phase:** P7 · **Next agent task:** P7-T21 · **Awaiting review:** P7-T20 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 21/35 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 22/36 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -38,8 +38,8 @@ Status: active · Progress: 21/35 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T16 | Check Base UI Select hidden input in the a11y tree | agent | done | — | a983ac9 | 2026-10-23 | Not a bug: Chromium ignores Base UI Select hidden inputs (ariaHiddenElement). New e2e/select-a11y.spec.ts; CLAUDE.md note. |
 | P7-T17 | ContactPicker search: full-name match and no client re-filter | agent | done | — | 3a9c451 | 2026-10-23 | Full-name contact search via function search field; picker filter={null}, selected pinned only on empty/own-name term |
 | P7-T18 | Booking dialog: slot-load error with Retry, ids from formId, fresh form per open | agent | done | — | af613bf | 2026-10-23 | LoadError+Retry for open times, useId-based ids, form keyed per open, 2-col phone grid; 4 new e2e tests |
-| P7-T19 | Link-as-button semantics in modules | agent | review | — |  | 2026-10-23 | 6 module links now <Link className={cn(buttonVariants())}>: no role=button, outline border restored; e2e/link-buttons.spec.ts (5) |
-| P7-T20 | Availability editor: unsaved-changes guard and empty open day | agent | todo | — |  |  |  |
+| P7-T19 | Link-as-button semantics in modules | agent | done | — | db3906a | 2026-10-23 | 6 module links now <Link className={cn(buttonVariants())}>: no role=button, outline border restored; e2e/link-buttons.spec.ts (5) |
+| P7-T20 | Availability editor: unsaved-changes guard and empty open day | agent | review | — |  | 2026-10-23 | Unsaved-changes guard on calendar select + Back link (ConfirmDialog); last window removal turns day off. e2e 5 new, 87/87 |
 | P7-T21 | Raise timeout on long calendars-booking e2e flows | agent | todo | — |  |  |  |
 | P7-T22 | Calendar update: reject explicit undefined keys and use a plain-language 422 message | agent | todo | — |  |  |  |
 | P7-T23 | Deal form Expected close uses shared isCalendarDay | agent | todo | — |  |  |  |
@@ -52,6 +52,7 @@ Status: active · Progress: 21/35 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T30 | Shared chooseContact e2e helper | agent | todo | — |  |  |  |
 | P7-T31 | LinkButton helper and nativeButton lint rule | agent | todo | — |  |  |  |
 | P7-T32 | Link-button icon padding and link-buttons spec scoping | agent | todo | P7-T31 |  | 2026-10-23 | Repurposed from a duplicate of P7-T31 (P7-T19 review) |
+| P7-T33 | App-wide unsaved-changes guard (sidebar links, reload, tab close) | agent | todo | — |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md

@@ -167,3 +167,7 @@
 - 2026-10-23 [P7-T19] Links styled as buttons are `<Link className={cn(buttonVariants({ variant, size }))}>`, never `<Button render={<Link/>} nativeButton={false}>` (role=button) and never a bare `buttonVariants()` string (conflicting classes survive). Replaces the P7-T09 spelling.
 - 2026-10-23 [P7-T19] Scope included the two P7-T09 calendars links (Availability, Back to calendars) for the same missing-border defect; they now match the Today button. Link children unchanged (no data-icon added).
 - 2026-10-23 [P7-T19] Look checks compare one object (height, radius, icon, border) so a regression reports every difference at once.
+- 2026-10-23 [P7-T20] Empty open day: removing an enabled day's last window switches the day off and focuses its switch. No schema message; availabilitySchema and calendars.update unchanged.
+- 2026-10-23 [P7-T20] Guard scope: only the Calendar select and Back to calendars link are guarded. Sidebar links, back/forward, reload and tab close still drop edits silently (documented in AvailabilityWorkspace).
+- 2026-10-23 [P7-T20] The leave question stores source and target calendar names at open, so the dialog text does not change during its exit animation.
+- 2026-10-23 [P7-T20] Shared ConfirmDialog (components/common): ReactNode title/description, cancelLabel, confirmLabel, confirmVariant, onConfirm, optional finalFocus. Confirm calls onConfirm() then onOpenChange(false). Synchronous for now.

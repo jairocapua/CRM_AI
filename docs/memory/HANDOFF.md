@@ -5,25 +5,30 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T19 in review (deep review).
+- **Status:** P7-T20 in review (deep review).
 
 ## Last change
-- Six module links (View contact, 2x Back to inbox, Open board, Availability, Back to calendars) are now `<Link className={cn(buttonVariants(...))}>`: no role=button.
-- cn() restores the light-mode outline border, 8px radius and 14px icons that a raw buttonVariants() string lost.
-- New e2e/link-buttons.spec.ts (5 tests, light mode pinned); check green, e2e 82/82.
-- Added P7-T31 (LinkButton helper + nativeButton lint rule + pagination fix). P7-T32 is an accidental duplicate, marked blocked: delete it from the phase file.
+- Availability editor: with unsaved edits, switching calendar or "Back to calendars" opens a "Discard unsaved changes?" dialog (Keep editing / Discard changes); clean form never asks.
+- New shared `src/components/common/confirm-dialog.tsx`.
+- Removing an enabled day's last window now switches the day off and focuses its switch.
+- New e2e/calendars-availability-editor.spec.ts (5 tests, seen red); check green, e2e 87/87 (after 2 P7-T27 flakes).
 
 ## Next up
-- **Agent:** P7-T20 Availability editor: unsaved-changes guard and empty open day.
+- **Agent:** P7-T21 Raise timeout on long calendars-booking e2e flows.
 
 ## Waiting on you
-- Review of P7-T19.
-- Your call: add a CLAUDE.md "Non-obvious constraints" note on the link-as-button spelling (the shadcn skill recommends nativeButton={false}).
+- Review of P7-T20.
+- P7-T32 is a duplicate: delete it from the phase file.
 
 ## Open suggestions (non-blocking review notes)
-- View contact / Open board icons lack data-icon, so inline padding never applies (predates task).
-- link-buttons.spec.ts:163 header-link lookup relies on DOM order; scope it to the thread header.
-- Earlier: P7-T18 notes (fresh form from Appointments tab, SlotsSkeleton columns, `== null` guard).
+- Spec A5 gap: add switch-after-save and Back-after-load checks (spec:230-265).
+- availability-form.tsx:115-118 onDirtyChange effect assumes a stable callback; document or use form.subscribe.
+- workspace:208-213 call setDirty(false) before router.push on Back-discard; :167 fallback needs a comment.
+- ConfirmDialog will need a pending state for async api.* callers.
+- Add calendars-availability.spec.ts:69 (and its Back toHaveURL) to P7-T27's scope.
+- calendars.update/schema still accept { enabled: true, windows: [] } (maybe with P7-T22).
+- Known: toggle on-then-off keeps a hidden window, so the form stays dirty. Not checked in the Browser pane (dev lock held).
+- App-wide guard added as P7-T33.
 
 ## Blockers
-- None (P7-T32 is a duplicate, not a real blocker).
+- None.
