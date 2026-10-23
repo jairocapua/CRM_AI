@@ -5,7 +5,7 @@ import { PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { useAction, useResource } from "@/lib/api";
+import { loadErrorOf, useAction, useResource } from "@/lib/api";
 import type { TagColor } from "@/types";
 import {
   Combobox,
@@ -34,7 +34,15 @@ function isCreatable(option: TagOption): option is CreatableOption {
   return "creatable" in option;
 }
 
-/** Multi-select tag picker with inline "create a new tag" support. */
+/**
+ * Multi-select tag picker with inline "create a new tag" support.
+ *
+ * When its tags read has failed with no tags to show (`loadErrorOf`), the
+ * list says "Could not load tags." instead of "No tags found." and offers
+ * nothing, not even Create: without the list there is no way to tell whether
+ * a tag with that name already exists, so creating one could make a
+ * duplicate. A failed re-read with tags on screen keeps them.
+ */
 export function TagPicker({
   id,
   "aria-label": ariaLabel,
@@ -62,6 +70,7 @@ export function TagPicker({
     return tag;
   });
 
+  const tagsError = loadErrorOf(tags);
   const allTags = tags.data ?? [];
   const selected = allTags.filter((t) => value.includes(t.id));
 
@@ -69,8 +78,9 @@ export function TagPicker({
   const exactMatch = allTags.some(
     (t) => t.name.toLowerCase() === trimmed.toLowerCase(),
   );
-  const itemsForView: TagOption[] =
-    trimmed !== "" && !exactMatch
+  const itemsForView: TagOption[] = tagsError
+    ? []
+    : trimmed !== "" && !exactMatch
       ? [
           ...allTags,
           {
@@ -144,7 +154,9 @@ export function TagPicker({
             )
           }
         </ComboboxList>
-        <ComboboxEmpty>No tags found.</ComboboxEmpty>
+        <ComboboxEmpty>
+          {tagsError ? "Could not load tags." : "No tags found."}
+        </ComboboxEmpty>
       </ComboboxContent>
     </Combobox>
   );

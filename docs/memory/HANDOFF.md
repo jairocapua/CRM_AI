@@ -5,28 +5,28 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T46 in review (deep review).
+- **Status:** P7-T47 in review (deep review).
 
 ## Last changes (this session)
-- P7-T46: `api.opportunities.create()/update()` validate input with one zod schema and save only the parsed result; API-owned/unknown keys ignored, wrong types a 422 INVALID_OPPORTUNITY ("<label>: <rule>", `field` = path), non-object input 422 "Deal: Not a valid value.".
-- undefined/null on expectedCloseAt, ownerId, lostReason deletes the key; setStatus() writes via private writeStatus() (no own undefined keys left).
-- `withoutUndefined` moved to `src/lib/api/patch.ts` (shared with calendars.ts). Vitest 676 -> 730; e2e 120 passed.
+- P7-T47: /contacts shows "Could not load tags" LoadError + Retry above the table when tags.list fails (rows/footer stay); Retry calls invalidate("tags").
+- Contacts-list error suppresses the tags alert; its Retry also re-reads tags. TagPicker shows "Could not load tags." with no options/Create.
+- e2e: failReads gains "tags" (TABLE_SHAPES now { has, lacks? }); 1 test extended, 2 new. Gate green; e2e 122 passed.
+- New task P7-T51: same tags-failure surfacing for contact detail and opportunity board/detail.
 
 ## Next up
-- **Agent:** P7-T47 (once P7-T46 is approved).
+- **Agent:** P7-T48 (once P7-T47 is approved).
 
 ## Waiting on you
-- Review of P7-T46.
+- Review of P7-T47.
 - P7-H4: should an ended appointment that is already Cancelled stay frozen? Not blocking.
 
 ## Open suggestions (non-blocking review notes)
-- P7-T46: custom-fields form number check accepts "Infinity"/"1e400"; zod refuses -> toast 422. Use Number.isFinite in validation/custom-fields.ts:29,:68 (backlog).
-- P7-T46: applyPatch "no cast" doc: withoutUndefined still casts inside; scope the claim.
-- P7-T46: parse() reports only the first zod issue; consider all issues if calendars does.
-- P7-T46: add a setStatus() unknown-id test (404, no activity written).
-- P7-T46: BACKLOG calendars tidy-up row could note withoutUndefined now lives in patch.ts.
-- Pre-existing React Compiler "incompatible library" lint warnings: data-table.tsx:55, contact-form-sheet.tsx:183, opportunity-form-sheet.tsx:145.
-- P7-T44: year-0000 message pad; freeSlots 9999-12-31 edge. P7-T43: hook test U4, `leave` rename, console.error spy.
+- P7-T47: tags alert can flash above the skeleton on first load; gate on `contactsPage.data !== undefined` (contacts-table.tsx:175).
+- P7-T47: TagPicker error state in form sheets/bulk popover has no Retry; add one in ComboboxEmpty or backlog.
+- P7-T47: comment that the "re-read keeps badges" e2e is a guard, not proof; helper check that tags fault hits exactly one table.
+- P7-T47: Tags cell shows '—' while tags load/fail; after contacts Retry the tags alert can flash ~110ms (accepted).
+- P7-T46: custom-fields number check accepts "Infinity"/"1e400" (Number.isFinite); applyPatch doc; parse() first issue only; setStatus() unknown-id test.
+- Pre-existing React Compiler lint warnings: data-table.tsx:55, contact-form-sheet.tsx:183, opportunity-form-sheet.tsx:145.
 
 ## Blockers
 - None.

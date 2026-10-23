@@ -2248,7 +2248,12 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** tags.list counts tags via contacts; on failure /contacts tag badges and tag filter show nothing with no error or Retry. Add an error state.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] When the contacts list loads but `tags.list` fails, /contacts shows a "Could not load tags" `LoadError` with the error message and a Retry above the table; the rows and the count/pager footer stay.
+  - [ ] While its tags read has failed with no data, the tag filter (`TagPicker`) says "Could not load tags." instead of "No tags found." and offers no tags and no Create option.
+  - [ ] The tags Retry follows the `LoadError` contract (busy while in flight, the alert stays, no skeleton). Once the read succeeds it brings back both the table's tag badges and the toolbar filter's tag list.
+  - [ ] When the contacts list itself fails (a contacts fault fails the tag counts too), only the contacts error shows, and its Retry also re-reads tags: after the fault clears, the badges and the filter list return.
+  - [ ] A tags re-read that fails while tags are on screen keeps the badges and shows no tags alert.
+  - [ ] The gate is green and nothing else regressed (`npm run check`; e2e/calendars-load-errors.spec.ts and e2e/select-a11y.spec.ts).
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
 ### P7-T48 — Bump next to patch npm audit critical findings
@@ -2268,6 +2273,13 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T50 — Custom number fields: refuse non-finite values inline (Infinity, 1e400)
 - **Owner:** agent · **Depends:** —
 - **Scope:** From the P7-T46 review. src/lib/validation/custom-fields.ts number/currency checks use !Number.isNaN(Number(v)), so 'Infinity' and '1e400' pass the form and toCustomFieldsPatch stores Infinity; since P7-T46 the opportunities API's zod z.number() refuses it, so the deal form shows a 422 toast 'Deal details: Not a valid value.' instead of an inline field error (contacts likely store Infinity, which JSON turns into null on reload). Use Number.isFinite so the error shows on the field, for contacts and deals alike. Also pin the private writeStatus() error path: setStatus() on an unknown id is a 404 and writes no activity. Fix applyPatch's doc in opportunities.ts: its 'needs no cast' covers applyPatch only (withoutUndefined in src/lib/api/patch.ts casts inside).
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-24
+
+### P7-T51 — Contact detail + opportunity board/detail: surface tags.list load failure
+- **Owner:** agent · **Depends:** —
+- **Scope:** Info panel and opportunity board/detail read tags with ?? [] and stay silently empty on failure; show LoadError + Retry like P7-T47.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-24

@@ -236,3 +236,6 @@
 - 2026-10-24 [P7-T46] Vitest toHaveProperty/toEqual treat an own `undefined` key as present/equal; to prove a key is gone assert `Object.keys(record).not.toContain(key)` (this exposed setStatus storing own undefined keys).
 - 2026-10-24 [P7-T46] zod 4: a ctx.addIssue({ message }) inside a transform keeps its message; the per-parse `{ error: () => 'Not a valid value.' }` map only fills issues without one.
 - 2026-10-24 [P7-T46] Bash-tool heredocs with long bodies containing apostrophes can fail (unexpected EOF); write the block to a scratch file with Write and append it with cat.
+- 2026-10-24 [P7-T47] Base UI Combobox inside a Popover: while the list is open, the popover's other controls drop out of the a11y tree (getByRole misses them); press Escape to close the list, the popover stays open.
+- 2026-10-24 [P7-T47] Clicking a TagPicker's chips input opens its list in Playwright; ComboboxEmpty shows when items is empty, so an error message can live there.
+- 2026-10-24 [P7-T47] TagBadge renders data-slot='badge'; scope e2e to td:nth-child(4) so status badges are excluded.

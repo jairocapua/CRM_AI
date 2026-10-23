@@ -5,7 +5,7 @@ import { UsersIcon } from "lucide-react";
 import type { RowSelectionState, SortingState } from "@tanstack/react-table";
 
 import * as api from "@/lib/api";
-import { loadErrorOf, useResource } from "@/lib/api";
+import { invalidate, loadErrorOf, useResource } from "@/lib/api";
 import type { Contact, ContactStatus, FilterCondition } from "@/types";
 import { DataTable } from "@/components/common/data-table";
 import { EmptyState } from "@/components/common/empty-state";
@@ -37,6 +37,14 @@ const PAGE_SIZE = 25;
  * - A refetch of the same query that fails with rows on screen (after any
  *   contact write invalidates "contacts") keeps the rows and the footer:
  *   `loadErrorOf` gives no error while there is data.
+ * - A tags read that fails with no tags to show, while the rows are on
+ *   screen, shows "Could not load tags" with Retry above the table; the rows
+ *   and the footer stay. Its Retry re-reads every tags reader on the page,
+ *   the toolbar's tag filter included.
+ * - While the contacts list itself is in error, only that alert shows: the
+ *   tag counts read the contacts table, so the same fault failed them, and
+ *   the contacts Retry re-reads the tags too.
+ * - A failed tags re-read with tags on screen keeps them (`loadErrorOf`).
  */
 export function ContactsTable() {
   const [searchInput, setSearchInput] = useState("");
@@ -119,6 +127,7 @@ export function ContactsTable() {
   );
 
   const loadError = loadErrorOf(contactsPage);
+  const tagsError = loadErrorOf(tags);
   const rows = contactsPage.data?.rows ?? [];
   const total = contactsPage.data?.total ?? 0;
   const pageCount = contactsPage.data?.pageCount ?? 1;
@@ -163,11 +172,29 @@ export function ContactsTable() {
         />
       ) : null}
 
+      {!loadError && tagsError ? (
+        <LoadError
+          title="Could not load tags"
+          message={tagsError.message}
+          // `invalidate`, not `tags.refetch`: refetch re-reads only this
+          // hook's copy, and the toolbar's TagPicker holds its own
+          // `useResource("tags")`, which would keep its failed read.
+          onRetry={() => invalidate("tags")}
+          retrying={tags.isRefreshing}
+        />
+      ) : null}
+
       {loadError ? (
         <LoadError
           title="Could not load contacts"
           message={loadError.message}
-          onRetry={contactsPage.refetch}
+          onRetry={() => {
+            contactsPage.refetch();
+            // tags.list counts tags through the contacts table, so the fault
+            // that failed the list failed the tag counts too: one Retry
+            // re-reads both.
+            if (tagsError) invalidate("tags");
+          }}
           retrying={contactsPage.isRefreshing}
         />
       ) : (

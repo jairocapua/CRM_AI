@@ -504,23 +504,36 @@ export const timeRadio = (dialog: Locator, label: string) =>
   timeGroup(dialog).getByRole("radio", { name: label, exact: true });
 
 /** A store table whose reads `failReads` can make fail. */
-export type FaultTable = "appointments" | "calendars" | "contacts";
+export type FaultTable = "appointments" | "calendars" | "contacts" | "tags";
 
 /**
- * Keys every record of the table has and no record of another table has all
- * of. An appointment also has a `timezone`, so the calendar shape needs more
- * than that one key. No other record has `dnd` or `score`, and users have
- * no `tagIds`.
+ * How `failReads` tells a table's records apart: every record of the table
+ * has all of `has` and none of `lacks`, and no record of another table
+ * matches both. An appointment also has a `timezone`, so the calendar shape
+ * needs more than that one key. No other record has `dnd` or `score`, and
+ * users have no `tagIds`. A tag has `name`, `slug` and `color`, and so does a
+ * calendar, the only other record with a `slug` (src/types), so the tag
+ * shape also requires no `timezone`, which every calendar has. If another
+ * record type gains `name`, `slug` and `color` without a `timezone`, the tags
+ * fault catches it too.
  */
-const TABLE_SHAPES: Record<FaultTable, readonly string[]> = {
-  appointments: ["calendarId", "contactId", "startAt", "endAt"],
-  calendars: ["availability", "slotDurationMin", "timezone"],
-  contacts: ["firstName", "lastName", "tagIds", "dnd", "score"],
+const TABLE_SHAPES: Record<
+  FaultTable,
+  { has: readonly string[]; lacks?: readonly string[] }
+> = {
+  appointments: { has: ["calendarId", "contactId", "startAt", "endAt"] },
+  calendars: { has: ["availability", "slotDurationMin", "timezone"] },
+  contacts: { has: ["firstName", "lastName", "tagIds", "dnd", "score"] },
+  tags: { has: ["name", "slug", "color"], lacks: ["timezone"] },
 };
 
 interface ReadFaultWindow {
   /** The table whose reads fail now, or null when none does. */
-  __e2eReadFault?: { table: FaultTable; keys: readonly string[] } | null;
+  __e2eReadFault?: {
+    table: FaultTable;
+    has: readonly string[];
+    lacks: readonly string[];
+  } | null;
   /** Set once `Object.values` has been wrapped in this document. */
   __e2eReadFaultInstalled?: boolean;
   /** How many reads the fault has failed in this document so far. */
@@ -564,12 +577,16 @@ interface ReadFaultWindow {
  * catches every read of the whole table: the contacts list, the tag counts
  * (`list()` in tags.ts), the dashboard's analytics (analytics.ts) and the
  * contacts CSV export (contacts.ts). Contact writes and `contacts.get` read
- * by key and are unaffected. Restore reads before a step that reaches them.
+ * by key and are unaffected. For tags it catches only `list()` in tags.ts
+ * (`Object.values(tags)`, after its loop over the contacts, which passes):
+ * tag create, update and remove, `contacts.list` and
+ * `contacts.addTags`/`removeTags` do not read the tags table that way, so
+ * they keep working. Restore reads before a step that reaches them.
  * `readFaultThrows` counts the reads the fault has failed.
  */
 export async function failReads(page: Page, table: FaultTable): Promise<void> {
   await page.evaluate(
-    ({ table, keys }) => {
+    ({ table, has, lacks }) => {
       const w = window as unknown as ReadFaultWindow;
       if (!w.__e2eReadFaultInstalled) {
         const real = Object.values;
@@ -581,7 +598,8 @@ export async function failReads(page: Page, table: FaultTable): Promise<void> {
             fault &&
             typeof first === "object" &&
             first !== null &&
-            fault.keys.every((key) => key in first)
+            fault.has.every((key) => key in first) &&
+            !fault.lacks.some((key) => key in first)
           ) {
             w.__e2eReadFaultThrows = (w.__e2eReadFaultThrows ?? 0) + 1;
             throw new Error(`e2e: reading ${fault.table} failed`);
@@ -590,9 +608,13 @@ export async function failReads(page: Page, table: FaultTable): Promise<void> {
         } as typeof Object.values;
         w.__e2eReadFaultInstalled = true;
       }
-      w.__e2eReadFault = { table, keys };
+      w.__e2eReadFault = { table, has, lacks };
     },
-    { table, keys: TABLE_SHAPES[table] },
+    {
+      table,
+      has: TABLE_SHAPES[table].has,
+      lacks: TABLE_SHAPES[table].lacks ?? [],
+    },
   );
 }
 

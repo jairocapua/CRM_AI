@@ -31,17 +31,21 @@ import { expect, NAVIGATION, test } from "./fixtures";
  * page, in the booking dialog's calendar list and open times, and on the
  * contacts list (the first load, a failed page change, and a failed re-read
  * that keeps the rows on screen; here, like the contact page's tests, because
- * they share this spec's fault helpers and Retry watch). A contact that does
- * not exist keeps its "Contact not found" state, not the load error. A
+ * they share this spec's fault helpers and Retry watch) and its tag read (a
+ * failed tag read with the rows on screen, which also empties the toolbar's
+ * tag filter, and a failed tag re-read that keeps the badges). A contact that
+ * does not exist keeps its "Contact not found" state, not the load error. A
  * re-read that fails with a list already on screen keeps the list, with no
  * error in its place (the booking dialog's open-times test and the contacts
- * list's last test). The dialog's calendar list has no such test: nothing
+ * list's re-read tests). The dialog's calendar list has no such test: nothing
  * refetches it while the dialog is open, so that case holds by construction
  * (DECISIONS P7-T36).
  *
  * The mock never fails a read, so `failReads` makes one fail from the page,
  * and `armContactFault` makes one contact's read fail where `failReads`
- * cannot reach it (see calendar-helpers.ts). Both can be switched off, so
+ * cannot reach it (see calendar-helpers.ts). `failReads(page, "tags")` fails
+ * only the tag read, not the contacts list; a contacts fault fails both,
+ * since the tag counts read the contacts table. Both can be switched off, so
  * each test proves both halves: the error appears, and once the fault is off,
  * Retry brings the data back. The fault is a plain Error, which
  * `useResource` reports as "Something went wrong.".
@@ -686,6 +690,9 @@ test("booking dialog: a failed re-read of the open times keeps the list on scree
 });
 
 const PAGE_SIZE = 25;
+const TAGS_ERROR = "Could not load tags";
+/** What a `TagPicker` lists in place of its tags after a failed read. */
+const TAG_PICKER_ERROR = "Could not load tags.";
 
 /** The contacts table's row checkboxes, one per row on screen. */
 const contactRows = (page: Page) =>
@@ -694,6 +701,42 @@ const contactRows = (page: Page) =>
 /** The contacts footer's pager text, "Page 2 of 10". */
 const pagerText = (page: Page) =>
   page.locator("main").getByText(/^Page \d+ of \d+$/);
+
+/**
+ * The tag badges in the contacts table. Column 4 is Tags (select, contact,
+ * status, tags in columns.tsx); the column number keeps the status badges
+ * out. A column reorder makes this match nothing, and the tests that wait for
+ * a badge fail loudly rather than pass.
+ */
+const tagBadges = (page: Page) =>
+  page
+    .locator("main")
+    .getByRole("table")
+    .locator('tbody td:nth-child(4) [data-slot="badge"]');
+
+/** The toolbar's tag filter, a `TagPicker`. */
+const tagFilter = (page: Page) =>
+  page
+    .locator("main")
+    .getByRole("combobox", { name: "Filter by tags", exact: true });
+
+/**
+ * Opens the toolbar's tag filter, checks it lists tags (or, with `failed`,
+ * that it says its read failed and lists nothing), then closes it.
+ */
+async function expectTagFilter(page: Page, { failed = false } = {}) {
+  await tagFilter(page).click();
+  const error = page.getByText(TAG_PICKER_ERROR, { exact: true });
+  if (failed) {
+    await expect(error).toBeVisible();
+    await expect(page.getByRole("option")).toHaveCount(0);
+  } else {
+    await expect(page.getByRole("option").first()).toBeVisible();
+    await expect(error).toHaveCount(0);
+  }
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+}
 
 test("contacts list: a failed first load shows the error and Retry lists the contacts", async ({
   page,
@@ -727,6 +770,11 @@ test("contacts list: a failed first load shows the error and Retry lists the con
     main.getByRole("button", { name: "Add contact", exact: true }),
   ).toBeVisible();
 
+  // tags.list counts tags through the contacts table, so the fault failed
+  // the tag read too. One fault, one alert: the tags error is not shown
+  // beside the contacts error.
+  await expect(loadErrorAlert(page, TAGS_ERROR)).toHaveCount(0);
+
   // A Retry that fails again: the button goes busy, and no skeleton appears.
   // The load error is the only alert in main.
   const readWatch = await watchRetry(page, "main");
@@ -741,9 +789,10 @@ test("contacts list: a failed first load shows the error and Retry lists the con
     sawSkeleton: false,
     sawLabelledSpinner: false,
   });
+  await expect(loadErrorAlert(page, TAGS_ERROR)).toHaveCount(0);
 
-  // The fault clears, and Retry lists the first page. Tags are not checked:
-  // the fault failed the tag counts too, and nothing retries them.
+  // The fault clears, and Retry lists the first page. The same Retry re-reads
+  // the tags: the table's badges and the toolbar filter's tags come back.
   await restoreReads(page);
   await retry.click();
   await expect(contactRows(page)).toHaveCount(PAGE_SIZE);
@@ -754,6 +803,132 @@ test("contacts list: a failed first load shows the error and Retry lists the con
     `Page 1 of ${Math.ceil(total / PAGE_SIZE)}`,
   );
   await expect(alert).toHaveCount(0);
+  await expect(tagBadges(page).first()).toBeVisible();
+  await expect(loadErrorAlert(page, TAGS_ERROR)).toHaveCount(0);
+  await expectTagFilter(page);
+});
+
+test("contacts list: a failed tag read shows its error and Retry brings back the badges and the tag filter", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/calendars");
+  await expectViewLoaded(page, "Month");
+  const total = (await readContacts(page)).length;
+  await failReads(page, "tags");
+  // Client-side navigation, so the fault survives.
+  await page
+    .locator('[data-slot="sidebar"]')
+    .getByRole("link", { name: "Contacts", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/contacts$/, NAVIGATION);
+
+  // The contacts list does not read the tags table: its rows and footer
+  // stay, with the tags error above them and no badge in the Tags column.
+  const main = page.locator("main");
+  await expect(contactRows(page)).toHaveCount(PAGE_SIZE);
+  await expect(
+    main.getByText(`${total} contacts`, { exact: true }),
+  ).toBeVisible();
+  const alert = loadErrorAlert(page, TAGS_ERROR);
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  await expect(loadErrorAlert(page, CONTACTS_ERROR)).toHaveCount(0);
+  await expect(tagBadges(page)).toHaveCount(0);
+
+  // The tag filter says its read failed, not "No tags found.", and offers
+  // nothing to pick or create.
+  await expectTagFilter(page, { failed: true });
+
+  // A Retry that fails again: the button goes busy, and no skeleton appears.
+  // The tags error is the only alert in main.
+  const readWatch = await watchRetry(page, "main");
+  const retry = alert.getByRole("button", { name: "Retry", exact: true });
+  await retry.click();
+  await expect.poll(async () => (await readWatch()).sawBusy).toBe(true);
+  await expect(retry).toBeEnabled();
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  expect(await readWatch()).toEqual({
+    sawBusy: true,
+    sawSkeleton: false,
+    sawLabelledSpinner: false,
+  });
+
+  // The fault clears, and Retry brings back the badges and the filter's tags:
+  // the toolbar's TagPicker holds its own read, and Retry re-reads it too.
+  await restoreReads(page);
+  await retry.click();
+  await expect(alert).toHaveCount(0);
+  await expect(tagBadges(page).first()).toBeVisible();
+  await expectTagFilter(page);
+});
+
+test("contacts list: a failed tag re-read with badges on screen keeps them", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/contacts");
+  const main = page.locator("main");
+  await expect(contactRows(page)).toHaveCount(PAGE_SIZE);
+  await expect(tagBadges(page).first()).toBeVisible();
+
+  // The bulk Tags popover's picker loads its tags before the fault goes on.
+  await contactRows(page).first().check();
+  await main.getByRole("button", { name: "Tags", exact: true }).click();
+  const popover = page.locator('[data-slot="popover-content"]');
+  await popover.getByRole("combobox", { name: "Tags", exact: true }).click();
+  await page.getByRole("option").first().click();
+  // While its list is open, the combobox hides the rest of the popover from
+  // the accessibility tree, Add included: close the list first.
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  const add = popover.getByRole("button", { name: "Add", exact: true });
+  await expect(add).toBeEnabled();
+
+  // Notes any alert appearing in main from now on, however briefly, so a
+  // check made after the failed re-read has rendered cannot miss one.
+  await page.evaluate(() => {
+    const w = window as unknown as { __sawTagsAlert?: boolean };
+    w.__sawTagsAlert = false;
+    new MutationObserver(() => {
+      if (document.querySelector('main [data-slot="alert"]')) {
+        w.__sawTagsAlert = true;
+      }
+    }).observe(document.body, { subtree: true, childList: true });
+  });
+
+  // addTags writes the contacts by spread, so it succeeds, then invalidates
+  // "contacts" and "tags": the tag re-reads go through Object.values and fail.
+  await failReads(page, "tags");
+  const throwsBefore = await readFaultThrows(page);
+  await add.click();
+  await expect(page.getByText("Tags added", { exact: true })).toBeVisible();
+  await expect
+    .poll(() => readFaultThrows(page), {
+      message: "the tags were never read again under the fault",
+    })
+    .toBeGreaterThan(throwsBefore);
+  // Let React commit the rejected re-read before checking nothing changed.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => setTimeout(resolve, 50)),
+        ),
+      ),
+  );
+
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __sawTagsAlert?: boolean }).__sawTagsAlert,
+    ),
+  ).toBe(false);
+  await expect(loadErrorAlert(page, TAGS_ERROR)).toHaveCount(0);
+  await expect(tagBadges(page).first()).toBeVisible();
+  await expect(contactRows(page)).toHaveCount(PAGE_SIZE);
+
+  await restoreReads(page);
 });
 
 test("contacts list: a failed page change shows the error, not the previous page", async ({

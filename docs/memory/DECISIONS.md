@@ -289,3 +289,8 @@
 - 2026-10-24 [P7-T46] Expected close is checked in the schema (z.unknown().transform(checkExpectedClose) adds an issue with EXPECTED_CLOSE_RULE), rebuilding P7-T35's message exactly; INVALID_EXPECTED_CLOSE replaced by EXPECTED_CLOSE_RULE.
 - 2026-10-24 [P7-T46] currency uses a mapped `{ [K in CurrencyCode]: K }` object for z.enum (complete, no cast); source reuses the `Object.keys(LEAD_SOURCE_LABELS) as [LeadSource, ...]` pattern.
 - 2026-10-24 [P7-T46] An empty or unknown issue path gets label 'Deal' and no field; a no-issue failure yields the same 'Deal: Not a valid value.', so no separate untestable branch.
+- 2026-10-24 [P7-T47] While the contacts list is in error only the contacts alert shows (`!loadError && tagsError`); its Retry also calls invalidate('tags'). One fault, one alert.
+- 2026-10-24 [P7-T47] Tags Retry uses invalidate('tags'), not tags.refetch(): refetch re-reads only the table's hook, the toolbar TagPicker has its own useResource('tags').
+- 2026-10-24 [P7-T47] TagPicker hides Create while its read has failed with no data (cannot check duplicates); applies to every TagPicker.
+- 2026-10-24 [P7-T47] e2e TABLE_SHAPES is now { has, lacks? }; tags = name+slug+color without timezone (Calendar is the only other record with slug).
+- 2026-10-24 [P7-T47] No new Vitest tests: no pure logic added; component branches proven red/green by e2e mutants (a)-(f).
