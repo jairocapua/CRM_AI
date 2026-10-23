@@ -41,6 +41,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { TAG_DOT_CLASSES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { canMoveToStatus, hasEnded } from "@/lib/validation/appointment";
 import {
   calendarDayOf,
   offersStart,
@@ -53,6 +54,9 @@ import {
 /**
  * Every status, in the order the select lists them. Cancelled is listed but
  * not offered: cancelling goes through its own button, which offers Undo.
+ * Once the appointment has ended, Confirmed is listed but not offered either
+ * (P7-H3). All four stay listed so the selected value always has an item for
+ * the popup to align on (`alignItemWithTrigger`).
  */
 const STATUS_OPTIONS: readonly AppointmentStatus[] = [
   "confirmed",
@@ -71,6 +75,11 @@ function errorMessage(error: unknown, fallback: string): string {
  * and status. The status changes through the select (`setStatus`) and the
  * appointment is cancelled through its own button (`cancel`), with Undo in
  * the toast.
+ *
+ * Once the appointment has ended (on the demo clock, read at render), only
+ * Showed and No Show are offered and there is no Cancel button (P7-H3). The
+ * API refuses the other moves with a 422 anyway, and a refusal shows its
+ * message in the error toast, as any failed change does.
  *
  * Controlled by the calendars workspace, which passes the row as its latest
  * fetch has it. A change shows at once (`shownStatus`) and the row takes over
@@ -158,12 +167,15 @@ function AppointmentDetails({
     }
   }
 
+  const nowMs = apiNow().getTime();
+  const ended = hasEnded(row.endAt, nowMs);
+
   // The stored status, not the shown one: the line reads the slots only once
   // the cancel has landed, never ahead of it.
   const showAvailability =
     row.status === "cancelled" &&
     status === "cancelled" &&
-    Date.parse(row.startAt) > apiNow().getTime();
+    Date.parse(row.startAt) > nowMs;
 
   return (
     <>
@@ -230,7 +242,10 @@ function AppointmentDetails({
                       <SelectItem
                         key={option}
                         value={option}
-                        disabled={option === "cancelled"}
+                        disabled={
+                          option === "cancelled" ||
+                          !canMoveToStatus(row.endAt, option, nowMs)
+                        }
                       >
                         {APPOINTMENT_STATUS_LABELS[option]}
                       </SelectItem>
@@ -253,7 +268,7 @@ function AppointmentDetails({
         </DetailRow>
       </dl>
 
-      {row.status !== "cancelled" ? (
+      {row.status !== "cancelled" && !ended ? (
         <DialogFooter>
           <Button
             variant="destructive"

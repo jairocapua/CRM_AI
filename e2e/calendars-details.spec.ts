@@ -20,7 +20,8 @@ import { expect, test } from "./fixtures";
  * Appointment details: a chip or block opens a dialog with the contact, the
  * time in the viewer's zone and in the calendar's, the calendar, location and
  * status. The status changes there and the appointment can be cancelled.
- * Within a day, live appointments are listed before cancelled ones in every
+ * Once an appointment has ended, only Showed and No Show are offered and it
+ * cannot be cancelled (P7-H3). Within a day, live appointments are listed before cancelled ones in every
  * view, so a cancellation never pushes a live booking behind "+N more".
  *
  * Checked against an oracle the UI does not share: the persisted database.
@@ -419,6 +420,76 @@ test("a status change appears on the contact's activity timeline", async ({
   await expect(page.getByText(SUMMARY, { exact: true })).toHaveCount(
     before + 1,
   );
+});
+
+test("a past appointment offers only Showed and No Show and no Cancel; a future one offers Cancel and Confirmed", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp(MONTH_URL);
+  await expectViewLoaded(page, "Month");
+  const rows = await readSeededAppointments(page);
+  const seededAt = await readSeededAt(page);
+
+  // Before P7-H3, a past Showed appointment offered both Cancel and Confirmed.
+  const past = byStart(
+    rows.filter(
+      (row) =>
+        row.status === "showed" &&
+        row.endAt < seededAt &&
+        localDayIn(ZONE, row.startAt).startsWith("2026-09"),
+    ),
+  ).at(-1);
+  if (!past) throw new Error("No showed appointment in September");
+  const [future] = byStart(
+    rows.filter((row) => row.status === "confirmed" && row.startAt >= seededAt),
+  );
+  if (!future) throw new Error("No upcoming confirmed appointment");
+
+  // Ended: no Cancel, and only Showed and No Show can be picked. All four
+  // stay listed, so the selected one always has an item to align on.
+  await gotoApp(`/calendars?view=day&date=${localDayIn(ZONE, past.startAt)}`);
+  let dialog = await openFromDayView(page, past);
+  await expect(
+    dialog.getByRole("button", { name: "Cancel appointment" }),
+  ).toHaveCount(0);
+  const pastStatus = dialog.getByRole("combobox", { name: "Status" });
+  await expect(selectedLabel(pastStatus)).toHaveText("Showed");
+  await pastStatus.click();
+  const listbox = page.getByRole("listbox");
+  await expect(listbox).toBeVisible();
+  await expect(page.getByRole("option")).toHaveCount(4);
+  await expect(page.getByRole("option", { disabled: false })).toHaveText([
+    "Showed",
+    "No Show",
+  ]);
+  for (const name of ["Confirmed", "Cancelled"]) {
+    await expect(
+      page.getByRole("option", { name, exact: true }),
+    ).toBeDisabled();
+  }
+  await page.keyboard.press("Escape");
+  await expect(listbox).toBeHidden();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+
+  // Still ahead: Cancel is there and Confirmed can be picked, as before.
+  await gotoApp(`/calendars?view=day&date=${localDayIn(ZONE, future.startAt)}`);
+  dialog = await openFromDayView(page, future);
+  await expect(
+    dialog.getByRole("button", { name: "Cancel appointment" }),
+  ).toBeVisible();
+  const futureStatus = dialog.getByRole("combobox", { name: "Status" });
+  await expect(selectedLabel(futureStatus)).toHaveText("Confirmed");
+  await futureStatus.click();
+  await expect(listbox).toBeVisible();
+  for (const name of ["Confirmed", "Showed", "No Show"]) {
+    await expect(page.getByRole("option", { name, exact: true })).toBeEnabled();
+  }
+  // Cancelling goes through its own button, which offers Undo.
+  await expect(
+    page.getByRole("option", { name: "Cancelled", exact: true }),
+  ).toBeDisabled();
 });
 
 test("Undo in the toast restores a cancelled appointment", async ({

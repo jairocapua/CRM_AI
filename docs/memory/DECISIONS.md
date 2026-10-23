@@ -191,3 +191,9 @@
 - 2026-10-23 [P7-T25] Contact fault: Object.values reads of the armed table do not throw (a `listing` flag); only by-key reads of that contact throw, so an in-flight tag count cannot fail silently.
 - 2026-10-23 [P7-T25] `restoreContactRead` restores the plain property only if the getter is still there, so a newer written value is never replaced by a stale one.
 - 2026-10-23 [P7-T25] A refetch that 404s still shows 'Contact not found' (404 branch first, no data check); A4 (refetch failure keeps the contact) holds by construction, not e2e.
+- 2026-10-23 [P7-T26] hasEnded = `Date.parse(endAt) < nowMs` (strict); a running appointment or one at its exact end can still be cancelled/confirmed. Seed isPast uses `<=`; differs only at the end ms.
+- 2026-10-23 [P7-T26] setStatus() error order: 404 NOT_FOUND, 422 PAST_APPOINTMENT, 409 SLOT_UNAVAILABLE; nothing written on any.
+- 2026-10-23 [P7-T26] The past check reads apiNowMs(), not nowIso(), so a refused call does not move the persisted high-water mark.
+- 2026-10-23 [P7-T26] Rule names target statuses only: an ended Cancelled appointment can still go to Showed/No Show (subject to 409), not Confirmed. Re-setting the same blocked status is also 422. Flagged to owner.
+- 2026-10-23 [P7-T26] Dialog lists all four statuses and disables unoffered ones, so Base UI Select's alignItemWithTrigger always finds the selected item.
+- 2026-10-23 [P7-T26] The rule lives in src/lib/validation/appointment.ts, shared by API and dialog like calendarSettingsSchema.

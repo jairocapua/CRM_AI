@@ -158,3 +158,6 @@
 - 2026-10-23 [P7-T25] `contacts.get` reads `contacts[id]` by key, so `failReads` (wraps Object.values) cannot fail it; a per-record accessor armed from the Object.values wrapper can.
 - 2026-10-23 [P7-T25] The contact page itself reads the whole contacts table (ContactInfoPanel's `tags.list`), so a fault keyed on the next table read arms there first.
 - 2026-10-23 [P7-T25] useResource turns a plain Error in simulate() into ApiError 500 'Something went wrong.', which drives the error branch, not 'Contact not found'.
+- 2026-10-23 [P7-T26] With setTuning({ latencyMs: 0, jitter: 0 }), simulate() via settle() does not advance the fake clock, so after setDemoNow(t) and no writes nowIso() returns exactly t; a stray nowIso() in a refused path shows as t + 1ms.
+- 2026-10-23 [P7-T26] Base UI disabled SelectItems read correctly via getByRole('option', { disabled: false }) and toBeDisabled(); option text has no stray glyph, so toHaveText([...]) works.
+- 2026-10-23 [P7-T26] Python is not installed in this machine's Git Bash; use heredocs, sed or the Edit tool.

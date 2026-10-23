@@ -1022,6 +1022,13 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
+### P7-H4 — Decide: should an ended, already-Cancelled appointment stay frozen?
+- **Owner:** human · **Depends:** —
+- **Scope:** Today it can be marked Showed/No Show (target-only rule); 409 message reads oddly when slot rebooked. If frozen, change canMoveToStatus + its Vitest row.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-23
+
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
       timeline, and in the dashboard Upcoming card, and its slot disappears

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { AvailabilityRule, Calendar } from "@/types";
+import type { Appointment, AvailabilityRule, Calendar, ID } from "@/types";
 import {
   seededWorld,
   setDemoNow,
@@ -716,6 +716,172 @@ describe.each(ZONES)("book() with the runtime in $zone", (zone) => {
       }),
     );
     expect(rows.map((r) => r.startAt)).toEqual(["2026-10-27T17:00:00.000Z"]);
+  });
+});
+
+/**
+ * P7-H3 (DECISIONS 2026-10-23): once an appointment has ended, it can only be
+ * marked Showed or No Show; it can no longer be confirmed or cancelled. The
+ * rule names target statuses only, so Showed and No Show stay allowed on
+ * either side of the end.
+ *
+ * Every case books Discovery's 10:00 PDT slot on Tue 10-27 (17:00Z-17:30Z) at
+ * DEMO_NOW, a day ahead, then moves the demo clock (which only runs forward).
+ */
+describe("setStatus() and cancel() once an appointment has ended (P7-H3)", () => {
+  const START = "2026-10-27T17:00:00.000Z";
+  const END = "2026-10-27T17:30:00.000Z";
+  const HALF_AN_HOUR_AFTER = "2026-10-27T18:00:00.000Z";
+  const MESSAGE =
+    "This appointment has already ended, so it can only be marked Showed or No Show.";
+
+  async function bookedWorld() {
+    const world = await loadWorld(ZONES[0]!);
+    const booked = await world.book(world.discovery, START);
+    expect(booked).toMatchObject({ endAt: END, status: "confirmed" });
+    return { ...world, id: booked.id };
+  }
+
+  const REFUSED: {
+    name: string;
+    /** Run after the booking, while it is still a day ahead. */
+    ahead?: (world: World, id: ID) => Promise<unknown>;
+    /** The demo clock for the refused call. */
+    at: string;
+    call: (api: World["api"], id: ID) => Promise<Appointment>;
+  }[] = [
+    {
+      name: "cancel() on one never marked",
+      at: HALF_AN_HOUR_AFTER,
+      call: (api, id) => api.cancel(id),
+    },
+    {
+      name: "setStatus(cancelled) on a no-show",
+      ahead: ({ api }, id) => settle(api.setStatus(id, "no_show")),
+      at: HALF_AN_HOUR_AFTER,
+      call: (api, id) => api.setStatus(id, "cancelled"),
+    },
+    {
+      name: "confirming one marked Showed",
+      ahead: ({ api }, id) => settle(api.setStatus(id, "showed")),
+      at: HALF_AN_HOUR_AFTER,
+      call: (api, id) => api.setStatus(id, "confirmed"),
+    },
+    {
+      name: "restoring a cancelled one as Confirmed",
+      ahead: ({ api }, id) => settle(api.cancel(id)),
+      at: HALF_AN_HOUR_AFTER,
+      call: (api, id) => api.setStatus(id, "confirmed"),
+    },
+    {
+      // Its time is taken too, which is a 409: the 422 is checked first.
+      name: "restoring as Confirmed after its time was rebooked",
+      ahead: async ({ api, discovery, book }, id) => {
+        await settle(api.cancel(id));
+        await book(discovery, START);
+      },
+      at: HALF_AN_HOUR_AFTER,
+      call: (api, id) => api.setStatus(id, "confirmed"),
+    },
+    {
+      name: "cancel() a millisecond after its end",
+      at: "2026-10-27T17:30:00.001Z",
+      call: (api, id) => api.cancel(id),
+    },
+  ];
+
+  it.each(REFUSED)("refuses $name with a 422 and writes nothing", async (c) => {
+    const world = await bookedWorld();
+    // Loaded after `seededWorld()`, so it is the class the API throws.
+    const { ApiError, nowIso } = await import("./http");
+    await c.ahead?.(world, world.id);
+    setDemoNow(c.at);
+    const before = await snapshot(world);
+
+    const error = await settle(c.call(world.api, world.id)).catch(
+      (e: unknown) => e,
+    );
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({
+      status: 422,
+      code: "PAST_APPOINTMENT",
+      message: MESSAGE,
+    });
+    expect(await snapshot(world)).toEqual(before);
+    // Not even the clock's mark moved: nothing has issued a timestamp since
+    // the clock was set, so the next one is `at` itself.
+    expect(nowIso()).toBe(c.at);
+  });
+
+  /** The status changes on the contact's timeline, newest first. */
+  async function statusSummaries({ activities, contactId }: World, id: ID) {
+    const timeline = await settle(activities.listForContact(contactId));
+    return timeline
+      .filter((a) => a.appointmentId === id && a.type !== "appointment.booked")
+      .map((a) => a.summary);
+  }
+
+  it("lets an ended appointment be marked Showed, then No Show, then Showed again", async () => {
+    const world = await bookedWorld();
+    setDemoNow(HALF_AN_HOUR_AFTER);
+
+    for (const status of ["showed", "no_show", "showed"] as const) {
+      await expect(
+        settle(world.api.setStatus(world.id, status)),
+      ).resolves.toMatchObject({ id: world.id, status });
+    }
+    expect(await statusSummaries(world, world.id)).toEqual([
+      "Appointment marked showed",
+      "Appointment marked no show",
+      "Appointment marked showed",
+    ]);
+  });
+
+  it("lets an ended appointment go straight to No Show", async () => {
+    const world = await bookedWorld();
+    setDemoNow(HALF_AN_HOUR_AFTER);
+
+    await expect(
+      settle(world.api.setStatus(world.id, "no_show")),
+    ).resolves.toMatchObject({ status: "no_show" });
+    expect(await statusSummaries(world, world.id)).toEqual([
+      "Appointment marked no show",
+    ]);
+  });
+
+  it("lets an ended, cancelled appointment be marked Showed (the rule names target statuses only)", async () => {
+    // Flagged to the owner: pinned so a later decision changes it on purpose.
+    const world = await bookedWorld();
+    await settle(world.api.cancel(world.id));
+    setDemoNow(HALF_AN_HOUR_AFTER);
+
+    await expect(
+      settle(world.api.setStatus(world.id, "showed")),
+    ).resolves.toMatchObject({ status: "showed" });
+  });
+
+  it("still cancels and confirms an appointment that has not ended", async () => {
+    // Running: a minute before its end, so both writes land before it.
+    const world = await bookedWorld();
+    setDemoNow("2026-10-27T17:29:00.000Z");
+
+    await expect(settle(world.api.cancel(world.id))).resolves.toMatchObject({
+      status: "cancelled",
+    });
+    await expect(
+      settle(world.api.setStatus(world.id, "confirmed")),
+    ).resolves.toMatchObject({ status: "confirmed" });
+  });
+
+  it("at its end instant, cancel() is still allowed", async () => {
+    // One write only: the clock issues strictly increasing timestamps, so a
+    // second write in this millisecond would run at END + 1ms.
+    const world = await bookedWorld();
+    setDemoNow(END);
+
+    await expect(settle(world.api.cancel(world.id))).resolves.toMatchObject({
+      status: "cancelled",
+    });
   });
 });
 

@@ -9,6 +9,7 @@ import {
   liveBookings,
   zonedDay,
 } from "@/lib/mock/slots";
+import { canMoveToStatus } from "@/lib/validation/appointment";
 import {
   calendarSettingsSchema,
   WEEKDAY_LABELS,
@@ -399,10 +400,21 @@ export async function book(draft: AppointmentDraft): Promise<Appointment> {
 }
 
 /**
- * Moves an appointment to `status`. Moving a cancelled one to any other status
- * takes its time back, so it is a 409 if another booking has taken that time
- * (or filled that day) since: the collision and daily-cap rules `book()`
- * applies. Its hours, notice and booking range are not rechecked.
+ * Moves an appointment to `status`.
+ *
+ * Once an appointment has ended (its end is before the demo's now), it can
+ * only be marked Showed or No Show (P7-H3, see `canMoveToStatus`): confirming
+ * or cancelling it is a 422. Until then any status is allowed.
+ *
+ * Moving a cancelled one to any other status takes its time back, so it is a
+ * 409 if another booking has taken that time (or filled that day) since: the
+ * collision and daily-cap rules `book()` applies. Its hours, notice and
+ * booking range are not rechecked.
+ *
+ * Errors, checked in this order, and nothing is written on any of them:
+ * - 404 `NOT_FOUND`: no such appointment;
+ * - 422 `PAST_APPOINTMENT`: it has ended and `status` is not Showed or No Show;
+ * - 409 `SLOT_UNAVAILABLE`: it is cancelled and its time is no longer free.
  */
 export async function setStatus(
   id: ID,
@@ -412,7 +424,17 @@ export async function setStatus(
     const state = db.getState();
     const prev = state.appointments[id] ?? notFound("Appointment", id);
 
-    // Checked in the same synchronous block as the write, as in `book()`.
+    // These checks run in the same synchronous block as the write, as in
+    // `book()`. `apiNowMs`, not `nowIso`: a refused call must move nothing,
+    // not even the clock's saved high-water mark.
+    if (!canMoveToStatus(prev.endAt, status, apiNowMs())) {
+      throw new ApiError(
+        "This appointment has already ended, so it can only be marked Showed or No Show.",
+        422,
+        "PAST_APPOINTMENT",
+      );
+    }
+
     if (prev.status === "cancelled" && status !== "cancelled") {
       const calendar =
         state.calendars[prev.calendarId] ??
@@ -454,6 +476,10 @@ export async function setStatus(
   return appointment;
 }
 
+/**
+ * Cancels an appointment that has not ended. Once it has, this is a 422
+ * `PAST_APPOINTMENT`, as for any `setStatus()` move to cancelled.
+ */
 export async function cancel(id: ID): Promise<Appointment> {
   return setStatus(id, "cancelled");
 }
