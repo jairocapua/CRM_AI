@@ -1111,6 +1111,7 @@ hours land around midnight–08:00 local; that is expected.
   - From the P7-T24 review, in calendars-load-errors.spec.ts: rewrap the header line edited in P7-T24 (~:25, ~93 characters) to match the block, and scope the calendars test's `watchRetry(page, "main")` to the calendar column, since it reads the first `[data-slot="alert"]` in main.
   - From the P7-T21 review: failReads' Limits paragraph in calendar-helpers.ts names only calendars.ts. Add that any other API call reading the table through `Object.values` throws too while the fault is on, e.g. template rendering (templates.ts), analytics (analytics.ts) and the settings integrity check (settings.ts).
   - From the P7-T27 review, in e2e/fixtures.ts: make `NAVIGATION` read-only (`as const` or `Object.freeze`) so no spec can change it for the others, and reword "So do 'the URL did not change' checks." to say plainly that those keep the 5s default too. Add a one-line e2e note (LEARNINGS or CLAUDE.md) that the first wait after a cross-route navigation passes the shared `NAVIGATION`, so new specs do not write a local copy again.
+  - From the P7-T29 review: move `pauseTimers` from e2e/contact-picker.spec.ts into the shared e2e helpers next to `chooseContact`, so the next race test can reuse it.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
@@ -1199,6 +1200,8 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T40 — ContactPicker: hold fetched contact for outside-set values
 - **Owner:** agent · **Depends:** —
 - **Scope:** Edit path still uses each refetch's object; after fetch() swap an invalidation rewrites typed text. Keep first fetched copy per id (contact-picker-value.ts) + unit test.
+  - From the P7-T29 review: the held pick (and a held fetched copy) keeps a contact's old name if it is renamed elsewhere while the picker stays mounted. Every consumer unmounts it when its dialog or sheet closes today, so say that in `pickerValue`'s doc rather than adding a refresh.
+  - In e2e/contact-picker.spec.ts `pauseTimers` (~:147-150): `pauseAt(now + 1s)` throws "Cannot fast-forward to the past" if more than 1s of page time passes before it runs. Widen the margin to a few seconds, or state the limit in the helper's comment (every timer due inside the margin fires at once on pause).
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
