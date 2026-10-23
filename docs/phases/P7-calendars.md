@@ -1408,7 +1408,8 @@ hours land around midnight–08:00 local; that is expected.
         The reporting effect is unchanged and no `form.subscribe` is added.
   - [ ] A9. Every new test has been seen failing. On HEAD's src, T-A fails
         at the dialog check and T-B sees no beforeunload guard. T-C fails
-        against a provider that pushes before releasing. T-D fails without
+        against a provider that does not release on Discard (the order of
+        release and push inside the handler does not matter). T-D fails without
         the close-on-release. Each T-E fails against a type-clean
         AvailabilityForm that always reports dirty, and its beforeunload
         check fails against a listener installed regardless of dirty.
@@ -1969,11 +1970,61 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T43 — Unsaved-changes guard: stable guardLeave, menu focus return, mobile Sheet
 - **Owner:** agent · **Depends:** —
+- **Skills:** `vercel-react-best-practices`, `vitest`, `playwright-cli`
 - **Scope:** Keep subject in a ref so guardLeave/context keep identity; finalFocus to user-menu trigger for menu links (fix comment); close mobile Sheet on question; reword A9/'Released first' ordering claim
   - From the P7-T33 review (pre-existing, not caused by P7-T33): on a phone (390px) the sidebar Sheet stays open after any sidebar link navigates, even with no unsaved edits, so the new page sits behind the open panel. Close it (`setOpenMobile(false)` from `useSidebar`) when a sidebar or user-menu link navigates, and when the guard's Discard changes leaves; the question itself already opens over the Sheet and Escape closes only the question. Prove both with an e2e at a phone viewport (clean link click, and Discard from the guard).
   - In unsaved-changes.tsx's JSDoc, name the case where the registration is released while the question is open because a save finished (the question closes and the clicked link is dropped), or go on to `leave.href` then, since nothing is left to lose.
+  - Decided: `subject` lives in a ref read at click time; the `subject`
+    state stays only for the `beforeunload` effect.
+  - Decided: `guardLeave(href, { onLeave?, returnFocus? })`. `onLeave` runs
+    when the link goes ahead (at once if clean, or on Discard changes
+    together with `router.push`). `returnFocus` becomes the question's
+    `finalFocus`.
+  - Decided: the Sheet stays open under the question; Escape closes only
+    the question; the Sheet closes on a clean click or on Discard changes,
+    through `onLeave = () => setOpenMobile(false)`. The scope line's
+    "close mobile Sheet on question" is read through its detail bullet.
+  - Decided: a save that finishes while the question is open keeps today's
+    behaviour (the question closes, the link is dropped, `onLeave` does not
+    run). It is documented, not changed.
+  - Decided: the release/push order inside Discard's handler does not
+    matter; releasing does.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. `guardLeave` and the provider's context value keep one
+        identity while a page registers and releases; `subject` is read
+        from a ref at click time, never during render; the `subject` state
+        remains only for the `beforeunload` effect.
+  - [ ] A2. `guardLeave(href, { onLeave })` runs `onLeave` only when the
+        link goes ahead: at once on a clean click, and on Discard changes
+        together with `router.push(href)`; never on Keep editing, Escape,
+        or a release while asking.
+  - [ ] A3. Keep editing or Escape on a question asked from the user menu's
+        My profile or Team settings returns focus to the user-menu trigger
+        (`returnFocus` -> `finalFocus`); the wrong "No finalFocus" comment
+        is replaced.
+  - [ ] A4. On a phone (390x844), a clean sidebar link and a clean
+        user-menu link close the sidebar Sheet as they navigate.
+  - [ ] A5. On a phone with unsaved edits, the question opens over the open
+        Sheet; Escape closes only the question (Sheet open, link focused,
+        URL and edit kept); Discard changes closes the Sheet and lands on
+        the link's page with no dialog left.
+  - [ ] A6. The save-finished-while-asking case is named in
+        unsaved-changes.tsx's JSDoc: the question closes, the clicked link
+        is dropped and `onLeave` does not run; behaviour unchanged.
+  - [ ] A7. The ordering claim is reworded everywhere: the `onConfirm`
+        comment, the `useUnsavedChanges` JSDoc, the spec header, T-C's
+        title and P7-T33's A9 say Discard releases the guard in the same
+        handler that starts the push and that the order does not matter.
+  - [ ] A8. Every new or changed test has been seen failing: the hook tests
+        against mutants, the menu-focus assertion on HEAD (or a
+        `finalFocus={false}` mutant), both phone tests on HEAD's src.
+  - [ ] A9. No seed, API, mock or ui change and no regression: SEED_VERSION
+        stays 4; nothing under src/lib or src/components/ui changes;
+        `npm run check` green with Vitest +4; full `npm run e2e` green with
+        +2 tests; `@tanstack/react-table` 8.21.3; `progress --check` clean.
+  - [ ] A10. Docs match the code: this entry, unsaved-changes.tsx's JSDoc
+        (onLeave, returnFocus, identity, the save-finished case), the
+        app-sidebar and nav-user comments and the spec header.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T44 — book(): check the start's day in the calendar zone (422 INVALID_START, not RangeError)

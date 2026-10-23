@@ -269,3 +269,10 @@
 - 2026-10-24 [P7-T41] Phase A4 also lists mutant M4, which proves the reworded TRIGGER_DIV_DISABLED comment.
 - 2026-10-24 [P7-T42] /settings/team got a Phase 9 placeholder page instead of prefetch={false}: removes both prefetch and click 404s, no Link prop for P9 to remember; P9-T03 replaces it in place.
 - 2026-10-24 [P7-T42] The Team settings prefetch 404 excuse is removed from the editor e2e; the earlier P7-T33 entries stay as history.
+- 2026-10-24 [P7-T43] subject lives in a ref (subjectRef) read inside guardLeave at click time; the subject state stays only for the beforeunload effect; guardLeave is useCallback with [] deps.
+- 2026-10-24 [P7-T43] guardLeave(href, { onLeave?, returnFocus? }): onLeave runs when the link goes ahead (clean click at once, or Discard next to router.push); returnFocus becomes ConfirmDialog finalFocus (undefined when absent, so Base UI's default applies).
+- 2026-10-24 [P7-T43] Scope 'close mobile Sheet on question' read through its detail bullet: the Sheet stays open under the question, Escape closes only the question, the Sheet closes via onLeave = setOpenMobile(false). Recorded as a Decided line.
+- 2026-10-24 [P7-T43] A save finishing while the question is open keeps today's behaviour (question closes, link dropped, onLeave not run); documented in the JSDoc and pinned by U4.
+- 2026-10-24 [P7-T43] nav-user holds the trigger element in state via a callback ref (ref={setTrigger}) rather than useRef, so it can be passed into guardLeave during render.
+- 2026-10-24 [P7-T43] Phone tests scope the sidebar opener with page.locator('header'): the header sits inside SidebarInset's <main> (not a banner landmark), and the Sheet's SidebarRail shares the 'Toggle Sidebar' name.
+- 2026-10-24 [P7-T43] Only My profile is followed in the clean phone test (Team settings is the P9 placeholder; the Discard path is covered by the sidebar Contacts link).

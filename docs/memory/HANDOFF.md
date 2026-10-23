@@ -5,25 +5,26 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T37–T42 approved (Autopilot review, 2026-10-24). P7-T42 was approved with `progress.mjs set`, so no task is running. P7-T43 is next. Session handed off to a fresh one after 6 approvals, per CLAUDE.md.
+- **Status:** P7-T43 in review (deep review).
 
 ## Last changes (this session)
-- P7-T37 (128a5a3): /contacts shows "Could not load contacts" + Retry on a failed list read; new `loadErrorOf` helper in use-resource.ts replaces the inline guards on six screens. Added P7-T47 (tags.list failure on /contacts is silent).
-- P7-T38 (b5b8fe1): hook-level useResource test under happy-dom (`*.hook.test.ts`, per-file `// @vitest-environment happy-dom`). Added P7-T48 (patch-bump `next` for npm audit criticals).
-- P7-T39 (1f06927): names for the contacts search box, toolbar tag filter, bulk Tags popover and deal-sheet TagPicker.
-- P7-T40 (6b06212): ContactPicker holds its contact through `useHeldValue`, so refetches never rewrite typed text.
-- P7-T41 (3f4f697): LinkButton JSDoc names both `nativeButton` lint exceptions; comment and test-assert changes only.
-- P7-T42 (f1e0eb7): placeholder page at /settings/team so the user menu's Team settings link stops 404ing. Added P7-T49 (shared `userMenu(page)` e2e helper).
+- P7-T43: `guardLeave` keeps one identity (subject read from a ref at click time), so the sidebar and user menu stop re-rendering on register/release.
+- New `guardLeave(href, { onLeave, returnFocus })`: the phone Sheet closes only when a link really navigates; the user menu's question returns focus to its trigger.
+- Tests: 4 happy-dom hook tests (unsaved-changes.hook.test.ts) and 2 phone (390x844) e2e tests; ordering comments reworded everywhere.
 
 ## Next up
-- **Agent:** P7-T43 (Unsaved-changes guard: stable guardLeave, menu focus return, mobile Sheet).
+- **Agent:** P7-T44 (once P7-T43 is approved).
 
 ## Waiting on you
+- Review of P7-T43.
 - P7-H4: should an ended appointment that is already Cancelled stay frozen? Not blocking.
 
 ## Open suggestions (non-blocking review notes)
-- Logged to docs/BACKLOG.md this session: contacts list error has no way back to page 1 and keeps hidden rows selected (P7-T37); ContactPicker's same-batch assumption in `useHeldValue` (P7-T40).
-- Cosmetic, not logged: team/page.tsx types metadata as `Metadata` while /settings does not (align in P9-T03); smoke.spec.ts:66-68 comment overstates the prefetch 404; button.tsx JSDoc "There `role="button"` is right" could read "In both cases"; select-a11y "Contacts toolbar" test title and a redundant `toHaveAccessibleName`.
+- P7-T43: hook test U4 is a characterization test (green on HEAD); note it or name a mutant (setSubject(null) not closing the question).
+- P7-T43: rename the local `leave` options object to `leaveOptions` in app-sidebar.tsx / nav-user.tsx (cosmetic).
+- P7-T43: phone e2e lacks a guarded user-menu path (My profile in the Sheet, Escape, focus back on trigger, Sheet open).
+- P7-T43: `vi.spyOn(console, 'error')` in the hook test could `.mockImplementation(() => {})` for tidy output.
+- Earlier, not logged: team/page.tsx `Metadata` typing; smoke.spec.ts:66-68 comment; button.tsx JSDoc wording; select-a11y test title.
 
 ## Blockers
 - None.

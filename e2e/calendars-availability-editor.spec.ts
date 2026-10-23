@@ -13,8 +13,12 @@ import { expect, NAVIGATION, test, waitForBoot } from "./fixtures";
  *   (Back to calendars, the sidebar's 7 nav links, the user menu's My
  *   profile and Team settings) opens the same question from
  *   `UnsavedChangesProvider`. Keep editing (or Escape) changes nothing and
- *   puts focus back on the control used; Discard changes goes ahead, and
- *   releases the guard before it navigates. A reload or a closed tab gets
+ *   puts focus back on the control used (for a user-menu link, whose item
+ *   is gone by then, the menu's trigger); Discard changes goes ahead, and
+ *   releases the guard in the same handler that starts the push. On a phone
+ *   the question opens over the sidebar Sheet, which stays open under it;
+ *   a sidebar or user-menu link that really navigates (a clean click, or
+ *   Discard changes) closes the Sheet. A reload or a closed tab gets
  *   the browser's own `beforeunload` prompt. A clean form (just loaded,
  *   discarded or saved) never asks, by any of those ways. The browser's Back
  *   is not guarded: a test pins that it leaves no stale question behind.
@@ -102,6 +106,15 @@ const sidebarLink = (page: Page, name: string) =>
   page
     .locator('[data-slot="sidebar"]')
     .getByRole("link", { name, exact: true });
+
+/** The sidebar as a phone shows it: a modal Sheet. */
+const mobileSidebar = (page: Page, options: { includeHidden?: boolean } = {}) =>
+  page.getByRole("dialog", { name: "Sidebar", ...options });
+
+/** The header's sidebar toggle. Scoped to the header: on a phone the Sheet's
+ *  rail has the same name. */
+const openSidebar = (page: Page) =>
+  page.locator("header").getByRole("button", { name: "Toggle Sidebar" });
 
 /** The sidebar footer's user menu trigger. */
 const userMenu = (page: Page) =>
@@ -363,14 +376,15 @@ test("every sidebar link asks before dropping unsaved edits", async ({
     await expect(link).toBeFocused();
   }
 
-  // The user menu's links ask too. Focus is not checked on the way back:
-  // the menu item that asked is gone by then.
+  // The user menu's links ask too. The menu item that asked is gone once
+  // the question closes, so focus comes back to the menu's trigger.
   for (const name of ["My profile", "Team settings"]) {
     await userMenu(page).click();
     await page.getByRole("menuitem", { name, exact: true }).click();
     await expectAsked();
     await page.keyboard.press("Escape");
     await expectEditKept();
+    await expect(userMenu(page)).toBeFocused();
   }
 
   // Discard changes leaves at once and drops the edit.
@@ -439,7 +453,7 @@ test("reload and tab close with unsaved edits get the browser's prompt", async (
   await expect(slotDuration(page)).toHaveValue("30");
 });
 
-test("Discard releases the guard first: a second Back click during a slow push asks nothing", async ({
+test("Discard releases the guard: a second Back click during a slow push asks nothing", async ({
   page,
   gotoApp,
 }) => {
@@ -490,6 +504,70 @@ test("the browser's Back is not guarded and closes an open question", async ({
   // The page with the edits is gone, and so is its question and its guard.
   await expect(anyAlertDialog(page)).toHaveCount(0);
   await expect.poll(() => beforeUnloadPrevented(page)).toBe(false);
+});
+
+test.describe("on a phone", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("a clean sidebar or user-menu link closes the sidebar as it navigates", async ({
+    page,
+    gotoApp,
+  }) => {
+    await gotoApp("/calendars");
+
+    await openSidebar(page).click();
+    await expect(mobileSidebar(page)).toBeVisible();
+    await sidebarLink(page, "Contacts").click();
+    await expect(page).toHaveURL(/\/contacts$/, NAVIGATION);
+    await expect(mobileSidebar(page, HIDDEN)).toHaveCount(0);
+
+    await openSidebar(page).click();
+    await expect(mobileSidebar(page)).toBeVisible();
+    await userMenu(page).click();
+    await page
+      .getByRole("menuitem", { name: "My profile", exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/settings$/, NAVIGATION);
+    await expect(mobileSidebar(page, HIDDEN)).toHaveCount(0);
+    await expect(anyAlertDialog(page)).toHaveCount(0);
+  });
+
+  test("the leave question opens over the sidebar; Escape keeps both, Discard closes the sidebar and leaves", async ({
+    page,
+    gotoApp,
+  }) => {
+    await openEditor(page, gotoApp);
+    // Tripwire: Discovery Call's slots are 30 minutes long.
+    await expect(slotDuration(page)).toHaveValue("30");
+    await editSlotDuration(page, "45");
+
+    await openSidebar(page).click();
+    await expect(mobileSidebar(page)).toBeVisible();
+    const link = sidebarLink(page, "Contacts");
+    await link.click();
+    const dialog = leaveDialog(page);
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText(FIRST);
+    // The Sheet is still there, under the question.
+    await expect(mobileSidebar(page, HIDDEN)).toHaveCount(1);
+    await expect(page).toHaveURL(/\/calendars\/availability$/);
+
+    // Escape closes only the question.
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(mobileSidebar(page)).toBeVisible();
+    await expect(link).toBeFocused();
+    await expect(page).toHaveURL(/\/calendars\/availability$/);
+    await expect(slotDuration(page)).toHaveValue("45");
+
+    // Discard changes leaves and closes the Sheet with it.
+    await link.click();
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Discard changes" }).click();
+    await expect(page).toHaveURL(/\/contacts$/, NAVIGATION);
+    await expect(mobileSidebar(page, HIDDEN)).toHaveCount(0);
+    await expect(anyAlertDialog(page)).toHaveCount(0);
+  });
 });
 
 /** The ways a form ends up clean. */
