@@ -37,12 +37,15 @@ function isCreatable(option: TagOption): option is CreatableOption {
 /** Multi-select tag picker with inline "create a new tag" support. */
 export function TagPicker({
   id,
+  "aria-label": ariaLabel,
   value,
   onChange,
   disabled = false,
 }: {
   /** Id for the text input, so a `<label htmlFor>` names it. */
   id?: string;
+  /** Names the text input where no `<label htmlFor>` can (toolbars, popovers). */
+  "aria-label"?: string;
   value: string[];
   onChange: (tagIds: string[]) => void;
   disabled?: boolean;
@@ -116,6 +119,7 @@ export function TagPicker({
         ))}
         <ComboboxChipsInput
           id={id}
+          aria-label={ariaLabel}
           placeholder={selected.length ? "" : "Add tags…"}
         />
       </ComboboxChips>

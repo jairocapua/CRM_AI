@@ -39,6 +39,7 @@ export function ContactsToolbar({
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search contacts…"
+          aria-label="Search contacts"
           className="pl-8"
         />
       </div>
@@ -67,7 +68,11 @@ export function ContactsToolbar({
       </Select>
 
       <div className="w-56">
-        <TagPicker value={tagIds} onChange={onTagIdsChange} />
+        <TagPicker
+          aria-label="Filter by tags"
+          value={tagIds}
+          onChange={onTagIdsChange}
+        />
       </div>
 
       <Button className="ml-auto" onClick={onAddContact}>

@@ -1782,10 +1782,50 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T39 — Name the remaining TagPickers and the contacts search box
 - **Owner:** agent · **Depends:** —
+- **Skills:** `shadcn`, `playwright-cli`, `webapp-testing`
 - **Scope:** Deal sheet TagPicker: id + FieldLabel htmlFor (opportunity-form-sheet.tsx ~499); contacts-toolbar and bulk Tags popover TagPickers need an aria-label prop; contacts search Input (contacts-toolbar.tsx:38) needs aria-label; extend select-a11y.spec.ts
   - From the P7-T28 review, in e2e/select-a11y.spec.ts: retitle the per-route tests (~:240) from "Chromium ignores every Select's hidden input" to say they also pin the names (e.g. "every Select is named and its hidden input ignored", as the Owner-popover test reads). In `expectNamedControls`' doc, say the count is checked once the named triggers are present, so a Select that mounts later is not caught. Cite the TAG_COMBOBOX source as AriaCombobox.mjs's `${id}-hidden-input` expression, not a line range, so a Base UI patch bump does not stale it.
+  - Decided: the contacts search box is named "Search contacts", its
+    placeholder minus the ellipsis, as board-toolbar names "Search deals".
+  - Decided: the contacts toolbar TagPicker is named "Filter by tags", like
+    inbox-list's "Filter by channel": its placeholder "Add tags…" would
+    wrongly suggest it adds tags to contacts.
+  - Decided: the bulk Tags popover TagPicker is named "Tags", matching the
+    popover's button.
+  - Decided: the deal sheet TagPicker is named through `FieldLabel
+    htmlFor="tagIds"` plus `TagPicker id="tagIds"`, exactly like the Add
+    contact sheet, not through an aria-label.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. The contacts search Input (contacts-toolbar.tsx) is named
+        "Search contacts" through aria-label; its placeholder "Search
+        contacts…" is unchanged.
+  - [ ] A2. The contacts toolbar TagPicker is an exposed combobox that
+        Chromium names "Filter by tags"; its Base UI hidden input is ignored
+        for its own aria-hidden, 1 trigger to 1 hidden input.
+  - [ ] A3. Bulk actions: with a row selected and the Tags popover open, the
+        popover holds exactly one TagPicker, an exposed combobox named "Tags"
+        whose hidden input is ignored for its own aria-hidden.
+  - [ ] A4. Deal sheet (New deal): the TagPicker is an exposed combobox named
+        "Tags" through `FieldLabel htmlFor="tagIds"` and `TagPicker
+        id="tagIds"`, not an aria-label; its hidden input is ignored, 1 to 1.
+  - [ ] A5. TagPicker accepts an optional `aria-label` prop and passes it to
+        its text input; placeholder and behaviour are unchanged and the Add
+        contact sheet TagPicker is still named "Tags".
+  - [ ] A6. select-a11y.spec.ts carries the P7-T28 review fixes: per-route and
+        Add contact tests are titled "… is named and its hidden input
+        ignored"; the `expectNamedControls` doc says the trigger count is
+        checked once the named triggers are present, so a Select that mounts
+        after that is not caught; the TAG_COMBOBOX doc cites the
+        `${id}-hidden-input` expression in AriaCombobox.mjs with no line
+        range; the file header names all four TagPicker cases.
+  - [ ] A7. Each of the three new tests fails against the HEAD versions of
+        the src files.
+  - [ ] A8. No seed, API or mock changes and no regressions: only tag-picker,
+        contacts-toolbar, bulk-actions-bar and opportunity-form-sheet change
+        under src/, SEED_VERSION stays 4, `npm run check` is green and the full
+        `npm run e2e` passes with the previous test count plus 3.
+  - [ ] A9. This entry has a Skills line, acceptance criteria A1-A9 and the
+        four naming decisions.
 - **Refs:** added by `progress.mjs add` on 2026-10-23
 
 ### P7-T40 — ContactPicker: hold fetched contact for outside-set values

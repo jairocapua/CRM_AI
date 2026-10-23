@@ -66,7 +66,11 @@ export function BulkActionsBar({
           Tags
         </PopoverTrigger>
         <PopoverContent>
-          <TagPicker value={pendingTagIds} onChange={setPendingTagIds} />
+          <TagPicker
+            aria-label="Tags"
+            value={pendingTagIds}
+            onChange={setPendingTagIds}
+          />
           <div className="mt-2 flex justify-end gap-2">
             <Button
               size="sm"

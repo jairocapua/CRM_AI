@@ -216,3 +216,5 @@
 - 2026-10-24 [P7-T38] A React hook test in Vitest needs a DOM environment (happy-dom) plus `react-dom/client` createRoot and `act` from 'react'; stub `IS_REACT_ACT_ENVIRONMENT` with `vi.stubGlobal` or React 19 warns the environment does not support act(...).
 - 2026-10-24 [P7-T38] Resolving/rejecting a deferred inside `await act(async () => ...)` flushes useResource's `.then().catch()` state update; no fake timers or waitFor needed.
 - 2026-10-24 [P7-T38] `ReturnType<typeof useResource<Payload>>` (instantiation expression) types the hook result in tests without exporting a type.
+- 2026-10-24 [P7-T39] A multi-assertion e2e run against the old file stops at the first failing assertion; to prove a later one can fail, remove only the fix it covers, re-run with -g, then restore and confirm with cmp.
+- 2026-10-24 [P7-T39] TagPicker has an optional "aria-label" prop (toolbar filter, bulk Tags popover); where a visible FieldLabel exists, name it via id + htmlFor instead (deal sheet, Add contact sheet).

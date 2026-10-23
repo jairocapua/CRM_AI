@@ -5,26 +5,24 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T38 in review.
+- **Status:** P7-T39 in review.
 
 ## Last change
-- P7-T38: new src/lib/api/use-resource.hook.test.ts (happy-dom, createRoot + act): failed refetch()/invalidate keeps data, isLoading never shown; new failing cacheKey drops data and loadErrorOf returns the error.
-- Mutants M1-M4 of use-resource.ts each turn a test red; use-resource.ts unchanged. Only new devDependency: happy-dom ^21.0.4 (vite stays 7.3.7). check green.
-- Added P7-T48 (bump next for npm audit critical findings).
+- P7-T39: TagPicker gained an optional `aria-label` prop. Contacts search ("Search contacts"), toolbar tag filter ("Filter by tags") and bulk Tags popover ("Tags") are named; deal sheet TagPicker named via FieldLabel htmlFor/id.
+- e2e/select-a11y.spec.ts: 3 new tests (each red on HEAD), plus P7-T28 review fixes (titles, docs, header). check green; e2e 117 passed.
 
 ## Next up
-- **Agent:** P7-T39.
+- **Agent:** P7-T40.
 
 ## Waiting on you
-- Review of P7-T38 (deep review).
+- Review of P7-T39 (deep review).
 - P7-H4: should an ended appointment that is already Cancelled stay frozen? Not blocking.
 
 ## Open suggestions (non-blocking review notes)
-- Hook test: assert error/loadErrorOf null while a new query loads (data still shows old page's data then: intended?).
-- Hook test: new query fails, then refetch() succeeds -> error clears (LoadError Retry path).
-- Comment that invalidate() revisions in cache.ts persist across tests.
-- Consider documenting the `*.hook.test.ts` + happy-dom convention in CLAUDE.md Commands.
-- Contacts list (P7-T37): failed page change hides Previous/Next; selection survives under the error; disconnect the MutationObserver in the re-read test.
+- select-a11y: drop redundant toHaveAccessibleName on the search box (or locate by placeholder); extend the Contacts toolbar test title to mention hidden input.
+- select-a11y: reword expectNamedControls doc ("is waited for"); share an openBulkPopover helper scoped to the bulk bar.
+- WCAG 2.5.3: toolbar placeholder "Add tags…" vs name "Filter by tags"; consider placeholder "Filter by tags…" (cosmetic).
+- Hook test (P7-T38) and contacts list (P7-T37) notes from earlier still open.
 
 ## Blockers
 - None.

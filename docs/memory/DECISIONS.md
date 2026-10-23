@@ -256,3 +256,7 @@
 - 2026-10-24 [P7-T38] Hook tests use happy-dom, opted in per file with `// @vitest-environment happy-dom`; global env stays node. Not jsdom: jsdom 30 needs Node >=22.22.2, this machine has 22.21.0.
 - 2026-10-24 [P7-T38] No @testing-library/react: a small in-file harness (createRoot + act + a Probe reporting renders via an onRender prop, which keeps React-compiler lint quiet) covers it.
 - 2026-10-24 [P7-T38] Hook tests assert in afterEach that console.error was never called, so act or other React warnings fail the test.
+- 2026-10-24 [P7-T39] Contacts search box named "Search contacts" (placeholder minus ellipsis, like board-toolbar's "Search deals").
+- 2026-10-24 [P7-T39] Contacts toolbar TagPicker named "Filter by tags" (like "Filter by channel"); its "Add tags…" placeholder would mislead.
+- 2026-10-24 [P7-T39] Bulk Tags popover TagPicker named "Tags", matching its button; deal sheet TagPicker named via FieldLabel htmlFor="tagIds" + id, not aria-label.
+- 2026-10-24 [P7-T39] Add contact a11y tests retitled to the "... is named and its hidden input ignored" pattern.

@@ -16,8 +16,9 @@ import { expect, test } from "./fixtures";
  * Chromium ignores each hidden input because of its own `aria-hidden`, while
  * the trigger next to it stays an exposed combobox with a non-empty name. Each
  * test pins the names it expects, so a missing, extra or nameless trigger
- * fails. One case checks a Combobox (the Add contact sheet's TagPicker), so
- * CLAUDE.md's "Select and Combobox" note is proven, not assumed. If a Base UI
+ * fails. The TagPicker cases (the Add contact sheet, the deal sheet, the
+ * contacts toolbar and the bulk Tags popover) check a Combobox, so CLAUDE.md's
+ * "Select and Combobox" note is proven, not assumed. If a Base UI
  * upgrade drops the attribute, these tests go red (the self-tests below show
  * they can).
  *
@@ -54,9 +55,9 @@ const SELECT: Control = {
 /**
  * A chips Combobox such as the TagPicker. Its `role="combobox"` element is the
  * text input. Base UI's Combobox Root renders no element of its own and adds
- * its `${id}-hidden-input` after its children
- * (node_modules/@base-ui/react/combobox/root/AriaCombobox.mjs, ~1186-1263), so
- * the hidden input comes after the chips div, in the same parent. If a Base UI
+ * its hidden input after its children (the `${id}-hidden-input` id expression
+ * in node_modules/@base-ui/react/combobox/root/AriaCombobox.mjs), so the
+ * hidden input comes after the chips div, in the same parent. If a Base UI
  * upgrade changes this, the count check fails with a mismatch.
  */
 const TAG_COMBOBOX: Control = {
@@ -188,12 +189,14 @@ function controlAxProblems(
  * triggers of `control` named `names`, in page order, and that each one passes
  * `controlAxProblems`.
  *
- * It waits for every name by role first. That is what catches a Select that
- * mounts late: a trigger and its hidden input mount in the same React commit,
- * so the counts always agree and a poll alone could pass before a late Select
- * arrives. Then the trigger count must equal the list, and Chromium's own names
- * (read through CDP) must equal it too. The CDP read is polled, not read once,
- * so the accessibility tree can settle after a render.
+ * It waits for every name by role first. That is what makes an expected
+ * Select that mounts late get waited for: a trigger and its hidden input mount
+ * in the same React commit, so the counts always agree and a poll alone could
+ * pass before a late Select arrives. The trigger count is then checked once,
+ * after those named triggers are present, so an extra Select that mounts after
+ * that moment is not caught. Then Chromium's own names (read through CDP) must
+ * equal the list. The CDP read is polled, not read once, so the accessibility
+ * tree can settle after a render.
  */
 async function expectNamedControls(
   page: Page,
@@ -235,7 +238,7 @@ const ROUTES_WITH_A_SELECT: { path: string; names: string[] }[] = [
 ];
 
 for (const { path, names } of ROUTES_WITH_A_SELECT) {
-  test(`${path}: Chromium ignores every Select's hidden input`, async ({
+  test(`${path}: every Select is named and its hidden input ignored`, async ({
     page,
     gotoApp,
   }) => {
@@ -248,7 +251,7 @@ for (const { path, names } of ROUTES_WITH_A_SELECT) {
   });
 }
 
-test("Add contact sheet: Chromium ignores every Select's hidden input", async ({
+test("Add contact sheet: every Select is named and its hidden input ignored", async ({
   page,
   gotoApp,
 }) => {
@@ -271,7 +274,7 @@ test("Add contact sheet: Chromium ignores every Select's hidden input", async ({
   await expectNamedControls(page, selects, { scope: '[role="dialog"]' });
 });
 
-test("Add contact sheet: Chromium ignores the TagPicker Combobox's hidden input", async ({
+test("Add contact sheet: the TagPicker Combobox is named and its hidden input ignored", async ({
   page,
   gotoApp,
 }) => {
@@ -303,6 +306,70 @@ test("Bulk actions Owner popover: its Select is named and its hidden input ignor
 
   await expectNamedControls(page, ["Assign owner"], {
     scope: '[data-slot="popover-content"]',
+  });
+});
+
+test("Deal sheet: the TagPicker Combobox is named and its hidden input ignored", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/opportunities");
+  await expect(page.locator('[data-slot="skeleton"]')).toHaveCount(0, {
+    timeout: 15_000,
+  });
+  await page.getByRole("button", { name: "New deal", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "New deal" })).toBeVisible();
+
+  // Named by the sheet's `FieldLabel htmlFor="tagIds"`, not its placeholder.
+  // The sheet's ContactPicker is a plain combobox input, not a chips input, so
+  // TAG_COMBOBOX does not match it.
+  await expectNamedControls(page, ["Tags"], {
+    scope: '[role="dialog"]',
+    control: TAG_COMBOBOX,
+  });
+});
+
+test("Contacts toolbar: the tag filter and the search box are named", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/contacts");
+  await expect(page.locator('[data-slot="skeleton"]')).toHaveCount(0, {
+    timeout: 15_000,
+  });
+
+  // The whole page is the scope: no other chips Combobox is mounted until a
+  // popover or sheet opens. Without an aria-label, both names would fall back
+  // to the placeholders ("Add tags…", "Search contacts…").
+  await expectNamedControls(page, ["Filter by tags"], {
+    control: TAG_COMBOBOX,
+  });
+  const search = page.getByRole("textbox", {
+    name: "Search contacts",
+    exact: true,
+  });
+  await expect(search).toBeVisible();
+  await expect(search).toHaveAccessibleName("Search contacts");
+});
+
+test("Bulk actions Tags popover: its TagPicker is named and its hidden input ignored", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/contacts");
+  await expect(page.locator('[data-slot="skeleton"]')).toHaveCount(0, {
+    timeout: 15_000,
+  });
+
+  // The popover's TagPicker mounts only once a row is selected and Tags is
+  // opened. The Tags column header is not sortable, so it is not a button; if
+  // it ever becomes one, this click turns ambiguous.
+  await page.getByRole("checkbox", { name: "Select row" }).first().click();
+  await page.getByRole("button", { name: "Tags", exact: true }).click();
+
+  await expectNamedControls(page, ["Tags"], {
+    scope: '[data-slot="popover-content"]',
+    control: TAG_COMBOBOX,
   });
 });
 
