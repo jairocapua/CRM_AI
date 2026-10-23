@@ -1509,6 +1509,8 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T43 — Unsaved-changes guard: stable guardLeave, menu focus return, mobile Sheet
 - **Owner:** agent · **Depends:** —
 - **Scope:** Keep subject in a ref so guardLeave/context keep identity; finalFocus to user-menu trigger for menu links (fix comment); close mobile Sheet on question; reword A9/'Released first' ordering claim
+  - From the P7-T33 review (pre-existing, not caused by P7-T33): on a phone (390px) the sidebar Sheet stays open after any sidebar link navigates, even with no unsaved edits, so the new page sits behind the open panel. Close it (`setOpenMobile(false)` from `useSidebar`) when a sidebar or user-menu link navigates, and when the guard's Discard changes leaves; the question itself already opens over the Sheet and Escape closes only the question. Prove both with an e2e at a phone viewport (clean link click, and Discard from the guard).
+  - In unsaved-changes.tsx's JSDoc, name the case where the registration is released while the question is open because a save finished (the question closes and the clicked link is dropped), or go on to `leave.href` then, since nothing is left to lose.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-23
