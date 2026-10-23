@@ -2265,6 +2265,13 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
+### P7-T50 — Custom number fields: refuse non-finite values inline (Infinity, 1e400)
+- **Owner:** agent · **Depends:** —
+- **Scope:** From the P7-T46 review. src/lib/validation/custom-fields.ts number/currency checks use !Number.isNaN(Number(v)), so 'Infinity' and '1e400' pass the form and toCustomFieldsPatch stores Infinity; since P7-T46 the opportunities API's zod z.number() refuses it, so the deal form shows a 422 toast 'Deal details: Not a valid value.' instead of an inline field error (contacts likely store Infinity, which JSON turns into null on reload). Use Number.isFinite so the error shows on the field, for contacts and deals alike. Also pin the private writeStatus() error path: setStatus() on an unknown id is a 404 and writes no activity. Fix applyPatch's doc in opportunities.ts: its 'needs no cast' covers applyPatch only (withoutUndefined in src/lib/api/patch.ts casts inside).
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-24
+
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
       timeline, and in the dashboard Upcoming card, and its slot disappears

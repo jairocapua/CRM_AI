@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 48/74 tasks done (65%) · **Current phase:** P7 · **Next agent task:** P7-T47 · **Awaiting review:** P7-T46 · **Blocked:** none · **Waiting on you:** P7-H4
+**Overall:** 48/75 tasks done (64%) · **Current phase:** P7 · **Next agent task:** P7-T47 · **Awaiting review:** P7-T46 · **Blocked:** none · **Waiting on you:** P7-H4
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 48/53 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 48/54 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -70,6 +70,7 @@ Status: active · Progress: 48/53 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T47 | Contacts: surface tags.list load failure (tag badges/filter silently empty) | agent | todo | — |  |  |  |
 | P7-T48 | Bump next to patch npm audit critical findings | agent | todo | — |  |  |  |
 | P7-T49 | Shared userMenu(page) e2e helper | agent | todo | — |  |  |  |
+| P7-T50 | Custom number fields: refuse non-finite values inline (Infinity, 1e400) | agent | todo | — |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md
