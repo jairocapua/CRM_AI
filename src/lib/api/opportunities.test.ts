@@ -1121,6 +1121,122 @@ describe("create() places a deal in a stage of its pipeline", () => {
     expect(stored.position).toBe(countInStage);
     expect(await w.stageProblems()).toEqual([]);
   });
+
+  /** The timeline entries `create()` added for the new deal `id`. */
+  async function createdEntries(
+    w: Awaited<ReturnType<typeof pipelineWorld>>,
+    id: string,
+  ) {
+    return (await w.timeline()).filter((a) => a.opportunityId === id);
+  }
+
+  it("create() into a won stage stores status won with closedAt and logs a won entry", async () => {
+    const w = await pipelineWorld();
+    const won = w.other.stages.find((s) => s.isWon)!;
+    expect(won).toBeDefined();
+    const name = "Born-won deal";
+
+    const saved = await settle(
+      w.api.create({
+        name,
+        contactId: w.deal.contactId,
+        pipelineId: w.other.id,
+        stageId: won.id,
+      }),
+    );
+
+    // The store first: before P7-T62 create() stored "open" in a won stage.
+    const stored = await settle(w.api.get(saved.id));
+    expect(stored).toEqual(saved);
+    expect(stored.status).toBe("won");
+    expect(stored.closedAt).toBe(stored.createdAt);
+    expect(stored.updatedAt).toBe(stored.createdAt);
+    // Same `at` on both, so membership, not order.
+    const entries = await createdEntries(w, saved.id);
+    expect(entries).toHaveLength(2);
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        type: "opportunity.created",
+        at: stored.createdAt,
+      }),
+    );
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        type: "opportunity.won",
+        at: stored.createdAt,
+        contactId: w.deal.contactId,
+        summary: `Won "${name}"`,
+        meta: { to: won.name },
+      }),
+    );
+  });
+
+  it("create() into a lost stage stores status lost with closedAt and logs a lost entry", async () => {
+    const w = await pipelineWorld();
+    // No seeded stage is a lost stage, so this store marks one.
+    const lost = w.other.stages.find((s) => !s.isWon)!;
+    w.db.setState((s) => ({
+      pipelines: {
+        ...s.pipelines,
+        [w.other.id]: {
+          ...w.other,
+          stages: w.other.stages.map((stage) =>
+            stage.id === lost.id ? { ...stage, isLost: true } : stage,
+          ),
+        },
+      },
+    }));
+    const name = "Born-lost deal";
+
+    const saved = await settle(
+      w.api.create({
+        name,
+        contactId: w.deal.contactId,
+        pipelineId: w.other.id,
+        stageId: lost.id,
+      }),
+    );
+
+    const stored = await settle(w.api.get(saved.id));
+    expect(stored).toEqual(saved);
+    expect(stored.status).toBe("lost");
+    expect(stored.closedAt).toBe(stored.createdAt);
+    const entries = await createdEntries(w, saved.id);
+    expect(entries).toHaveLength(2);
+    expect(entries).toContainEqual(
+      expect.objectContaining({ type: "opportunity.created" }),
+    );
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        type: "opportunity.lost",
+        at: stored.createdAt,
+        summary: `Moved "${name}" to ${lost.name}`,
+        meta: { to: lost.name },
+      }),
+    );
+  });
+
+  it("create() into an open stage stores status open with no closedAt", async () => {
+    const w = await pipelineWorld();
+    const open = w.other.stages.find((s) => !s.isWon && !s.isLost)!;
+
+    const saved = await settle(
+      w.api.create({
+        name: "Open-stage deal",
+        contactId: w.deal.contactId,
+        pipelineId: w.other.id,
+        stageId: open.id,
+      }),
+    );
+
+    const stored = await settle(w.api.get(saved.id));
+    expect(stored).toEqual(saved);
+    expect(stored.status).toBe("open");
+    expect("closedAt" in stored).toBe(false);
+    const entries = await createdEntries(w, saved.id);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ type: "opportunity.created" });
+  });
 });
 
 describe("update() moving a deal to another pipeline", () => {

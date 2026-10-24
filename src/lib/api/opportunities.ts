@@ -334,7 +334,8 @@ export type OpportunityDraft = OpportunityPatch &
  *   the parsed draft, never the draft itself, so id, position, status,
  *   closedAt, stageEnteredAt, createdAt, createdBy, updatedAt and any key the
  *   API does not know are ignored: the deal's id, position (the end of its
- *   column), status ("open") and timestamps always come from the API.
+ *   column), status and close date (from its stage, below) and timestamps
+ *   always come from the API, never from the draft.
  * - A wrong-typed value is a 422 `INVALID_OPPORTUNITY`, "<label>: <rule>" in
  *   the deal form's words, with `field` the dotted path (see `parse`). A
  *   draft that is not an object is "Deal: Not a valid value." with no field.
@@ -346,10 +347,14 @@ export type OpportunityDraft = OpportunityPatch &
  *   pipeline." (`field` stageId).
  * - Every check runs before `nowIso()`, so a refused draft writes nothing and
  *   does not move the demo clock.
- * - A new deal's status is "open" whatever its stage: create() still stores
- *   "open", even though move() and update()'s pipeline move derive the status
- *   from the stage's isWon/isLost (see `stageStatus`). P7-T62 brings create()
- *   in line.
+ * - The status and close date come from the stage, the way move() and
+ *   update()'s pipeline move set them (`enterStage`): a won or lost stage
+ *   gives status won or lost with closedAt = createdAt; any other stage gives
+ *   status open with no closedAt key. A won or lost stage also adds the same
+ *   timeline entry move() writes (`stageEntryActivity`) after the "created"
+ *   entry, at the same instant: `opportunity.won` "Won <deal>", or
+ *   `opportunity.lost` "Moved <deal> to <stage>" (move()'s wording, kept so
+ *   the two cannot drift). An open stage adds only the "created" entry.
  * - `null` or `undefined` for expectedCloseAt, ownerId or lostReason means
  *   the deal has no such field: the key is left out, never stored.
  */
@@ -358,7 +363,7 @@ export async function create(draft: OpportunityDraft): Promise<Opportunity> {
     () => {
       const parsed = parse(draftSchema, draft);
       const state = db.getState();
-      stageOf(
+      const stage = stageOf(
         state,
         parsed.pipelineId,
         parsed.stageId,
@@ -389,17 +394,22 @@ export async function create(draft: OpportunityDraft): Promise<Opportunity> {
         parsed,
         draft,
       );
+      enterStage(record, stage, at);
       db.setState((s) => ({
         opportunities: { ...s.opportunities, [record.id]: record },
       }));
+      const actorId = db.getState().currentUserId;
       pushActivity({
         type: "opportunity.created",
         at,
         contactId: record.contactId,
         opportunityId: record.id,
-        actorId: db.getState().currentUserId,
+        actorId,
         summary: `Opportunity "${record.name}" was created`,
       });
+      if (record.status !== "open") {
+        pushActivity(stageEntryActivity(record, stage, at, actorId));
+      }
       return record;
     },
     { ms: 380 },
@@ -497,8 +507,9 @@ export async function update(
 
 /**
  * The status a deal takes on entering this stage: "won" for an isWon stage,
- * "lost" for an isLost one, otherwise "open". move() and update()'s pipeline
- * move use it, and the deal form uses it to predict what a move leaves.
+ * "lost" for an isLost one, otherwise "open". create(), move() and update()'s
+ * pipeline move use it, and the deal form uses it to predict what a move
+ * leaves.
  */
 export function stageStatus(
   stage: PipelineStage | undefined,
@@ -522,10 +533,10 @@ function enterStage(
 }
 
 /**
- * The timeline entry for a deal entering `stage`, shared by move() and
- * update()'s pipeline move so the two cannot drift: "Won <deal>" for a won
- * stage, otherwise "Moved <deal> to <stage>", typed won, lost or
- * stage_changed by the stage.
+ * The timeline entry for a deal entering `stage`, shared by move(),
+ * update()'s pipeline move and create() (won or lost stages only) so they
+ * cannot drift: "Won <deal>" for a won stage, otherwise "Moved <deal> to
+ * <stage>", typed won, lost or stage_changed by the stage.
  */
 function stageEntryActivity(
   deal: Opportunity,

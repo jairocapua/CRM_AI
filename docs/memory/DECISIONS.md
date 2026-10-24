@@ -331,7 +331,7 @@
 - 2026-10-24 [P7-T58] updateSchema = editableSchema.extend({ stageId: optional }); OpportunityPatch widened with `& { stageId?: ID }`; stageId is pulled out before applyPatch.
 - 2026-10-24 [P7-T58] The acceptance test checks integrityReport() before the 422, so its red run shows the orphan stage itself.
 - 2026-10-24 [P7-T59] stageOf() takes the stage message as a parameter: update() keeps 'Pick a stage from the new pipeline.', create() says 'Pick a stage from this pipeline.'.
-- 2026-10-24 [P7-T59] create() still stores status 'open' even in an isWon/isLost stage, matching update(); now stated in its doc comment.
+- 2026-10-24 [P7-T59] create() still stores status 'open' even in an isWon/isLost stage, matching update(); now stated in its doc comment. (Superseded by [P7-T62].)
 - 2026-10-24 [P7-T59] No e2e run: API-only change, and the deal form already sends a stage from the selected pipeline.
 - 2026-10-24 [P7-T60] Seeded pipelines/stages are found by constant seed names (Sales Pipeline, Client Onboarding / Agreement Signed / Kickoff Call, Renewals / Renewed, New Lead); stageOf/pickOpenSalesDeal throw clearly if renamed.
 - 2026-10-24 [P7-T60] Board cards are found by `a[href="/opportunities/<id>"]` and timeline entries by full quoted summary, because seeded deal names are not unique.
@@ -342,3 +342,5 @@
 - 2026-10-25 [P7-T61] move() deletes the closedAt key on an open stage instead of storing closedAt: undefined (JSON round-trip rule).
 - 2026-10-25 [P7-T61] The deal form's lost-reason guard fires only when the save moved the deal and the move left it lost; reason edits on an already-lost deal without a move are out of scope.
 - 2026-10-25 [P7-T61] e2e/deal-pipeline-move.spec.ts now expects 'Won "<deal>"' then 'Reopened "<deal>"', since a won stage logs a won entry like move().
+- 2026-10-25 [P7-T62] Supersedes [P7-T59] "create() still stores status open": create() now takes status and closedAt from its stage via enterStage(), and a won or lost stage logs the stageEntryActivity() entry after 'created', at the same instant.
+- 2026-10-25 [P7-T62] The deal form's lost-reason guard also fires on create, so a new deal saved Lost in a lost stage keeps its typed reason (P7-T63 replaces the guard with a one-write lostReason).

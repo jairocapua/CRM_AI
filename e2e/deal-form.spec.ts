@@ -1,6 +1,13 @@
 import type { Locator, Page } from "@playwright/test";
 
-import { localDayIn, readDeals } from "./calendar-helpers";
+import {
+  chooseContactIn,
+  localDayIn,
+  readContacts,
+  readDeals,
+  readPipelines,
+  uniquelyNamedContact,
+} from "./calendar-helpers";
 import { expect, test } from "./fixtures";
 
 /**
@@ -21,6 +28,10 @@ import { expect, test } from "./fixtures";
  * textarea and date fields the spec adds to the persisted store itself
  * (`addRequiredCustomFields`), since no settings screen for custom fields
  * exists before P9-T04.
+ *
+ * The won-stage create test covers the form's create path since P7-T62:
+ * `create()` takes the status from the stage, so a new deal in Closed Won
+ * comes back won, and the form must still apply an explicit Open afterwards.
  */
 
 const ZONE = "Asia/Singapore";
@@ -351,6 +362,172 @@ test("A valid custom currency amount leaves its input unmarked", async ({
   ).toBeVisible();
   await expect(field.getByRole("alert")).toHaveCount(0);
   await expect(input).not.toHaveAttribute("aria-invalid");
+});
+
+/**
+ * Picks `name` in a Base UI select. The options are portalled, so they are
+ * looked up on the page. The trigger's text also holds the chevron's "▼"
+ * text node, hence toContainText (LEARNINGS P7-T51).
+ */
+async function chooseOption(page: Page, combobox: Locator, name: string) {
+  await combobox.click();
+  await page.getByRole("option", { name, exact: true }).click();
+  await expect(combobox).toContainText(name);
+}
+
+test("New deal in a Won stage with Status Open saves it Open", async ({
+  page,
+  gotoApp,
+}) => {
+  const { dialog } = await openNewDeal(page, gotoApp);
+  const sales = (await readPipelines(page)).find(
+    (p) => p.name === "Sales Pipeline",
+  );
+  const closedWon = sales?.stages.find((s) => s.name === "Closed Won");
+  if (!sales || !closedWon) throw new Error("No Sales Pipeline Closed Won");
+  const contact = uniquelyNamedContact(await readContacts(page));
+  const name = `E2E won-stage open ${Date.now()}`;
+
+  // The form fills itself in an effect: wait for it before changing a field.
+  await expect(
+    dialog.getByRole("combobox", { name: "Pipeline" }),
+  ).toContainText("Sales Pipeline");
+  await dialog.getByLabel("Deal name", { exact: true }).fill(name);
+  await chooseContactIn(
+    page,
+    dialog.getByRole("combobox", { name: "Contact" }),
+    contact,
+  );
+  await chooseOption(
+    page,
+    dialog.getByRole("combobox", { name: "Stage" }),
+    "Closed Won",
+  );
+  // Status follows the won stage; the explicit Open must win over it.
+  const statusSelect = dialog.getByRole("combobox", { name: "Status" });
+  await expect(statusSelect).toContainText("Won");
+  await chooseOption(page, statusSelect, "Open");
+  await dialog.getByRole("button", { name: "Create deal" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("Deal created")).toBeVisible();
+
+  // Persist is debounced, so the stored record is polled. create() leaves the
+  // deal won (P7-T62); the form's setStatus(open) reopens it.
+  await expect
+    .poll(async () => {
+      const stored = (await readDeals(page)).find((d) => d.name === name);
+      return (
+        stored && {
+          pipelineId: stored.pipelineId,
+          stageId: stored.stageId,
+          status: stored.status,
+          closedAt: stored.closedAt,
+        }
+      );
+    })
+    .toEqual({
+      pipelineId: sales.id,
+      stageId: closedWon.id,
+      status: "open",
+      closedAt: null,
+    });
+});
+
+/** The injected lost stage (no seeded stage is isLost). */
+const LOST_STAGE = Object.freeze({
+  id: "stg_e2e_lost",
+  name: "E2E Closed Lost",
+  position: 99,
+  color: "red",
+  probability: 0,
+  isLost: true,
+});
+
+/**
+ * Appends LOST_STAGE to the Sales Pipeline in the persisted mock database,
+ * the same way and for the same reasons as `addRequiredCustomFields`: an init
+ * script on the next navigation, one-shot per tab, `version` kept.
+ */
+async function addLostStage(
+  page: Page,
+  gotoApp: (path: string) => Promise<void>,
+) {
+  await gotoApp("/opportunities");
+  await expect
+    .poll(() => page.evaluate((key) => localStorage.getItem(key), DB_KEY))
+    .not.toBeNull();
+  await page.addInitScript(
+    ({ key, stage }) => {
+      if (!location.protocol.startsWith("http")) return;
+      const FLAG = "e2e-lost-stage-added";
+      if (sessionStorage.getItem(FLAG)) return;
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      const persisted = JSON.parse(raw) as {
+        state: {
+          pipelines: Record<string, { name: string; stages: unknown[] }>;
+        };
+      };
+      const sales = Object.values(persisted.state.pipelines).find(
+        (p) => p.name === "Sales Pipeline",
+      );
+      if (!sales) return;
+      sales.stages.push(stage);
+      localStorage.setItem(key, JSON.stringify(persisted));
+      sessionStorage.setItem(FLAG, "1");
+    },
+    { key: DB_KEY, stage: LOST_STAGE },
+  );
+}
+
+test("New deal in a lost stage with Status Lost keeps its Lost reason", async ({
+  page,
+  gotoApp,
+}) => {
+  await addLostStage(page, gotoApp);
+  const { dialog } = await openNewDeal(page, gotoApp);
+  const contact = uniquelyNamedContact(await readContacts(page));
+  const name = `E2E lost-stage reason ${Date.now()}`;
+  const reason = "Went with a competitor";
+
+  await expect(
+    dialog.getByRole("combobox", { name: "Pipeline" }),
+  ).toContainText("Sales Pipeline");
+  await dialog.getByLabel("Deal name", { exact: true }).fill(name);
+  await chooseContactIn(
+    page,
+    dialog.getByRole("combobox", { name: "Contact" }),
+    contact,
+  );
+  await chooseOption(
+    page,
+    dialog.getByRole("combobox", { name: "Stage" }),
+    LOST_STAGE.name,
+  );
+  await chooseOption(
+    page,
+    dialog.getByRole("combobox", { name: "Status" }),
+    "Lost",
+  );
+  await dialog.getByLabel("Lost reason", { exact: true }).fill(reason);
+  await dialog.getByRole("button", { name: "Create deal" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("Deal created")).toBeVisible();
+
+  // create() already leaves the deal lost (P7-T62), so only the reason makes
+  // the form call setStatus(); without it the typed reason is dropped.
+  await expect
+    .poll(async () => {
+      const stored = (await readDeals(page)).find((d) => d.name === name);
+      return (
+        stored && {
+          stageId: stored.stageId,
+          status: stored.status,
+          lostReason: stored.lostReason,
+        }
+      );
+    })
+    .toEqual({ stageId: LOST_STAGE.id, status: "lost", lostReason: reason });
 });
 
 test("Edit deal keeps a seeded deal's Expected close day through a save", async ({

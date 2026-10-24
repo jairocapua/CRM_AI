@@ -167,7 +167,8 @@ export function OpportunityFormSheet({
      * and the won/lost activity, so a status change goes through it below.
      * `update()` reads `stageId` only when the pipeline changes: it then moves
      * the deal to that stage of the new pipeline in the same write, with the
-     * status that stage gives (as `move()` does). A stage
+     * status that stage gives (as `move()` does). `create()` also takes the
+     * status from the new deal's stage. A stage
      * change inside the same pipeline goes through `move()`, which owns column
      * `position` and `stageEnteredAt` there.
      */
@@ -190,10 +191,11 @@ export function OpportunityFormSheet({
       });
     }
 
-    // Both `move()` and `update()`'s pipeline move derive the status from the
-    // destination stage: `record.status` is what the pipeline move left, and
-    // `stageStatus()` predicts what `move()` leaves. An explicit choice is
-    // applied after either and wins.
+    // `create()`, `move()` and `update()`'s pipeline move all derive the
+    // status from the destination stage: `record.status` is what `create()`
+    // or the pipeline move left, and `stageStatus()` predicts what `move()`
+    // leaves. An explicit choice is applied after any of them and wins, so a
+    // new deal in a Won stage saved as Open is reopened here.
     const statusAfterMove = stageChanged
       ? api.opportunities.stageStatus(
           selectedPipeline?.stages.find((s) => s.id === values.stageId),
@@ -203,10 +205,11 @@ export function OpportunityFormSheet({
       values.status === "lost"
         ? values.lostReason.trim() || undefined
         : undefined;
-    // A move into a lost stage already leaves the deal lost, so the status
-    // alone would skip `setStatus()` and drop the reason the user typed.
+    // A create or move into a lost stage already leaves the deal lost, so the
+    // status alone would skip `setStatus()` and drop the reason the user typed
+    // (neither `create()` nor `update()` takes `lostReason`).
     const moveDropsReason =
-      (pipelineChanged || stageChanged) &&
+      (!opportunity || pipelineChanged || stageChanged) &&
       statusAfterMove === "lost" &&
       lostReason !== undefined &&
       lostReason !== record.lostReason;

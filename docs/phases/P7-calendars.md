@@ -2449,7 +2449,7 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] Vitest: update() accepts `lostReason` on a lost deal and stores it in one write with no new activity entry.
   - [ ] Vitest: update() pipeline move into a lost stage with a `lostReason` stores the reason and logs exactly one `opportunity.lost` entry.
   - [ ] Vitest: move()/update() of a lost deal into an open stage removes `lostReason` (key absent).
-  - [ ] The deal form's `moveDropsReason` → second `setStatus()` path is removed; the form sends the reason through update(). A test (Vitest or e2e with a lost stage set up) goes red if the typed reason is dropped or a second Lost entry is logged.
+  - [ ] The deal form's `moveDropsReason` → second `setStatus()` path is removed, for edits and for new deals (P7-T62 extended it to create); the form sends the reason through update()/create(). A test (Vitest or e2e with a lost stage set up) goes red if the typed reason is dropped or a second Lost entry is logged.
   - [ ] `npm run check` is green.
 - **Refs:** added by `progress.mjs add` on 2026-10-25
 
