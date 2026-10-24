@@ -37,6 +37,13 @@ const ZONES: Zone[] = [
 /** Monday 2026-10-26, 08:00 in Los Angeles. */
 const DEMO_NOW = "2026-10-26T15:00:00.000Z";
 
+/** setStatus()'s 409 for a cancelled appointment whose time was taken. */
+const RESTORE_TAKEN_MESSAGE =
+  "Another booking has taken this time since it was cancelled. Book a new slot instead.";
+/** The same 409 once the appointment has ended (P7-H4). */
+const ENDED_TAKEN_MESSAGE =
+  "Another booking now holds this time, so this cancelled appointment cannot be marked Showed or No Show.";
+
 /** Discovery Call, Tue 2026-10-27, 09:00-17:00 PDT in 30-minute steps. */
 const DISCOVERY_TUESDAY = [
   "2026-10-27T16:00:00.000Z",
@@ -452,7 +459,11 @@ describe.each(ZONES)("book() with the runtime in $zone", (zone) => {
       const before = await snapshot();
 
       await expect(settle(api.setStatus(first.id, c.to))).rejects.toMatchObject(
-        { status: 409, code: "SLOT_UNAVAILABLE" },
+        {
+          status: 409,
+          code: "SLOT_UNAVAILABLE",
+          message: RESTORE_TAKEN_MESSAGE,
+        },
       );
       expect(await snapshot()).toEqual(before);
       const live = before.appointments.filter((a) => a.status !== "cancelled");
@@ -936,7 +947,8 @@ describe("setStatus() and cancel() once an appointment has ended (P7-H3)", () =>
   });
 
   it("lets an ended, cancelled appointment be marked Showed (the rule names target statuses only)", async () => {
-    // Flagged to the owner: pinned so a later decision changes it on purpose.
+    // P7-H4 (DECISIONS 2026-10-24): kept on purpose; an ended Cancelled
+    // appointment is not frozen.
     const world = await bookedWorld();
     await settle(world.api.cancel(world.id));
     setDemoNow(HALF_AN_HOUR_AFTER);
@@ -945,6 +957,62 @@ describe("setStatus() and cancel() once an appointment has ended (P7-H3)", () =>
       settle(world.api.setStatus(world.id, "showed")),
     ).resolves.toMatchObject({ status: "showed" });
   });
+
+  /**
+   * P7-H4: once its time is rebooked, the 409 is worded for an appointment
+   * that has ended, not "book a new slot". At its end instant it has not
+   * ended yet (`hasEnded` is strict), so it keeps the restore wording.
+   */
+  const REBOOKED: {
+    name: string;
+    to: "showed" | "no_show";
+    at: string;
+    message: string;
+  }[] = [
+    {
+      name: "marking it Showed once it has ended",
+      to: "showed",
+      at: HALF_AN_HOUR_AFTER,
+      message: ENDED_TAKEN_MESSAGE,
+    },
+    {
+      name: "marking it No Show once it has ended",
+      to: "no_show",
+      at: HALF_AN_HOUR_AFTER,
+      message: ENDED_TAKEN_MESSAGE,
+    },
+    {
+      name: "marking it Showed at its end instant (not yet ended)",
+      to: "showed",
+      at: END,
+      message: RESTORE_TAKEN_MESSAGE,
+    },
+  ];
+
+  it.each(REBOOKED)(
+    "refuses a cancelled, rebooked appointment: $name (409, writes nothing)",
+    async (c) => {
+      const world = await bookedWorld();
+      const { ApiError, nowIso } = await import("./http");
+      await settle(world.api.cancel(world.id));
+      // Rebooked while it is still a day ahead.
+      await world.book(world.discovery, START);
+      setDemoNow(c.at);
+      const before = await snapshot(world);
+
+      const error = await settle(world.api.setStatus(world.id, c.to)).catch(
+        (e: unknown) => e,
+      );
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({
+        status: 409,
+        code: "SLOT_UNAVAILABLE",
+        message: c.message,
+      });
+      expect(await snapshot(world)).toEqual(before);
+      expect(nowIso()).toBe(c.at);
+    },
+  );
 
   it("still cancels and confirms an appointment that has not ended", async () => {
     // Running: a minute before its end, so both writes land before it.

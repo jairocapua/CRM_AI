@@ -321,3 +321,6 @@
 - 2026-10-24 [P7-T55] TagPicker's retryHadFocus is set only in LoadError's onRetry (native button, so Enter/Space fire click); no separate onKeyDown, no wrapper onFocus.
 - 2026-10-24 [P7-T55] Wrapper onBlur clears the flag when relatedTarget is outside the wrapper, null included; Chromium fires no blur when the focused Retry is removed, so success tests still pass.
 - 2026-10-24 [P7-T55] The e2e starts the outside read with dispatchEvent('click', { detail: 1 }) so the non-modal popover stays open.
+- 2026-10-24 [P7-T56] The ended test for the 409 wording is strict hasEnded(), as in canMoveToStatus; a running appointment or one exactly at its end instant keeps "Book a new slot instead." (pinned by the END boundary row).
+- 2026-10-24 [P7-T56] setStatus reads apiNowMs() once for both the 422 check and the 409 wording, so they agree and a refused call does not move the clock's mark.
+- 2026-10-24 [P7-T56] DB_KEY is exported from e2e/calendar-helpers.ts so specs can inject data without redeclaring the key.

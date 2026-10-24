@@ -9,7 +9,7 @@ import {
   liveBookings,
   zonedDay,
 } from "@/lib/mock/slots";
-import { canMoveToStatus } from "@/lib/validation/appointment";
+import { canMoveToStatus, hasEnded } from "@/lib/validation/appointment";
 import {
   calendarSettingsSchema,
   WEEKDAY_LABELS,
@@ -421,12 +421,17 @@ export async function book(draft: AppointmentDraft): Promise<Appointment> {
  * Moving a cancelled one to any other status takes its time back, so it is a
  * 409 if another booking has taken that time (or filled that day) since: the
  * collision and daily-cap rules `book()` applies. Its hours, notice and
- * booking range are not rechecked.
+ * booking range are not rechecked. Until it has ended, the message says to
+ * book a new slot. Once it has ended (an ended Cancelled appointment can still
+ * be marked Showed or No Show, P7-H4, and only those reach this check), it
+ * says another booking now holds the time, so it cannot be marked Showed or
+ * No Show.
  *
  * Errors, checked in this order, and nothing is written on any of them:
  * - 404 `NOT_FOUND`: no such appointment;
  * - 422 `PAST_APPOINTMENT`: it has ended and `status` is not Showed or No Show;
- * - 409 `SLOT_UNAVAILABLE`: it is cancelled and its time is no longer free.
+ * - 409 `SLOT_UNAVAILABLE`: it is cancelled and its time is no longer free
+ *   (worded for an ended appointment when it has ended).
  */
 export async function setStatus(
   id: ID,
@@ -439,7 +444,8 @@ export async function setStatus(
     // These checks run in the same synchronous block as the write, as in
     // `book()`. `apiNowMs`, not `nowIso`: a refused call must move nothing,
     // not even the clock's saved high-water mark.
-    if (!canMoveToStatus(prev.endAt, status, apiNowMs())) {
+    const nowMs = apiNowMs();
+    if (!canMoveToStatus(prev.endAt, status, nowMs)) {
       throw new ApiError(
         "This appointment has already ended, so it can only be marked Showed or No Show.",
         422,
@@ -456,8 +462,12 @@ export async function setStatus(
         Object.values(state.appointments),
       );
       if (!hasRoomFor(calendar, intervalOf(prev), booked)) {
+        // Once it has ended only Showed or No Show get here (the 422 above),
+        // and "book a new slot" makes no sense for a past appointment (P7-H4).
         throw new ApiError(
-          "Another booking has taken this time since it was cancelled. Book a new slot instead.",
+          hasEnded(prev.endAt, nowMs)
+            ? "Another booking now holds this time, so this cancelled appointment cannot be marked Showed or No Show."
+            : "Another booking has taken this time since it was cancelled. Book a new slot instead.",
           409,
           "SLOT_UNAVAILABLE",
         );

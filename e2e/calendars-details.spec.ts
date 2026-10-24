@@ -1,6 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 
 import {
+  DB_KEY,
   expectPosition,
   expectViewLoaded,
   localDayIn,
@@ -494,6 +495,78 @@ test("a past appointment offers only Showed and No Show and no Cancel; a future 
   await expect(
     page.getByRole("option", { name: "Cancelled", exact: true }),
   ).toBeDisabled();
+});
+
+test("an ended, cancelled appointment whose time is rebooked explains why it cannot be marked Showed", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp(MONTH_URL);
+  await expectViewLoaded(page, "Month");
+  const rows = await readSeededAppointments(page);
+  const seededAt = await readSeededAt(page);
+
+  // A past Showed appointment holds the time; its cancelled twin wants it back.
+  const source = byStart(
+    rows.filter(
+      (row) =>
+        row.status === "showed" &&
+        row.endAt < seededAt &&
+        localDayIn(ZONE, row.startAt).startsWith("2026-09"),
+    ),
+  ).at(-1);
+  if (!source) throw new Error("No showed appointment in September");
+  const twinId = "appt_e2e_rebooked_twin";
+
+  // Injected before the app boots on the next navigation, never through
+  // `page.evaluate` on the live page, whose debounced save could overwrite it.
+  await page.addInitScript(
+    ({ key, sourceId, id }) => {
+      if (!location.protocol.startsWith("http")) return;
+      const FLAG = "e2e-rebooked-twin-added";
+      if (sessionStorage.getItem(FLAG)) return;
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      const persisted = JSON.parse(raw) as {
+        state: {
+          seededAt: string;
+          appointments: Record<string, Record<string, unknown>>;
+        };
+      };
+      const { state } = persisted;
+      const original = state.appointments[sourceId];
+      if (!original) return;
+      state.appointments[id] = {
+        ...original,
+        id,
+        status: "cancelled",
+        createdAt: state.seededAt,
+        updatedAt: state.seededAt,
+      };
+      localStorage.setItem(key, JSON.stringify(persisted));
+      sessionStorage.setItem(FLAG, "1");
+    },
+    { key: DB_KEY, sourceId: source.id, id: twinId },
+  );
+  await gotoApp(`/calendars?view=day&date=${localDayIn(ZONE, source.startAt)}`);
+  await expect.poll(() => readPersistedStatus(page, twinId)).toBe("cancelled");
+
+  const dialog = await openFromDayView(page, { ...source, id: twinId });
+  const status = dialog.getByRole("combobox", { name: "Status" });
+  await expect(selectedLabel(status)).toHaveText("Cancelled");
+  await status.click();
+  await page.getByRole("option", { name: "Showed", exact: true }).click();
+
+  // P7-H4: worded for an ended appointment, not "Book a new slot instead."
+  await expect(
+    page.getByText(
+      "Another booking now holds this time, so this cancelled appointment cannot be marked Showed or No Show.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(selectedLabel(status)).toHaveText("Cancelled");
+  await expect.poll(() => readPersistedStatus(page, twinId)).toBe("cancelled");
+  expect(await readPersistedStatus(page, source.id)).toBe("showed");
 });
 
 test("Undo in the toast restores a cancelled appointment", async ({

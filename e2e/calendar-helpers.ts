@@ -121,7 +121,7 @@ interface PersistedDb {
   };
 }
 
-const DB_KEY = "nimbus-crm-db";
+export const DB_KEY = "nimbus-crm-db";
 
 /**
  * The app's persisted database, read straight from localStorage as an oracle
