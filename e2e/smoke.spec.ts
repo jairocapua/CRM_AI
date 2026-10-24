@@ -12,8 +12,9 @@ import { expect, NAVIGATION, test, userMenu } from "./fixtures";
  * heading, leaves no skeleton behind and stays quiet in the console (the shared
  * fixture fails the test on any console error, page error or hydration
  * message). Built from `NAV_ITEMS`, so a new nav entry is covered without
- * touching this file. The user menu's Team settings link sits outside
- * `NAV_ITEMS`, so it has a test of its own.
+ * touching this file. Two routes sit outside `NAV_ITEMS` and have tests of
+ * their own: the user menu's Team settings link, and `/settings/demo-data`,
+ * which is reachable only by URL.
  */
 
 /**
@@ -81,5 +82,28 @@ test("Team settings in the user menu opens its page cleanly", async ({
   await expect(
     routeHeading(page, "Team settings"),
     '/settings/team rendered no "Team settings" heading',
+  ).toBeVisible();
+});
+
+// /settings/demo-data is reachable only by URL: it is in neither NAV_ITEMS nor
+// the user menu, so it is listed by hand. Its metadata title ("Demo Data") and
+// its page heading ("Demo data") differ in case, so each is hardcoded rather
+// than derived from one value.
+test("Demo data (/settings/demo-data) boots and renders cleanly", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/settings/demo-data");
+
+  await expect(page).toHaveTitle(`Demo Data · ${APP_NAME}`);
+
+  // The panel shows skeletons while its stats and integrity reads load.
+  await expect(page.locator('[data-slot="skeleton"]')).toHaveCount(0, {
+    timeout: 15_000,
+  });
+
+  await expect(
+    routeHeading(page, "Demo data"),
+    '/settings/demo-data rendered no "Demo data" heading',
   ).toBeVisible();
 });

@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 60/84 tasks done (71%) · **Current phase:** P7 · **Next agent task:** P7-T57 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+**Overall:** 60/84 tasks done (71%) · **Current phase:** P7 · **Next agent task:** P7-T58 · **Awaiting review:** P7-T57 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -77,7 +77,7 @@ Status: active · Progress: 60/62 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T54 | Custom fields: e2e for aria-invalid on select, multiselect, textarea, date | agent | done | — | 9aca3a8 | 2026-10-24 | e2e: required select/multiselect/textarea/date custom fields set aria-invalid when empty, none when filled |
 | P7-T55 | TagPicker: tighten inline Retry focus-restore flag | agent | done | — | 082113c | 2026-10-24 | Retry focus flag set only in onRetry; any blur leaving wrapper clears it; e2e proves no focus steal |
 | P7-T56 | Reword setStatus() 409 for an ended, cancelled appointment | agent | done | — | f6f8944 | 2026-10-24 | 409 for ended, cancelled, rebooked appt now says it cannot be marked Showed/No Show; Vitest + e2e red-capable |
-| P7-T57 | Gate fix: smoke-test /settings/demo-data | agent | todo | — |  |  |  |
+| P7-T57 | Gate fix: smoke-test /settings/demo-data | agent | review | — |  | 2026-10-24 | Smoke test for /settings/demo-data: title, no skeleton, h1; npm run e2e 140 passed |
 | P7-T58 | Gate fix: update() pipelineId leaves orphan stageId | agent | todo | — |  |  |  |
 
 ## P8 — Automation

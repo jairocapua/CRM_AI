@@ -324,3 +324,5 @@
 - 2026-10-24 [P7-T56] The ended test for the 409 wording is strict hasEnded(), as in canMoveToStatus; a running appointment or one exactly at its end instant keeps "Book a new slot instead." (pinned by the END boundary row).
 - 2026-10-24 [P7-T56] setStatus reads apiNowMs() once for both the 422 check and the 409 wording, so they agree and a refused call does not move the clock's mark.
 - 2026-10-24 [P7-T56] DB_KEY is exported from e2e/calendar-helpers.ts so specs can inject data without redeclaring the key.
+- 2026-10-24 [P7-T57] /settings/demo-data smoke test hardcodes title 'Demo Data' and h1 'Demo data' separately (metadata and PageHeader differ in case); a comment says why.
+- 2026-10-24 [P7-T57] Reused routeHeading() and the NAV_ITEMS loop's check order and messages; no new helpers.
