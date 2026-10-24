@@ -2389,6 +2389,20 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] Ended+cancelled+rebooked setStatus to showed/no_show is a 409 SLOT_UNAVAILABLE with the ended-case message and writes nothing; a future cancelled+rebooked appointment keeps the old message; Vitest rows seen red; npm run check green
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
+### P7-T57 — Gate fix: smoke-test /settings/demo-data
+- **Owner:** agent · **Depends:** —
+- **Scope:** e2e/smoke.spec.ts: add test gotoApp('/settings/demo-data'); route src/app/(app)/settings/demo-data/page.tsx is unvisited by e2e (not in NAV_ITEMS)
+- **Acceptance:**
+  - [ ] Title 'Demo Data · <APP_NAME>', no skeleton left, h1 'Demo data' in main; npm run e2e green with auto console fixture
+- **Refs:** added by `progress.mjs add` on 2026-10-24
+
+### P7-T58 — Gate fix: update() pipelineId leaves orphan stageId
+- **Owner:** agent · **Depends:** —
+- **Scope:** src/lib/api/opportunities.ts:96 editableSchema.pipelineId, update() :378-384; caller opportunity-form-sheet.tsx:172-181. Accept pipelineId only with a stageId from that pipeline in one write (position+stageEnteredAt), or 422 INVALID_OPPORTUNITY
+- **Acceptance:**
+  - [ ] New Vitest: update({pipelineId: other}) then integrityReport() reports no missing stage; fails before fix; npm run check green
+- **Refs:** added by `progress.mjs add` on 2026-10-24
+
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
       timeline, and in the dashboard Upcoming card, and its slot disappears
