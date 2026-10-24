@@ -9,6 +9,7 @@ import {
   type ISODate,
   type LeadSource,
   type Opportunity,
+  type PipelineStage,
 } from "@/types";
 import { parseInstant } from "@/lib/dates";
 import { db } from "@/lib/mock/db";
@@ -88,7 +89,9 @@ const NOT_AN_AMOUNT = "Not a valid amount.";
  * value must pass. Every key is optional; `draftSchema` makes create()'s
  * required ones required. A key not named here is stripped by the parse, so
  * it can never reach the store. Ids are checked for shape only, not against
- * stored records, as `teamMemberIds` is on calendars.
+ * stored records, as `teamMemberIds` is on calendars. The one exception is a
+ * pipeline change through update(), which must name a stored pipeline and
+ * one of its stages (see update()).
  */
 const editableSchema = z.object({
   name: z.string().trim().min(1, "Can't be empty.").optional(),
@@ -117,6 +120,14 @@ const editableSchema = z.object({
     .optional(),
   expectedCloseAt: z.unknown().transform(checkExpectedClose).optional(),
   lostReason: z.string().nullable().optional(),
+});
+
+/**
+ * update()'s input: the editable keys plus a stageId, which update() reads
+ * only alongside a pipeline change (see update()).
+ */
+const updateSchema = editableSchema.extend({
+  stageId: z.string().min(1).optional(),
 });
 
 /** create()'s input: the editable keys, with the four a deal needs required. */
@@ -225,13 +236,14 @@ function applyPatch(
  * removes an optional one, the expected close, the owner or the lost reason
  * (the key is deleted, never stored as null). A JSON client cannot send
  * `undefined`, so `null` is how it clears one of these. `Pick` makes every
- * schema key an `Opportunity` key.
+ * schema key an `Opportunity` key. `stageId` is read only with a pipeline
+ * change (see update()).
  */
 export type OpportunityPatch = Partial<
   Pick<Opportunity, Exclude<EditableKey, RemovableKey>>
 > & {
   [K in RemovableKey]?: Opportunity[K] | null;
-};
+} & { stageId?: ID };
 
 function pushActivity(activity: Omit<Activity, "id">) {
   const record: Activity = { ...activity, id: newId("act") };
@@ -357,17 +369,28 @@ export async function create(draft: OpportunityDraft): Promise<Opportunity> {
  * - Only the keys `editableSchema` names can change: name, contactId,
  *   pipelineId, value, currency, source, ownerId, tagIds, customFields,
  *   expectedCloseAt and lostReason. What is saved is the parsed patch, never
- *   the patch itself, so id, stageId, position, status, closedAt,
- *   stageEnteredAt, createdAt, createdBy, updatedAt and any key the API does
- *   not know are ignored, and a client that sends the whole record back
- *   still saves. move() owns the stage and position, and setStatus() owns
- *   the status, the close date and the won/lost activity.
- * - Errors, in this order, and nothing is written on either: 404 `NOT_FOUND`
+ *   the patch itself, so id, position, status, closedAt, stageEnteredAt,
+ *   createdAt, createdBy, updatedAt and any key the API does not know are
+ *   ignored, and a client that sends the whole record back still saves.
+ *   move() owns stage changes inside a pipeline, and setStatus() owns the
+ *   status, the close date and the won/lost activity.
+ * - A pipelineId that differs from the stored one moves the deal to that
+ *   pipeline, and must come with a stageId from it. The deal is written once:
+ *   the new pipelineId and stageId, position at the end of that stage's
+ *   column, and stageEnteredAt now; the contact's timeline gets a
+ *   "Moved <deal> to <stage>" `opportunity.stage_changed` entry. Status and
+ *   closedAt are left to setStatus(). A stageId with no pipelineId, or with
+ *   the deal's own, is ignored.
+ * - Errors, in this order, and nothing is written on any: 404 `NOT_FOUND`
  *   for an unknown id, then 422 `INVALID_OPPORTUNITY` for a wrong-typed
  *   value, "<label>: <rule>" with `field` the dotted path (see `parse`). A
  *   patch that is not an object is "Deal: Not a valid value." with no field;
- *   an expected close that is not one instant keeps P7-T35's message. Both
- *   run before `nowIso()`, so a refused patch does not move the demo clock.
+ *   an expected close that is not one instant keeps P7-T35's message. On a
+ *   pipeline change, then 422 `INVALID_OPPORTUNITY` "Pipeline: No pipeline
+ *   has this id." (`field` pipelineId) for an unknown pipeline, and "Stage:
+ *   Pick a stage from the new pipeline." (`field` stageId) for a stageId
+ *   that is missing or not in that pipeline. All run before `nowIso()`, so a
+ *   refused patch does not move the demo clock.
  * - `undefined` on any other key is ignored, the same as a missing key, so
  *   it never erases a stored value. On expectedCloseAt, ownerId or
  *   lostReason, `undefined` (the deal form's empty field) or `null` (a JSON
@@ -379,14 +402,65 @@ export async function update(
   id: ID,
   patch: OpportunityPatch,
 ): Promise<Opportunity> {
+  let moved = false;
   const opportunity = await simulate(() => {
-    const prev = db.getState().opportunities[id] ?? notFound("Opportunity", id);
-    const parsed = parse(editableSchema, patch);
-    const next = applyPatch({ ...prev, updatedAt: nowIso() }, parsed, patch);
+    const state = db.getState();
+    const prev = state.opportunities[id] ?? notFound("Opportunity", id);
+    const { stageId, ...fields } = parse(updateSchema, patch);
+    // Compared with the stored pipeline, not just present: a client that
+    // sends the whole record back resends the deal's own pipelineId.
+    const targetPipelineId =
+      fields.pipelineId !== prev.pipelineId ? fields.pipelineId : undefined;
+
+    let stage: PipelineStage | undefined;
+    if (targetPipelineId !== undefined) {
+      const pipeline = state.pipelines[targetPipelineId];
+      if (!pipeline) {
+        throw new ApiError(
+          "Pipeline: No pipeline has this id.",
+          422,
+          "INVALID_OPPORTUNITY",
+          "pipelineId",
+        );
+      }
+      stage = pipeline.stages.find((s) => s.id === stageId);
+      if (!stage) {
+        throw new ApiError(
+          "Stage: Pick a stage from the new pipeline.",
+          422,
+          "INVALID_OPPORTUNITY",
+          "stageId",
+        );
+      }
+    }
+
+    const at = nowIso();
+    const next = applyPatch({ ...prev, updatedAt: at }, fields, patch);
+    if (stage) {
+      next.stageId = stage.id;
+      next.position = Object.values(state.opportunities).filter(
+        (o) => o.stageId === stage.id,
+      ).length;
+      next.stageEnteredAt = at;
+    }
     db.setState((s) => ({ opportunities: { ...s.opportunities, [id]: next } }));
+
+    if (stage) {
+      moved = true;
+      pushActivity({
+        type: "opportunity.stage_changed",
+        at,
+        contactId: next.contactId,
+        opportunityId: next.id,
+        actorId: state.currentUserId,
+        summary: `Moved "${next.name}" to ${stage.name}`,
+        meta: { to: stage.name },
+      });
+    }
     return next;
   });
-  invalidate("opportunities", "analytics");
+  if (moved) invalidate("opportunities", "activities", "analytics");
+  else invalidate("opportunities", "analytics");
   return opportunity;
 }
 

@@ -152,6 +152,7 @@ export function OpportunityFormSheet({
       name: values.name.trim(),
       contactId: values.contactId,
       pipelineId: values.pipelineId,
+      stageId: values.stageId,
       value: parseCents(values.value),
       currency: selectedPipeline?.currency ?? "USD",
       source: values.source,
@@ -162,17 +163,21 @@ export function OpportunityFormSheet({
     };
 
     /**
-     * `status` and `stageId` are not in that patch: `update()` ignores both,
-     * because the API keeps bookkeeping for them that a field write would
-     * skip. `move()` owns column `position` and `stageEnteredAt`, and
-     * `setStatus()` owns `closedAt` and the won/lost activity, so a stage or
-     * status change goes through those two below.
+     * `status` is not in that patch: `setStatus()` owns it, with `closedAt`
+     * and the won/lost activity, so a status change goes through it below.
+     * `update()` reads `stageId` only when the pipeline changes: it then moves
+     * the deal to that stage of the new pipeline in the same write. A stage
+     * change inside the same pipeline goes through `move()`, which owns column
+     * `position` and `stageEnteredAt` there.
      */
     const record = opportunity
       ? await api.opportunities.update(opportunity.id, patch)
-      : await api.opportunities.create({ ...patch, stageId: values.stageId });
+      : await api.opportunities.create(patch);
 
-    const stageChanged = opportunity && opportunity.stageId !== values.stageId;
+    const pipelineChanged =
+      opportunity && opportunity.pipelineId !== values.pipelineId;
+    const stageChanged =
+      opportunity && !pipelineChanged && opportunity.stageId !== values.stageId;
     if (stageChanged) {
       const column = await api.opportunities.listForBoard(values.pipelineId);
       const appendAt = column.filter(

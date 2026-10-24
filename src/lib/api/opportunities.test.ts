@@ -995,3 +995,149 @@ describe("the demo clock", () => {
     expect(storage.getItem("nimbus-crm-clock")).not.toBeNull();
   });
 });
+
+describe("update() moving a deal to another pipeline", () => {
+  /** A seeded store, its first deal, and a pipeline that deal is not in. */
+  async function pipelineWorld() {
+    const { db } = await seededWorld();
+    const api = await import("./opportunities");
+    const settings = await import("./settings");
+    const activities = await import("./activities");
+    const state = db.getState();
+    const deal = Object.values(state.opportunities)[0]!;
+    const other = Object.values(state.pipelines).find(
+      (p) => p.id !== deal.pipelineId,
+    )!;
+    expect(other).toBeDefined();
+    const stageProblems = async () =>
+      (await settle(settings.integrityReport())).filter((line) =>
+        /stage that does not exist/.test(line),
+      );
+    const timeline = () =>
+      settle(activities.listForContact(deal.contactId, 1000));
+    return { db, api, deal, other, stageProblems, timeline };
+  }
+
+  it("update() with only a new pipelineId leaves no deal in a missing stage", async () => {
+    const w = await pipelineWorld();
+
+    const outcome = await settle(
+      w.api.update(w.deal.id, { pipelineId: w.other.id }),
+    ).catch((error: unknown) => error);
+
+    // The store first: before P7-T58 the update resolved and left this deal
+    // in a stage of its old pipeline.
+    expect(await w.stageProblems()).toEqual([]);
+    expect(outcome).toMatchObject({
+      status: 422,
+      code: "INVALID_OPPORTUNITY",
+      field: "stageId",
+    });
+    expect(await settle(w.api.get(w.deal.id))).toEqual(w.deal);
+  });
+
+  it("update() refuses a stage from the old pipeline on a pipeline change", async () => {
+    const w = await pipelineWorld();
+    const before = await w.timeline();
+
+    await expect(
+      settle(
+        w.api.update(w.deal.id, {
+          pipelineId: w.other.id,
+          stageId: w.deal.stageId,
+        }),
+      ),
+    ).rejects.toMatchObject({
+      status: 422,
+      code: "INVALID_OPPORTUNITY",
+      field: "stageId",
+      message: "Stage: Pick a stage from the new pipeline.",
+    });
+
+    expect(await settle(w.api.get(w.deal.id))).toEqual(w.deal);
+    expect(await w.timeline()).toEqual(before);
+  });
+
+  it("update() refuses an unknown pipeline", async () => {
+    const w = await pipelineWorld();
+
+    await expect(
+      settle(
+        w.api.update(w.deal.id, { pipelineId: "pipe_nope", stageId: "x" }),
+      ),
+    ).rejects.toMatchObject({
+      status: 422,
+      code: "INVALID_OPPORTUNITY",
+      field: "pipelineId",
+      message: "Pipeline: No pipeline has this id.",
+    });
+
+    expect(await settle(w.api.get(w.deal.id))).toEqual(w.deal);
+  });
+
+  it("update() moves a deal to another pipeline in one write", async () => {
+    const w = await pipelineWorld();
+    const stage = w.other.stages[0]!;
+    const countBefore = Object.values(w.db.getState().opportunities).filter(
+      (o) => o.stageId === stage.id,
+    ).length;
+
+    const saved = await settle(
+      w.api.update(w.deal.id, { pipelineId: w.other.id, stageId: stage.id }),
+    );
+
+    const stored = await settle(w.api.get(w.deal.id));
+    expect(stored).toEqual(saved);
+    expect(stored.pipelineId).toBe(w.other.id);
+    expect(stored.stageId).toBe(stage.id);
+    expect(stored.position).toBe(countBefore);
+    expect(stored.stageEnteredAt).toBe(stored.updatedAt);
+    expect(stored.stageEnteredAt).not.toBe(w.deal.stageEnteredAt);
+    expect(stored.status).toBe(w.deal.status);
+    expect(await w.timeline()).toContainEqual(
+      expect.objectContaining({
+        type: "opportunity.stage_changed",
+        opportunityId: w.deal.id,
+        at: stored.updatedAt,
+        summary: `Moved "${w.deal.name}" to ${stage.name}`,
+      }),
+    );
+    expect(await w.stageProblems()).toEqual([]);
+  });
+
+  it("update() still ignores a stageId when the pipeline does not change", async () => {
+    const w = await pipelineWorld();
+    const pipeline = w.db.getState().pipelines[w.deal.pipelineId]!;
+    const otherStage = pipeline.stages.find((s) => s.id !== w.deal.stageId)!;
+
+    const saved = await settle(
+      w.api.update(w.deal.id, {
+        pipelineId: w.deal.pipelineId,
+        stageId: otherStage.id,
+      }),
+    );
+
+    for (const record of [saved, await settle(w.api.get(w.deal.id))]) {
+      expect(record.stageId).toBe(w.deal.stageId);
+      expect(record.position).toBe(w.deal.position);
+      expect(record.stageEnteredAt).toBe(w.deal.stageEnteredAt);
+    }
+  });
+
+  it("a refused pipeline change does not move the demo clock", async () => {
+    await freshModules();
+    const storage = stubLocalStorage();
+    const { db } = await import("@/lib/mock/db");
+    const api = await import("./opportunities");
+    db.setState({ seededAt: AT, opportunities: { [FIXTURE.id]: FIXTURE } });
+
+    const refused = [
+      () => api.update(FIXTURE.id, { pipelineId: "pipe_other" }),
+      () => api.update(FIXTURE.id, { pipelineId: "pipe_other", stageId: "x" }),
+    ];
+    for (const call of refused) {
+      await expect(settle(call())).rejects.toMatchObject({ status: 422 });
+      expect(storage.getItem("nimbus-crm-clock")).toBeNull();
+    }
+  });
+});

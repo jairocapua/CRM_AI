@@ -2403,6 +2403,20 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] New Vitest: update({pipelineId: other}) then integrityReport() reports no missing stage; fails before fix; npm run check green
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
+### P7-T59 — Gate fix: create() accepts stageId outside its pipeline
+- **Owner:** agent · **Depends:** —
+- **Scope:** draftSchema checks shape only; refuse a stageId not in pipelineId with 422 INVALID_OPPORTUNITY; Vitest via integrityReport()
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-24
+
+### P7-T60 — E2E: change a deal's pipeline in the Edit deal sheet
+- **Owner:** agent · **Depends:** —
+- **Scope:** Edit deal, switch pipeline+stage, save; assert deal on new board, timeline 'Moved ... to <stage>', chosen status applied
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-24
+
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
       timeline, and in the dashboard Upcoming card, and its slot disappears

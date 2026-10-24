@@ -261,3 +261,4 @@
 - 2026-10-24 [P7-T55] Base UI non-modal Popover dismisses on outside clicks with detail 0 (virtual); Playwright dispatchEvent('click') sends detail 0, so pass { detail: 1 } to click outside without closing it (useDismiss.js 'Press-less clicks').
 - 2026-10-24 [P7-T56] An e2e copy of a seeded appointment can be injected with addInitScript plus a one-shot sessionStorage flag, then gotoApp; the fixture's storage-clear has already run, so the injected data survives.
 - 2026-10-24 [P7-T57] A targeted `npx playwright test -g` run finished in ~11s; the full `npm run e2e` still runs `next build` via webServer.
+- 2026-10-24 [P7-T58] integrityReport() in src/lib/api/settings.ts is a handy oracle for orphan-reference tests: it lists lines like '<n> opportunities sit in a stage that does not exist'.

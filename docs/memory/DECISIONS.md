@@ -326,3 +326,7 @@
 - 2026-10-24 [P7-T56] DB_KEY is exported from e2e/calendar-helpers.ts so specs can inject data without redeclaring the key.
 - 2026-10-24 [P7-T57] /settings/demo-data smoke test hardcodes title 'Demo Data' and h1 'Demo data' separately (metadata and PageHeader differ in case); a comment says why.
 - 2026-10-24 [P7-T57] Reused routeHeading() and the NAV_ITEMS loop's check order and messages; no new helpers.
+- 2026-10-24 [P7-T58] update() treats a call as a pipeline move only when pipelineId differs from prev.pipelineId, not when the key is merely present; whole-record resends stay no-ops.
+- 2026-10-24 [P7-T58] update() does not derive status from the destination stage (unlike move()); setStatus() owns status/closedAt and the form applies the chosen status afterwards.
+- 2026-10-24 [P7-T58] updateSchema = editableSchema.extend({ stageId: optional }); OpportunityPatch widened with `& { stageId?: ID }`; stageId is pulled out before applyPatch.
+- 2026-10-24 [P7-T58] The acceptance test checks integrityReport() before the 422, so its red run shows the orphan stage itself.
