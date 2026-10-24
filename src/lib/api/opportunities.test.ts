@@ -1199,7 +1199,10 @@ describe("update() moving a deal to another pipeline", () => {
     expect(stored.position).toBe(countBefore);
     expect(stored.stageEnteredAt).toBe(stored.updatedAt);
     expect(stored.stageEnteredAt).not.toBe(w.deal.stageEnteredAt);
-    expect(stored.status).toBe(w.deal.status);
+    // The target is an open stage, so the move leaves the deal open whatever
+    // the seeded deal's status was (P7-T61).
+    expect(stored.status).toBe("open");
+    expect("closedAt" in stored).toBe(false);
     expect(await w.timeline()).toContainEqual(
       expect.objectContaining({
         type: "opportunity.stage_changed",
@@ -1209,6 +1212,105 @@ describe("update() moving a deal to another pipeline", () => {
       }),
     );
     expect(await w.stageProblems()).toEqual([]);
+  });
+
+  /** The deal's timeline entries that `update()` added since `before`. */
+  async function newEntries(
+    w: Awaited<ReturnType<typeof pipelineWorld>>,
+    before: { id: string }[],
+  ) {
+    const seen = new Set(before.map((a) => a.id));
+    return (await w.timeline()).filter(
+      (a) => !seen.has(a.id) && a.opportunityId === w.deal.id,
+    );
+  }
+
+  it("update() into another pipeline's won stage sets status won, closedAt and a won entry", async () => {
+    const w = await pipelineWorld();
+    const won = w.other.stages.find((s) => s.isWon)!;
+    expect(won).toBeDefined();
+    const before = await w.timeline();
+
+    const saved = await settle(
+      w.api.update(w.deal.id, { pipelineId: w.other.id, stageId: won.id }),
+    );
+
+    const stored = await settle(w.api.get(w.deal.id));
+    expect(stored).toEqual(saved);
+    expect(stored.status).toBe("won");
+    expect(stored.closedAt).toBe(stored.updatedAt);
+    const entries = await newEntries(w, before);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      type: "opportunity.won",
+      at: stored.updatedAt,
+      summary: `Won "${w.deal.name}"`,
+      meta: { to: won.name },
+    });
+  });
+
+  it("update() into another pipeline's lost stage sets status lost, closedAt and a lost entry", async () => {
+    const w = await pipelineWorld();
+    // No seeded stage is a lost stage, so this store marks one.
+    const lost = w.other.stages.find((s) => !s.isWon)!;
+    w.db.setState((s) => ({
+      pipelines: {
+        ...s.pipelines,
+        [w.other.id]: {
+          ...w.other,
+          stages: w.other.stages.map((stage) =>
+            stage.id === lost.id ? { ...stage, isLost: true } : stage,
+          ),
+        },
+      },
+    }));
+    const before = await w.timeline();
+
+    const saved = await settle(
+      w.api.update(w.deal.id, { pipelineId: w.other.id, stageId: lost.id }),
+    );
+
+    const stored = await settle(w.api.get(w.deal.id));
+    expect(stored).toEqual(saved);
+    expect(stored.status).toBe("lost");
+    expect(stored.closedAt).toBe(stored.updatedAt);
+    const entries = await newEntries(w, before);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      type: "opportunity.lost",
+      at: stored.updatedAt,
+      summary: `Moved "${w.deal.name}" to ${lost.name}`,
+      meta: { to: lost.name },
+    });
+  });
+
+  it("update() into another pipeline's open stage leaves the deal open", async () => {
+    const w = await pipelineWorld();
+    const open = w.other.stages.find((s) => !s.isWon && !s.isLost)!;
+    const closedAt = w.deal.updatedAt;
+    w.db.setState((s) => ({
+      opportunities: {
+        ...s.opportunities,
+        [w.deal.id]: { ...w.deal, status: "won", closedAt },
+      },
+    }));
+    const before = await w.timeline();
+
+    const saved = await settle(
+      w.api.update(w.deal.id, { pipelineId: w.other.id, stageId: open.id }),
+    );
+
+    const stored = await settle(w.api.get(w.deal.id));
+    expect(stored).toEqual(saved);
+    expect(stored.status).toBe("open");
+    expect("closedAt" in stored).toBe(false);
+    const entries = await newEntries(w, before);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      type: "opportunity.stage_changed",
+      summary: `Moved "${w.deal.name}" to ${open.name}`,
+      meta: { to: open.name },
+    });
   });
 
   it("update() still ignores a stageId when the pipeline does not change", async () => {

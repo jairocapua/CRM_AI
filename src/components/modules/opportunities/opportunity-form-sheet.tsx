@@ -166,7 +166,8 @@ export function OpportunityFormSheet({
      * `status` is not in that patch: `setStatus()` owns it, with `closedAt`
      * and the won/lost activity, so a status change goes through it below.
      * `update()` reads `stageId` only when the pipeline changes: it then moves
-     * the deal to that stage of the new pipeline in the same write. A stage
+     * the deal to that stage of the new pipeline in the same write, with the
+     * status that stage gives (as `move()` does). A stage
      * change inside the same pipeline goes through `move()`, which owns column
      * `position` and `stageEnteredAt` there.
      */
@@ -189,21 +190,28 @@ export function OpportunityFormSheet({
       });
     }
 
-    // `move()` derives status from the destination stage, so an explicit
-    // choice is applied after it and wins.
+    // Both `move()` and `update()`'s pipeline move derive the status from the
+    // destination stage: `record.status` is what the pipeline move left, and
+    // `stageStatus()` predicts what `move()` leaves. An explicit choice is
+    // applied after either and wins.
     const statusAfterMove = stageChanged
-      ? selectedPipeline?.stages.find((s) => s.id === values.stageId)?.isWon
-        ? "won"
-        : "open"
+      ? api.opportunities.stageStatus(
+          selectedPipeline?.stages.find((s) => s.id === values.stageId),
+        )
       : (record.status ?? "open");
-    if (values.status !== statusAfterMove) {
-      await api.opportunities.setStatus(
-        record.id,
-        values.status,
-        values.status === "lost"
-          ? values.lostReason.trim() || undefined
-          : undefined,
-      );
+    const lostReason =
+      values.status === "lost"
+        ? values.lostReason.trim() || undefined
+        : undefined;
+    // A move into a lost stage already leaves the deal lost, so the status
+    // alone would skip `setStatus()` and drop the reason the user typed.
+    const moveDropsReason =
+      (pipelineChanged || stageChanged) &&
+      statusAfterMove === "lost" &&
+      lostReason !== undefined &&
+      lostReason !== record.lostReason;
+    if (values.status !== statusAfterMove || moveDropsReason) {
+      await api.opportunities.setStatus(record.id, values.status, lostReason);
     }
 
     toast.success(opportunity ? "Deal updated" : "Deal created");

@@ -268,3 +268,5 @@
 - 2026-10-24 [P7-T60] Board columns are `<section aria-label="<stage> stage">`; scope with `getByRole('region', { name, exact: true })`. After switching pipelines, wait for a new region and 0 skeletons before asserting a card is absent.
 - 2026-10-24 [P7-T60] The deal status badge has no role/label; `page.locator('h1').locator('..').getByText(label, { exact: true })` finds it.
 - 2026-10-24 [P7-T60] The e2e box has no `python` (Windows Store alias exits 49); use the Edit tool or node for scripted edits.
+- 2026-10-25 [P7-T61] The first seeded deal (Object.values(opportunities)[0]) is status 'won'; a pipeline-move status test must not compare against w.deal.status.
+- 2026-10-25 [P7-T61] No seeded stage has isLost: true; lost-stage tests must mark a stage lost in the test store with db.setState.

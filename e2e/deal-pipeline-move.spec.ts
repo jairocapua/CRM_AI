@@ -24,9 +24,9 @@ import { NAVIGATION, expect, test } from "./fixtures";
  * unique, so cards are found by their link and timeline entries by the full
  * quoted summary.
  *
- * The won-stage test asserts only the end state, never that no "Won" entry
- * was logged: P7-T61 makes `update()` derive status from a won target stage,
- * and this test must stay green through that.
+ * Since P7-T61 `update()` derives status from the target stage the way
+ * `move()` does, so the won-stage test expects a "Won" entry from the move
+ * and a "Reopened" entry from the explicit Open.
  */
 
 const SKELETON = '[data-slot="skeleton"]';
@@ -252,7 +252,12 @@ test("Moving into another pipeline's won stage defaults Status to Won, and an ex
   await expect(statusBadge(page, "Open")).toBeVisible();
   await expect(detailValue(page, "Pipeline")).toHaveText("Renewals");
   await expect(detailValue(page, "Stage")).toContainText("Renewed");
+  // update() logs the won stage the way move() does (P7-T61), then the
+  // explicit Open reopens the deal through setStatus().
   await expect(
-    page.getByText(`Moved "${deal.name}" to Renewed`, { exact: true }),
+    page.getByText(`Won "${deal.name}"`, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(`Reopened "${deal.name}"`, { exact: true }),
   ).toBeVisible();
 });

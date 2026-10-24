@@ -338,3 +338,7 @@
 - 2026-10-24 [P7-T60] The board is reached via the detail page's back link scoped to `main` (client-side nav, so no reload races the 250ms debounced save).
 - 2026-10-24 [P7-T60] Test B checks only the end state, never that a 'Won' entry is absent, so it stays green after P7-T61.
 - 2026-10-24 [P7-T60] No Vitest added: e2e coverage of existing behaviour; API rules already unit-tested in P7-T58/T59.
+- 2026-10-25 [P7-T61] Supersedes [P7-T58] "update() does not derive status from the destination stage": update()'s pipeline move now takes status, closedAt and its timeline entry from the target stage, via helpers shared with move().
+- 2026-10-25 [P7-T61] move() deletes the closedAt key on an open stage instead of storing closedAt: undefined (JSON round-trip rule).
+- 2026-10-25 [P7-T61] The deal form's lost-reason guard fires only when the save moved the deal and the move left it lost; reason edits on an already-lost deal without a move are out of scope.
+- 2026-10-25 [P7-T61] e2e/deal-pipeline-move.spec.ts now expects 'Won "<deal>"' then 'Reopened "<deal>"', since a won stage logs a won entry like move().

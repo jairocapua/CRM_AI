@@ -2441,6 +2441,13 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] `npm run check` is green.
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
+### P7-T63 — Deal form keeps a changed lost reason
+- **Owner:** agent · **Depends:** —
+- **Scope:** Edit deal sheet: a changed lost reason on an already-lost deal (no move) is dropped; let update() accept lostReason in one write (also avoids the double Lost entry from moveDropsReason). Add a test.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-25
+
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
       timeline, and in the dashboard Upcoming card, and its slot disappears

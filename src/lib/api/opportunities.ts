@@ -346,9 +346,10 @@ export type OpportunityDraft = OpportunityPatch &
  *   pipeline." (`field` stageId).
  * - Every check runs before `nowIso()`, so a refused draft writes nothing and
  *   does not move the demo clock.
- * - A new deal's status is "open" whatever its stage: create() does not
- *   derive it from a stage's isWon/isLost, as update() does not (setStatus()
- *   owns the status).
+ * - A new deal's status is "open" whatever its stage: create() still stores
+ *   "open", even though move() and update()'s pipeline move derive the status
+ *   from the stage's isWon/isLost (see `stageStatus`). P7-T62 brings create()
+ *   in line.
  * - `null` or `undefined` for expectedCloseAt, ownerId or lostReason means
  *   the deal has no such field: the key is left out, never stored.
  */
@@ -417,15 +418,19 @@ export async function create(draft: OpportunityDraft): Promise<Opportunity> {
  *   the patch itself, so id, position, status, closedAt, stageEnteredAt,
  *   createdAt, createdBy, updatedAt and any key the API does not know are
  *   ignored, and a client that sends the whole record back still saves.
- *   move() owns stage changes inside a pipeline, and setStatus() owns the
- *   status, the close date and the won/lost activity.
+ *   move() owns stage changes inside a pipeline. Outside a pipeline move,
+ *   setStatus() owns the status, the close date and the won/lost activity.
  * - A pipelineId that differs from the stored one moves the deal to that
  *   pipeline, and must come with a stageId from it. The deal is written once:
  *   the new pipelineId and stageId, position at the end of that stage's
- *   column, and stageEnteredAt now; the contact's timeline gets a
- *   "Moved <deal> to <stage>" `opportunity.stage_changed` entry. Status and
- *   closedAt are left to setStatus(). A stageId with no pipelineId, or with
- *   the deal's own, is ignored.
+ *   column, stageEnteredAt now, and the status and close date the target
+ *   stage gives, the way move() does (`enterStage`): a won or lost stage sets
+ *   status won or lost with closedAt now, an open stage sets status open and
+ *   removes closedAt. The contact's timeline gets the matching entry
+ *   (`stageEntryActivity`): `opportunity.won` "Won <deal>",
+ *   `opportunity.lost` or `opportunity.stage_changed` "Moved <deal> to
+ *   <stage>". A stageId with no pipelineId, or with the deal's own, is
+ *   ignored.
  * - Errors, in this order, and nothing is written on any: 404 `NOT_FOUND`
  *   for an unknown id, then 422 `INVALID_OPPORTUNITY` for a wrong-typed
  *   value, "<label>: <rule>" with `field` the dotted path (see `parse`). A
@@ -475,26 +480,77 @@ export async function update(
         (o) => o.stageId === stage.id,
       ).length;
       next.stageEnteredAt = at;
+      enterStage(next, stage, at);
     }
     db.setState((s) => ({ opportunities: { ...s.opportunities, [id]: next } }));
 
     if (stage) {
       moved = true;
-      pushActivity({
-        type: "opportunity.stage_changed",
-        at,
-        contactId: next.contactId,
-        opportunityId: next.id,
-        actorId: state.currentUserId,
-        summary: `Moved "${next.name}" to ${stage.name}`,
-        meta: { to: stage.name },
-      });
+      pushActivity(stageEntryActivity(next, stage, at, state.currentUserId));
     }
     return next;
   });
   if (moved) invalidate("opportunities", "activities", "analytics");
   else invalidate("opportunities", "analytics");
   return opportunity;
+}
+
+/**
+ * The status a deal takes on entering this stage: "won" for an isWon stage,
+ * "lost" for an isLost one, otherwise "open". move() and update()'s pipeline
+ * move use it, and the deal form uses it to predict what a move leaves.
+ */
+export function stageStatus(
+  stage: PipelineStage | undefined,
+): Opportunity["status"] {
+  return stage?.isWon ? "won" : stage?.isLost ? "lost" : "open";
+}
+
+/**
+ * Sets the status and close date a deal takes on entering `stage`: a won or
+ * lost stage closes it at `at`, an open one deletes the close date (the key
+ * is removed, never stored as `undefined`).
+ */
+function enterStage(
+  next: Opportunity,
+  stage: PipelineStage | undefined,
+  at: ISODate,
+): void {
+  next.status = stageStatus(stage);
+  if (next.status === "open") delete next.closedAt;
+  else next.closedAt = at;
+}
+
+/**
+ * The timeline entry for a deal entering `stage`, shared by move() and
+ * update()'s pipeline move so the two cannot drift: "Won <deal>" for a won
+ * stage, otherwise "Moved <deal> to <stage>", typed won, lost or
+ * stage_changed by the stage.
+ */
+function stageEntryActivity(
+  deal: Opportunity,
+  stage: PipelineStage | undefined,
+  at: ISODate,
+  actorId: Activity["actorId"],
+): Omit<Activity, "id"> {
+  const status = stageStatus(stage);
+  return {
+    type:
+      status === "won"
+        ? "opportunity.won"
+        : status === "lost"
+          ? "opportunity.lost"
+          : "opportunity.stage_changed",
+    at,
+    contactId: deal.contactId,
+    opportunityId: deal.id,
+    actorId,
+    summary:
+      status === "won"
+        ? `Won "${deal.name}"`
+        : `Moved "${deal.name}" to ${stage?.name ?? "a new stage"}`,
+    meta: { to: stage?.name },
+  };
 }
 
 /**
@@ -520,10 +576,9 @@ export async function move(
       stageId: target.stageId,
       position: target.position,
       stageEnteredAt: changedStage ? at : prev.stageEnteredAt,
-      status: stage?.isWon ? "won" : stage?.isLost ? "lost" : "open",
-      closedAt: stage?.isWon || stage?.isLost ? at : undefined,
       updatedAt: at,
     };
+    enterStage(next, stage, at);
 
     // Renumber the destination column so positions stay dense and stable.
     db.setState((s) => {
@@ -541,21 +596,7 @@ export async function move(
     });
 
     if (changedStage) {
-      pushActivity({
-        type: stage?.isWon
-          ? "opportunity.won"
-          : stage?.isLost
-            ? "opportunity.lost"
-            : "opportunity.stage_changed",
-        at,
-        contactId: next.contactId,
-        opportunityId: next.id,
-        actorId: state.currentUserId,
-        summary: stage?.isWon
-          ? `Won "${next.name}"`
-          : `Moved "${next.name}" to ${stage?.name ?? "a new stage"}`,
-        meta: { to: stage?.name },
-      });
+      pushActivity(stageEntryActivity(next, stage, at, state.currentUserId));
     }
 
     return next;

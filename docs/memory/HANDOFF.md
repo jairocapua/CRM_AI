@@ -5,28 +5,27 @@
 ## Now
 - **Phase:** P7 Calendars (`active`, gate failed on 2026-10-24; fix tasks in progress)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T55–T60 approved (Autopilot review, 2026-10-24). P7-T60 was approved with `progress.mjs set`, so no task is running. Session handed off after 6 approvals, per CLAUDE.md.
+- **Status:** P7-T61 in review.
 
-## Last changes (this session)
-- P7-T55/T56: TagPicker Retry focus flag; ended+cancelled 409 rewording.
-- P7 gate (d7a972c) failed on two gaps, both now fixed: P7-T57 smoke-tests `/settings/demo-data`; P7-T58 makes `update({ pipelineId })` require a `stageId` from the new pipeline (single write + `stage_changed` activity).
-- P7-T59: create() checks pipeline and stage via the shared `stageOf()` helper.
-- P7-T60: `e2e/deal-pipeline-move.spec.ts` drives the Edit deal sheet across pipelines.
+## Last change
+- P7-T61: update()'s pipeline move now derives status, closedAt and the won/lost/stage_changed entry from the target stage, through helpers shared with move() (`stageStatus` exported, `enterStage`, `stageEntryActivity`).
+- move() now deletes closedAt on an open stage instead of storing undefined.
+- Deal form uses `api.opportunities.stageStatus` (lost stages predicted too) and adds a `moveDropsReason` guard. The e2e Test B now expects `Won` then `Reopened`.
+- New task P7-T63: deal form keeps a changed lost reason.
 
 ## Next up
-- **P7-T61:** update()'s pipeline move into a won/lost stage must derive status/closedAt and the won/lost activity like move(); share one stage-change helper with move().
-- **P7-T62** (depends on T61): the same for create(); acceptance is written in the phase file. It supersedes the P7-T59 DECISIONS line "create() still stores status 'open'"; update that line and create()'s doc comment.
-- Then rerun the P7 gate: `Workflow({ name: 'build-phase', args: { gate: 'P7' } })`.
-- Check after T61: P7-T60 Test B (won stage, explicit Open) must stay green. The form's `statusAfterMove` reads `record.status`, so it should still call setStatus(open).
+- **P7-T62** (depends on T61): same derivation for create(). Supersede the P7-T59 DECISIONS line and remove create()'s "until P7-T62" doc note.
+- Then P7-T63, then rerun the P7 gate: `Workflow({ name: 'build-phase', args: { gate: 'P7' } })`.
 
 ## Waiting on you (owner)
-- Before merging P7: open `/calendars?view=week&date=2026-09-08` in your own timezone and check appointment times, the zone label, the now line and overlaps (the gate's one human check).
+- Review of P7-T61 (Autopilot reviews it).
+- Before merging P7: open `/calendars?view=week&date=2026-09-08` in your own timezone and check appointment times, zone label, now line and overlaps.
 
-## Open suggestions (non-blocking; most are in docs/BACKLOG.md)
-- P7-T60: statusBadge() locator is layout-fragile (use data-slot/role); pickOpenSalesDeal should also exclude isLost stages; Test B could assert the stage reset; move the db readers to `e2e/db-helpers.ts`.
-- P7-T59: keep `const stage = stageOf(...)` in create(); one stage message; test create() with a missing stageId; map a `pipelineId` 422 onto the Pipeline field.
-- P7-T58: shared `stageChangedActivity()` helper (fold into T61); column position gaps; `rejects.toMatchObject`.
-- Pre-existing React Compiler lint warnings (3): data-table.tsx:55, contact-form-sheet.tsx:183, opportunity-form-sheet.tsx:145.
+## Open suggestions (non-blocking)
+- P7-T61: `moveDropsReason` is untested and logs a second Lost entry (P7-T63 should fix both); `enterStage` keeps a stale `lostReason` on an open stage (setStatus clears it); `stageEntryActivity` could reuse the status from `enterStage`.
+- P7-T60: statusBadge() locator is layout-fragile; pickOpenSalesDeal should exclude isLost stages; move db readers to `e2e/db-helpers.ts`.
+- P7-T59: test create() with a missing stageId; map a `pipelineId` 422 onto the Pipeline field.
+- Pre-existing React Compiler lint warnings (3): data-table.tsx, contact-form-sheet.tsx, opportunity-form-sheet.tsx.
 
 ## Blockers
 - None.
