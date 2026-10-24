@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 
 import { readCalendarAvailability } from "./calendar-helpers";
-import { expect, NAVIGATION, test, waitForBoot } from "./fixtures";
+import { expect, NAVIGATION, test, userMenu, waitForBoot } from "./fixtures";
 
 /**
  * The availability editor's two safety rules (P7-T20, widened app-wide in
@@ -115,10 +115,6 @@ const mobileSidebar = (page: Page, options: { includeHidden?: boolean } = {}) =>
  *  rail has the same name. */
 const openSidebar = (page: Page) =>
   page.locator("header").getByRole("button", { name: "Toggle Sidebar" });
-
-/** The sidebar footer's user menu trigger. */
-const userMenu = (page: Page) =>
-  page.getByRole("button", { name: /Jordan Reyes/ });
 
 /** Opens the Calendar select and picks `name`, whatever happens next. */
 async function pickCalendar(page: Page, name: string) {

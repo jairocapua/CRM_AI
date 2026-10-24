@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 51/76 tasks done (67%) · **Current phase:** P7 · **Next agent task:** P7-T49 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** P7-H4
+**Overall:** 51/76 tasks done (67%) · **Current phase:** P7 · **Next agent task:** P7-T50 · **Awaiting review:** P7-T49 · **Blocked:** none · **Waiting on you:** P7-H4
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -69,7 +69,7 @@ Status: active · Progress: 51/55 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T46 | Opportunities update(): allow-list the patch, 422 for non-object patch | agent | done | — | 3526e51 | 2026-10-24 | create/update allow-list via zod; 422 for bad types and non-object input; setStatus private writer; Vitest 676->730 |
 | P7-T47 | Contacts: surface tags.list load failure (tag badges/filter silently empty) | agent | done | — | f6993d9 | 2026-10-24 | Contacts: tags load error + Retry (invalidate tags); TagPicker shows 'Could not load tags.'; 3 e2e tests |
 | P7-T48 | Bump next to patch npm audit critical findings | agent | done | — | 126c13b | 2026-10-24 | next/eslint-config-next 16.4.3 + npm audit fix: 0 vulns; pins held; no src changes; gate + e2e green |
-| P7-T49 | Shared userMenu(page) e2e helper | agent | todo | — |  |  |  |
+| P7-T49 | Shared userMenu(page) e2e helper | agent | review | — |  | 2026-10-24 | userMenu(page) helper in e2e/fixtures.ts; specs import it; self-test in fixture.spec.ts; e2e 123 green |
 | P7-T50 | Custom number fields: refuse non-finite values inline (Infinity, 1e400) | agent | todo | — |  |  |  |
 | P7-T51 | Contact detail + opportunity board/detail: surface tags.list load failure | agent | todo | — |  |  |  |
 

@@ -242,3 +242,4 @@
 - 2026-10-24 [P7-T48] npm audit says "fix via --force / outside range" for next only because it is exact-pinned; `npm install --save-exact next@X` fixes it without --force touching vite or the react-table pin.
 - 2026-10-24 [P7-T48] The e2e _rsc / next-router-prefetch interception in calendars-availability-editor.spec.ts still works on Next 16.4.3 (wire format unchanged from 16.3.4).
 - 2026-10-24 [P7-T48] On Windows the `crm` preview dev server holds node_modules/next open; preview_stop it before npm install of next, then preview_start crm.
+- 2026-10-24 [P7-T49] In Git Bash, an inline `node -e '...'` breaks on any apostrophe in the source text; write the edit script to a scratchpad file and run that instead.

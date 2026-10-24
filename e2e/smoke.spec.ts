@@ -5,7 +5,7 @@ import type { Page } from "@playwright/test";
 // has nothing but type imports besides.
 import { APP_NAME } from "../src/lib/constants";
 import { NAV_ITEMS } from "../src/lib/nav";
-import { expect, NAVIGATION, test } from "./fixtures";
+import { expect, NAVIGATION, test, userMenu } from "./fixtures";
 
 /**
  * Visits every route in the navigation and checks it boots, renders its own
@@ -71,7 +71,7 @@ test("Team settings in the user menu opens its page cleanly", async ({
   gotoApp,
 }) => {
   await gotoApp("/dashboard");
-  await page.getByRole("button", { name: /Jordan Reyes/ }).click();
+  await userMenu(page).click();
   await page
     .getByRole("menuitem", { name: "Team settings", exact: true })
     .click();

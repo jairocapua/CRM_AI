@@ -2273,7 +2273,11 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** Move the /Jordan Reyes/ user-menu locator (smoke + calendars-availability-editor specs) into e2e/fixtures.ts so P9-T02's api.users.me() switch updates one place.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] `e2e/fixtures.ts` exports `userMenu(page: Page): Locator`, documented as the sidebar footer's user-menu trigger and as the one place P9-T02 updates; the file's header comment lists it.
+  - [ ] No spec carries its own copy of the locator: `Jordan Reyes` appears under `e2e/` only in `fixtures.ts`.
+  - [ ] A self-test in `e2e/fixture.spec.ts` proves the helper finds exactly one visible trigger on /dashboard, and goes red with the name mutated.
+  - [ ] `e2e/smoke.spec.ts` and `e2e/calendars-availability-editor.spec.ts` (including the phone Sheet user-menu case) still pass, and the full `npm run e2e` is green.
+  - [ ] `npm run check` is green.
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
 ### P7-T50 — Custom number fields: refuse non-finite values inline (Infinity, 1e400)

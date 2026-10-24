@@ -1,4 +1,9 @@
-import { test as base, expect, type Page } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 
 /**
  * Shared e2e fixtures. Specs import `test` and `expect` from here, never from
@@ -10,7 +15,8 @@ import { test as base, expect, type Page } from "@playwright/test";
  * - `gotoApp(path)`, which navigates and waits for the app to boot.
  *
  * It also exports `NAVIGATION`, the expect timeout for the first wait after a
- * client-side navigation to another route.
+ * client-side navigation to another route, and `userMenu(page)`, the sidebar
+ * footer's user-menu trigger.
  *
  * These apply to the `page` fixture only: a tab opened with
  * `context.newPage()` gets neither the storage clearing nor the console
@@ -63,6 +69,22 @@ export async function waitForBoot(page: Page): Promise<void> {
       `The app showed "${BOOT_FAILED}" instead of booting. See the console problems attached to this test.`,
     );
   }
+}
+
+/**
+ * The sidebar footer's user-menu trigger (`NavUser`,
+ * src/components/layout/nav-user.tsx, which renders `CURRENT_USER`).
+ *
+ * A page-wide match on purpose: on a phone the sidebar is a modal Sheet, and
+ * this also finds the trigger inside it. Do not scope it to the sidebar or the
+ * header.
+ *
+ * The only place in e2e/ that names the current user. When P9-T02 points
+ * `NavUser` at `api.users.me()`, update this one locator: to the seeded
+ * current user's name, or to a stable accessible name.
+ */
+export function userMenu(page: Page): Locator {
+  return page.getByRole("button", { name: /Jordan Reyes/ });
 }
 
 /** Throws one error that lists every recorded console problem. */

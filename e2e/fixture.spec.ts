@@ -5,6 +5,7 @@ import {
   expect,
   NAVIGATION,
   test,
+  userMenu,
   waitForBoot,
 } from "./fixtures";
 
@@ -160,5 +161,19 @@ test.describe("navigation timeout", () => {
     // into every later test in this worker.
     expect(Object.isFrozen(NAVIGATION)).toBe(true);
     expect(NAVIGATION).toEqual({ timeout: 15_000 });
+  });
+});
+
+test.describe("user menu", () => {
+  test("userMenu finds exactly one visible trigger", async ({
+    page,
+    gotoApp,
+  }) => {
+    await gotoApp("/dashboard");
+
+    // Exactly one: a renamed user, or a second element with the same name,
+    // fails here rather than deep inside a navigation test.
+    await expect(userMenu(page)).toHaveCount(1);
+    await expect(userMenu(page)).toBeVisible();
   });
 });
