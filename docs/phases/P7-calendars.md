@@ -2417,6 +2417,13 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
+### P7-T61 — Gate fix: update() pipeline move into a won/lost stage derives status
+- **Owner:** agent · **Depends:** P7-T58
+- **Scope:** src/lib/api/opportunities.ts update() pipeline-change branch (+ opportunities.test.ts). Make it match move(): a target stage with isWon/isLost sets status and closedAt and logs opportunity.won/opportunity.lost, otherwise status open; share one stage-change helper with move() so the activity entries cannot drift. Check the deal form's statusAfterMove in opportunity-form-sheet.tsx still applies the explicit status afterwards.
+- **Acceptance:**
+  - [ ] Vitest: update({pipelineId, stageId: <won stage>}) leaves status won with closedAt and a won activity, same for lost; an open target stage keeps status open; red before the fix. npm run check green.
+- **Refs:** added by `progress.mjs add` on 2026-10-24
+
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
       timeline, and in the dashboard Upcoming card, and its slot disappears

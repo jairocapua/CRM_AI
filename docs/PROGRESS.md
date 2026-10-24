@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 61/86 tasks done (71%) · **Current phase:** P7 · **Next agent task:** P7-T59 · **Awaiting review:** P7-T58 · **Blocked:** none · **Waiting on you:** none
+**Overall:** 61/87 tasks done (70%) · **Current phase:** P7 · **Next agent task:** P7-T59 · **Awaiting review:** P7-T58 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 61/64 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 61/65 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -81,6 +81,7 @@ Status: active · Progress: 61/64 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T58 | Gate fix: update() pipelineId leaves orphan stageId | agent | review | — |  | 2026-10-24 | update() refuses a pipeline change without a matching stageId (422); valid move is one write + timeline entry |
 | P7-T59 | Gate fix: create() accepts stageId outside its pipeline | agent | todo | — |  |  |  |
 | P7-T60 | E2E: change a deal's pipeline in the Edit deal sheet | agent | todo | — |  |  |  |
+| P7-T61 | Gate fix: update() pipeline move into a won/lost stage derives status | agent | todo | P7-T58 |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md
