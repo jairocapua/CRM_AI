@@ -12,8 +12,10 @@ import {
   loadErrorAlert,
   openTimes,
   readContacts,
+  readDeals,
   readFaultThrows,
   readSeededAppointments,
+  readTagNames,
   restoreContactRead,
   restoreReads,
   timeGroup,
@@ -33,7 +35,11 @@ import { expect, NAVIGATION, test } from "./fixtures";
  * that keeps the rows on screen; here, like the contact page's tests, because
  * they share this spec's fault helpers and Retry watch) and its tag read (a
  * failed tag read with the rows on screen, which also empties the toolbar's
- * tag filter, and a failed tag re-read that keeps the badges). A contact that
+ * tag filter, a failed tag re-read that keeps the badges, and a page change,
+ * whose skeleton the tags alert never sits above). The tag read fails the
+ * same way on the other screens that draw tags: a contact's Tags card, the
+ * opportunity board and a deal's details panel, and the toolbar's tag filter,
+ * whose own Retry re-reads every tags reader on the page. A contact that
  * does not exist keeps its "Contact not found" state, not the load error. A
  * re-read that fails with a list already on screen keeps the list, with no
  * error in its place (the booking dialog's open-times test and the contacts
@@ -864,6 +870,10 @@ test("contacts list: a failed tag read shows its error and Retry brings back the
   await expectTagFilter(page);
 });
 
+// A regression guard: it passes without P7-T47's fix too, because
+// `loadErrorOf` already hides an error while data is on screen. It pins that
+// behaviour, so a future change to the tags alert's gate cannot drop the
+// badges or put an alert over them.
 test("contacts list: a failed tag re-read with badges on screen keeps them", async ({
   page,
   gotoApp,
@@ -1022,4 +1032,422 @@ test("contacts list: a failed re-read with rows on screen keeps them", async ({
   await expect(count).toBeVisible();
 
   await restoreReads(page);
+});
+
+/**
+ * Clicks the alert's Retry while the fault is still on, and checks the
+ * LoadError contract: the button goes busy and comes back, the alert stays
+ * with its message, no skeleton appears in main and the busy button carries
+ * no labelled spinner. The alert must be the only one in main.
+ */
+async function retryFailsAgain(page: Page, alert: Locator) {
+  const readWatch = await watchRetry(page, "main");
+  const retry = alert.getByRole("button", { name: "Retry", exact: true });
+  await retry.click();
+  await expect.poll(async () => (await readWatch()).sawBusy).toBe(true);
+  await expect(retry).toBeEnabled();
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  expect(await readWatch()).toEqual({
+    sawBusy: true,
+    sawSkeleton: false,
+    sawLabelledSpinner: false,
+  });
+  return retry;
+}
+
+/** How many badges in main are tag badges, told apart by the tags' names. */
+async function countTagBadges(page: Page, tagNames: readonly string[]) {
+  return page
+    .locator('main [data-slot="badge"]')
+    .evaluateAll(
+      (badges, names) =>
+        badges.filter((badge) => names.includes(badge.textContent.trim()))
+          .length,
+      tagNames,
+    );
+}
+
+test("contacts list: the tags error waits for the rows, on the first load and a page change", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/calendars");
+  await expectViewLoaded(page, "Month");
+  const total = (await readContacts(page)).length;
+  expect(total, "the seed has more than one page").toBeGreaterThan(PAGE_SIZE);
+
+  // Notes, at every DOM change from now on, a tags alert in main while a
+  // skeleton is there too. Installed before the contacts page mounts, so its
+  // first load counts as well as the page change below.
+  await page.evaluate(() => {
+    const w = window as unknown as { __sawTagsAlertOverSkeleton?: boolean };
+    w.__sawTagsAlertOverSkeleton = false;
+    new MutationObserver(() => {
+      const skeleton = document.querySelector('main [data-slot="skeleton"]');
+      const tagsAlert = [
+        ...document.querySelectorAll('main [data-slot="alert"]'),
+      ].some((alert) => alert.textContent.includes("Could not load tags"));
+      if (skeleton && tagsAlert) w.__sawTagsAlertOverSkeleton = true;
+    }).observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+    });
+  });
+  const sawAlertOverSkeleton = () =>
+    page.evaluate(
+      () =>
+        (window as unknown as { __sawTagsAlertOverSkeleton?: boolean })
+          .__sawTagsAlertOverSkeleton,
+    );
+
+  await failReads(page, "tags");
+  // Client-side navigation, so the fault survives.
+  await page
+    .locator('[data-slot="sidebar"]')
+    .getByRole("link", { name: "Contacts", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/contacts$/, NAVIGATION);
+  const alert = loadErrorAlert(page, TAGS_ERROR);
+  await expect(contactRows(page)).toHaveCount(PAGE_SIZE);
+  await expect(alert).toBeVisible();
+
+  // A page change: the table shows its skeleton, and the tags alert waits
+  // for page 2's rows.
+  await page
+    .locator("main")
+    .getByRole("button", { name: "Next", exact: true })
+    .click();
+  await expect(pagerText(page)).toHaveText(
+    `Page 2 of ${Math.ceil(total / PAGE_SIZE)}`,
+  );
+  await expect(contactRows(page)).toHaveCount(PAGE_SIZE);
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  expect(await sawAlertOverSkeleton()).toBe(false);
+
+  await restoreReads(page);
+});
+
+test("contact page: a failed tag read shows its error in the Tags card and Retry brings back the badges", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/contacts");
+  const main = page.locator("main");
+  await expect(contactRows(page)).toHaveCount(PAGE_SIZE);
+  await expect(tagBadges(page).first()).toBeVisible();
+  // A contact that has tags: the first row showing a badge.
+  const href = await main
+    .getByRole("table")
+    .locator("tbody tr")
+    .filter({ has: page.locator('td:nth-child(4) [data-slot="badge"]') })
+    .first()
+    .locator('a[href^="/contacts/"]')
+    .first()
+    .getAttribute("href");
+  const id = href?.split("/").at(-1);
+  if (!id) throw new Error("No contact row with tags");
+  const contact = (await readContacts(page)).find((c) => c.id === id);
+  if (!contact) throw new Error(`No persisted contact ${id}`);
+  expect(contact.tagIds.length, "the contact has tags").toBeGreaterThan(0);
+
+  await failReads(page, "tags");
+  // A client-side link, so the fault survives.
+  await main.locator(`a[href="/contacts/${id}"]`).first().click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: contact.name, exact: true }),
+  ).toBeVisible(NAVIGATION);
+
+  const card = main.locator('[data-slot="card"]').filter({
+    has: page.locator('[data-slot="card-title"]', { hasText: /^Tags$/ }),
+  });
+  await expect(card).toHaveCount(1);
+  const alert = card.getByRole("alert").filter({ hasText: TAGS_ERROR });
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  // The error, not "No tags", which would not be true.
+  await expect(card.getByText("No tags", { exact: true })).toHaveCount(0);
+  await expect(card.locator('[data-slot="badge"]')).toHaveCount(0);
+  // The page has settled, so a skeleton during Retry would be Retry's.
+  await expect(main.locator('[data-slot="skeleton"]')).toHaveCount(0);
+
+  const retry = await retryFailsAgain(page, alert);
+
+  // The fault clears, and Retry brings back the contact's badges.
+  await restoreReads(page);
+  await retry.click();
+  await expect(alert).toHaveCount(0);
+  await expect(card.locator('[data-slot="badge"]').first()).toBeVisible();
+});
+
+test("contact page: a contact with no tags still reads No tags while the tag read fails", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/contacts");
+  const main = page.locator("main");
+  await expect(contactRows(page)).toHaveCount(PAGE_SIZE);
+  await expect(tagBadges(page).first()).toBeVisible();
+  // A contact with no tags: a row on screen whose persisted tagIds is empty.
+  const tagless = new Set(
+    (await readContacts(page))
+      .filter((c) => c.tagIds.length === 0)
+      .map((c) => c.id),
+  );
+  const hrefs = await main
+    .getByRole("table")
+    .locator('tbody tr a[href^="/contacts/"]')
+    .evaluateAll((links) => links.map((a) => a.getAttribute("href") ?? ""));
+  const id = hrefs
+    .map((href) => href.split("/").at(-1) ?? "")
+    .find((candidate) => tagless.has(candidate));
+  if (!id) throw new Error("No contact without tags on the first page");
+  const contact = (await readContacts(page)).find((c) => c.id === id);
+  if (!contact) throw new Error(`No persisted contact ${id}`);
+
+  const throwsBefore = await readFaultThrows(page);
+  await failReads(page, "tags");
+  // A client-side link, so the fault survives.
+  await main.locator(`a[href="/contacts/${id}"]`).first().click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: contact.name, exact: true }),
+  ).toBeVisible(NAVIGATION);
+  // The tag read has run and failed, and React has rendered its result, so
+  // the absence of the alert below means something.
+  await expect.poll(() => readFaultThrows(page)).toBeGreaterThan(throwsBefore);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  await expect(main.locator('[data-slot="skeleton"]')).toHaveCount(0);
+
+  const card = main.locator('[data-slot="card"]').filter({
+    has: page.locator('[data-slot="card-title"]', { hasText: /^Tags$/ }),
+  });
+  await expect(card).toHaveCount(1);
+  // "No tags" is true whatever the tag read did, so it stays.
+  await expect(card.getByText("No tags", { exact: true })).toBeVisible();
+  await expect(card.getByRole("alert")).toHaveCount(0);
+
+  await restoreReads(page);
+});
+
+test("opportunities board: a failed tag read shows its error above the columns and Retry brings back the card tags", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/calendars");
+  await expectViewLoaded(page, "Month");
+  const tagNames = await readTagNames(page);
+
+  await failReads(page, "tags");
+  // Client-side navigation, so the fault survives.
+  await page
+    .locator('[data-slot="sidebar"]')
+    .getByRole("link", { name: "Opportunities", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/opportunities$/, NAVIGATION);
+
+  // The board stays, its cards without tags, with the tags error above it.
+  const main = page.locator("main");
+  const alert = loadErrorAlert(page, TAGS_ERROR);
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  await expect(
+    main.locator('a[href^="/opportunities/"]').first(),
+  ).toBeVisible();
+  await expect(main.getByText(/live deals/)).toBeVisible();
+  await expect(main.locator('[data-slot="skeleton"]')).toHaveCount(0);
+  expect(await countTagBadges(page, tagNames)).toBe(0);
+
+  const retry = await retryFailsAgain(page, alert);
+
+  // The fault clears, and Retry brings back the cards' tags.
+  await restoreReads(page);
+  await retry.click();
+  await expect(alert).toHaveCount(0);
+  await expect.poll(() => countTagBadges(page, tagNames)).toBeGreaterThan(0);
+});
+
+test("opportunities board: the tags error waits for the board, on the first load and a pipeline change", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/calendars");
+  await expectViewLoaded(page, "Month");
+
+  // Notes, at every DOM change from now on, a tags alert in main while a
+  // skeleton is there too. Installed before the board mounts, so its first
+  // load counts as well as the pipeline change below.
+  await page.evaluate(() => {
+    const w = window as unknown as { __sawTagsAlertOverSkeleton?: boolean };
+    w.__sawTagsAlertOverSkeleton = false;
+    new MutationObserver(() => {
+      const skeleton = document.querySelector('main [data-slot="skeleton"]');
+      const tagsAlert = [
+        ...document.querySelectorAll('main [data-slot="alert"]'),
+      ].some((alert) => alert.textContent.includes("Could not load tags"));
+      if (skeleton && tagsAlert) w.__sawTagsAlertOverSkeleton = true;
+    }).observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+    });
+  });
+  const sawAlertOverSkeleton = () =>
+    page.evaluate(
+      () =>
+        (window as unknown as { __sawTagsAlertOverSkeleton?: boolean })
+          .__sawTagsAlertOverSkeleton,
+    );
+
+  await failReads(page, "tags");
+  // Client-side navigation, so the fault survives.
+  await page
+    .locator('[data-slot="sidebar"]')
+    .getByRole("link", { name: "Opportunities", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/opportunities$/, NAVIGATION);
+  const main = page.locator("main");
+  const alert = loadErrorAlert(page, TAGS_ERROR);
+  await expect(alert).toBeVisible();
+  await expect(
+    main.locator('a[href^="/opportunities/"]').first(),
+  ).toBeVisible();
+
+  // A pipeline change: the board shows its skeleton while the new pipeline's
+  // deals load, and the tags error (still failed) waits for them. Without
+  // the gate the alert would sit over that skeleton every time.
+  const pipeline = main.getByRole("combobox", { name: "Pipeline" });
+  const before = (await pipeline.textContent()) ?? "";
+  await pipeline.click();
+  const options = page.getByRole("option");
+  await expect(options.first()).toBeVisible();
+  const names = (await options.allTextContents()).map((name) => name.trim());
+  const other = names.find((name) => !before.includes(name));
+  if (!other) throw new Error("The seed has only one pipeline");
+  await options.filter({ hasText: other }).first().click();
+  await expect(pipeline).toContainText(other);
+  await expect(main.locator('[data-slot="skeleton"]')).toHaveCount(0);
+  await expect(main.getByText(/live deals/)).toBeVisible();
+  await expect(alert).toBeVisible();
+  expect(await sawAlertOverSkeleton()).toBe(false);
+
+  await restoreReads(page);
+});
+
+test("opportunity page: a failed tag read shows its error in the details panel and Retry brings back the Tags row", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/opportunities");
+  const main = page.locator("main");
+  await expect(
+    main.locator('a[href^="/opportunities/"]').first(),
+  ).toBeVisible();
+  await expect(main.locator('[data-slot="skeleton"]')).toHaveCount(0);
+
+  // A deal with tags whose card is on the board.
+  let deal: Awaited<ReturnType<typeof readDeals>>[number] | undefined;
+  for (const candidate of await readDeals(page)) {
+    if (candidate.tagIds.length === 0) continue;
+    if (
+      (await main.locator(`a[href="/opportunities/${candidate.id}"]`).count()) >
+      0
+    ) {
+      deal = candidate;
+      break;
+    }
+  }
+  if (!deal) throw new Error("No deal with tags on the board");
+
+  await failReads(page, "tags");
+  // The card's title is a client-side link, so the fault survives.
+  await main.locator(`a[href="/opportunities/${deal.id}"]`).first().click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: deal.name, exact: true }),
+  ).toBeVisible(NAVIGATION);
+
+  const tagsRow = main.locator("dt").filter({ hasText: /^Tags$/ });
+  const alert = loadErrorAlert(page, TAGS_ERROR);
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  await expect(tagsRow).toHaveCount(0);
+  await expect(main.locator('[data-slot="skeleton"]')).toHaveCount(0);
+
+  const retry = await retryFailsAgain(page, alert);
+
+  // The fault clears, and Retry brings back the Tags row and its badges.
+  await restoreReads(page);
+  await retry.click();
+  await expect(alert).toHaveCount(0);
+  await expect(tagsRow).toBeVisible();
+  await expect(
+    tagsRow.locator("xpath=..").locator('dd [data-slot="badge"]'),
+  ).toHaveCount(deal.tagIds.length);
+});
+
+test("tag picker: Retry in a failed tag list re-reads the tags", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/calendars");
+  await expectViewLoaded(page, "Month");
+  await failReads(page, "tags");
+  // Client-side navigation, so the fault survives.
+  await page
+    .locator('[data-slot="sidebar"]')
+    .getByRole("link", { name: "Contacts", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/contacts$/, NAVIGATION);
+  const pageAlert = loadErrorAlert(page, TAGS_ERROR);
+  await expect(pageAlert).toBeVisible();
+
+  await tagFilter(page).click();
+  const list = page.locator('[data-slot="combobox-content"]');
+  const error = list.getByText(TAG_PICKER_ERROR, { exact: true });
+  await expect(error).toBeVisible();
+  await expect(page.getByRole("option")).toHaveCount(0);
+  const retry = list.getByRole("button", { name: "Retry", exact: true });
+  await expect(retry).toBeVisible();
+
+  // A Retry that fails again: the button goes busy, then comes back, and the
+  // list still says its read failed.
+  await list.evaluate((content) => {
+    const w = window as unknown as { __pickerRetryBusy?: boolean };
+    w.__pickerRetryBusy = false;
+    new MutationObserver(() => {
+      const button = content.querySelector('[data-slot="button"]');
+      if (button?.getAttribute("aria-disabled") === "true") {
+        w.__pickerRetryBusy = true;
+      }
+    }).observe(content, { subtree: true, childList: true, attributes: true });
+  });
+  await retry.click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __pickerRetryBusy?: boolean })
+            .__pickerRetryBusy,
+      ),
+    )
+    .toBe(true);
+  await expect(retry).toBeEnabled();
+  await expect(error).toBeVisible();
+
+  // The fault clears, and Retry fills the list, which stayed open. Retry is
+  // `invalidate("tags")`, so the page's tags alert goes too.
+  await restoreReads(page);
+  await retry.click();
+  await expect(page.getByRole("option").first()).toBeVisible();
+  await expect(error).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(pageAlert).toHaveCount(0);
+  await expect(tagBadges(page).first()).toBeVisible();
 });

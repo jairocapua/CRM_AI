@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 52/77 tasks done (68%) · **Current phase:** P7 · **Next agent task:** P7-T51 · **Awaiting review:** P7-T50 · **Blocked:** none · **Waiting on you:** P7-H4
+**Overall:** 53/78 tasks done (68%) · **Current phase:** P7 · **Next agent task:** P7-T52 · **Awaiting review:** P7-T51 · **Blocked:** none · **Waiting on you:** P7-H4
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 52/56 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 53/57 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -70,9 +70,10 @@ Status: active · Progress: 52/56 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T47 | Contacts: surface tags.list load failure (tag badges/filter silently empty) | agent | done | — | f6993d9 | 2026-10-24 | Contacts: tags load error + Retry (invalidate tags); TagPicker shows 'Could not load tags.'; 3 e2e tests |
 | P7-T48 | Bump next to patch npm audit critical findings | agent | done | — | 126c13b | 2026-10-24 | next/eslint-config-next 16.4.3 + npm audit fix: 0 vulns; pins held; no src changes; gate + e2e green |
 | P7-T49 | Shared userMenu(page) e2e helper | agent | done | — | a686dd7 | 2026-10-24 | userMenu(page) helper in e2e/fixtures.ts; specs import it; self-test in fixture.spec.ts; e2e 123 green |
-| P7-T50 | Custom number fields: refuse non-finite values inline (Infinity, 1e400) | agent | review | — |  | 2026-10-24 | Number fields require finite values, currency checks finite cents; setStatus 404 test; applyPatch JSDoc fixed |
-| P7-T51 | Contact detail + opportunity board/detail: surface tags.list load failure | agent | todo | — |  |  |  |
+| P7-T50 | Custom number fields: refuse non-finite values inline (Infinity, 1e400) | agent | done | — | a92f13a | 2026-10-24 | Number fields require finite values, currency checks finite cents; setStatus 404 test; applyPatch JSDoc fixed |
+| P7-T51 | Contact detail + opportunity board/detail: surface tags.list load failure | agent | review | — |  | 2026-10-24 | Tags load errors with Retry on contacts table, contact panel, board, deal detail; TagPicker Retry; 5 new e2e |
 | P7-T52 | Custom-field inputs set aria-invalid when invalid | agent | todo | — |  |  |  |
+| P7-T53 | TagPicker: keyboard path to retry a failed tags read | agent | todo | — |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md

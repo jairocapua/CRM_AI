@@ -2328,12 +2328,26 @@ hours land around midnight–08:00 local; that is expected.
 - **Scope:** Info panel and opportunity board/detail read tags with ?? [] and stay silently empty on failure; show LoadError + Retry like P7-T47.
   - From the P7-T47 review: in src/components/modules/contacts/contacts-table.tsx (~:175) the tags alert is gated only on `!loadError`, so it can show above the skeleton during the contacts first load (a fault can fail tags.list before contacts.list lands). Gate it on the rows being on screen (`contactsPage.data !== undefined && !loadError`), matching its doc comment, and do the same on the new pages. TagPicker's "Could not load tags." state also appears in the contact and deal form sheets and the bulk Tags popover with no way to retry: add a small Retry in its ComboboxEmpty that calls `invalidate("tags")`. Add a comment that the "failed tag re-read with badges on screen keeps them" e2e is a regression guard (it passes without P7-T47's fix).
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] On /contacts the "Could not load tags" alert shows only while the rows are on screen: never above the table skeleton, on the first load or a page change, and back once the rows land (gate `!contactsPage.isLoading`, not `data !== undefined`, which still holds the previous page during a page change).
+  - [ ] On a contact's page (and the conversations contact panel, which reuses ContactInfoPanel), a failed tags read for a contact with tags shows a LoadError with message and Retry in the Tags card instead of "No tags"; a contact with no tags still reads "No tags".
+  - [ ] On /opportunities, a failed tags read shows a LoadError with Retry above the columns once the board has loaded; the columns, cards and summary stay.
+  - [ ] On /opportunities/[id], a failed tags read for a deal with tags shows a LoadError with Retry in the details panel; Retry restores the Tags row and its badges.
+  - [ ] Every new tags Retry follows the LoadError contract (busy, alert stays, no skeleton, no labelled spinner) and calls `invalidate("tags")`.
+  - [ ] TagPicker's "Could not load tags." empty state offers a Retry (busy while in flight) that refills the open list and clears the page-level tags alert.
+  - [ ] A failed tags re-read with tags on screen keeps them; the existing re-read e2e is marked as a regression guard.
+  - [ ] `npm run check` and `npm run e2e` pass.
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
 ### P7-T52 — Custom-field inputs set aria-invalid when invalid
 - **Owner:** agent · **Depends:** —
 - **Scope:** custom-fields-section.tsx sets data-invalid on the Field only; set aria-invalid on inputs and assert it in e2e/deal-form.spec.ts custom-field test
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-24
+
+### P7-T53 — TagPicker: keyboard path to retry a failed tags read
+- **Owner:** agent · **Depends:** —
+- **Scope:** Picker Retry in portaled ComboboxEmpty is mouse-only; contact/deal form sheets and bulk Tags popover have no page alert. Make Retry keyboard-reachable or add an inline alert.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-24

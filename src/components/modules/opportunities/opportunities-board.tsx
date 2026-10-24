@@ -19,8 +19,9 @@ import { toast } from "sonner";
 
 import type { Contact, Opportunity, User } from "@/types";
 import * as api from "@/lib/api";
-import { useResource } from "@/lib/api";
+import { invalidate, loadErrorOf, useResource } from "@/lib/api";
 import { EmptyState } from "@/components/common/empty-state";
+import { LoadError } from "@/components/common/load-error";
 import { Money } from "@/components/common/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -91,6 +92,7 @@ export function OpportunitiesBoard() {
   );
   const users = useResource("users", () => api.users.list());
   const tags = useResource("tags", () => api.tags.list());
+  const tagsError = loadErrorOf(tags);
 
   const contactsById = useMemo(
     () => new Map((contacts.data?.rows ?? []).map((c) => [c.id, c])),
@@ -281,6 +283,17 @@ export function OpportunitiesBoard() {
         />{" "}
         weighted forecast
       </p>
+
+      {/* The contacts table's rule: only once the board is on screen, never
+          above its skeleton. The columns and cards stay, without tags. */}
+      {!board.isLoading && tagsError ? (
+        <LoadError
+          title="Could not load tags"
+          message={tagsError.message}
+          onRetry={() => invalidate("tags")}
+          retrying={tags.isRefreshing}
+        />
+      ) : null}
 
       {board.isLoading ? (
         <Skeleton className="h-96 w-full" />

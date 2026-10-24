@@ -246,3 +246,8 @@
 - 2026-10-24 [P7-T50] custom-fields-section.tsx marks only the Field (data-invalid); its inputs set no aria-invalid, so an e2e expecting aria-invalid there fails even when validation works.
 - 2026-10-24 [P7-T50] parseCents('Infinity') returns 0 but parseCents('1e308') returns Infinity (finite amount, overflowing cents); a currency check must test the cents value.
 - 2026-10-24 [P7-T50] Python is not on PATH in this Windows environment; use the Edit tool or node for scripted edits.
+- 2026-10-24 [P7-T51] A Retry inside a Base UI ComboboxEmpty keeps the list open if its onMouseDown calls preventDefault (the chips input keeps focus).
+- 2026-10-24 [P7-T51] Mutating a branch to literal `false ? (` breaks typecheck when the branch uses a narrowed value; use a runtime-false, TS-opaque condition like `x.length < 0`.
+- 2026-10-24 [P7-T51] Adding a button inside an element located by exact getByText changes its text; put the message in its own element.
+- 2026-10-24 [P7-T51] A Base UI SelectTrigger's textContent includes the arrow icon text ('Sales Pipeline▼'); compare against option names or use toContainText.
+- 2026-10-24 [P7-T51] To prove a skeleton gate deterministically, trigger a new useResource cache key (page or pipeline change) while the other read's error persists.

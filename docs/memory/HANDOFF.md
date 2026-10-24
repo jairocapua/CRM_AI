@@ -5,25 +5,24 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T50 in review.
+- **Status:** P7-T51 in review.
 
 ## Last changes (this session)
-- P7-T50: custom number fields refuse non-finite values (Infinity, 1e400) inline; currency fields refuse amounts whose cents overflow (1e308).
-- New custom-fields.test.ts; setStatus() unknown-id 404 test (all 4 statuses, writes nothing); applyPatch JSDoc corrected.
-- deal-form e2e for Monthly Retainer '1e308' (asserts Field data-invalid). Gate and e2e green.
+- P7-T51: a failed tags.list read now shows LoadError + Retry (invalidate("tags")) on the contacts table (gated on `!isLoading`), contact Info panel (records with tags), opportunity board and deal detail.
+- TagPicker's 'Could not load tags.' empty state gained a Retry that keeps the list open.
+- 5 new e2e in calendars-load-errors.spec.ts; check and e2e green (769 Vitest, 131 Playwright).
 
 ## Next up
-- **Agent:** P7-T51 (tags alert gating, TagPicker Retry, guard comment), then P7-T52 (custom-field inputs set aria-invalid).
+- **Agent:** P7-T52 (custom-field inputs set aria-invalid). New P7-T53: keyboard path to retry tags in TagPicker.
 
 ## Waiting on you
-- Review of P7-T50.
+- Review of P7-T51.
 - P7-H4: should an ended appointment that is already Cancelled stay frozen? Not blocking.
 
 ## Open suggestions (non-blocking review notes)
-- P7-T50: NON_FINITE test comment true only for number fields; module doc could note currency Infinity became $0 / 1e308 became Infinity cents; widen BACKLOG aria-invalid entry to name custom-fields-section.tsx; comment that lostReason is irrelevant in the 404 test.
-- Deal Value field non-finite hole: in docs/BACKLOG.md (P7-T50 D2).
-- P7-T49: build userMenu's name from `CURRENT_USER.name` (after P9-T02); optional phone-viewport fixture case.
-- BACKLOG rows from P7-T43/T44; P7-T46 `parse()` reports first zod issue only; spec.md table date predates P7-T48.
+- P7-T51: move the duplicated alert-over-skeleton observer into an e2e helper and add a `__sawSkeleton` flag so the "waits for" tests cannot pass vacuously; board alert could gate on visible deals having tags; tagless-test `throw` could be an expect with message.
+- P7-T50: NON_FINITE comment true only for number fields; widen BACKLOG aria-invalid entry to custom-fields-section.tsx. Deal Value non-finite hole in BACKLOG.
+- P7-T49: build userMenu's name from `CURRENT_USER.name` (after P9-T02).
 - Pre-existing React Compiler lint warnings (3): data-table.tsx:55, contact-form-sheet.tsx:183, opportunity-form-sheet.tsx:145.
 
 ## Blockers

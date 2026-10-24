@@ -40,7 +40,9 @@ const PAGE_SIZE = 25;
  * - A tags read that fails with no tags to show, while the rows are on
  *   screen, shows "Could not load tags" with Retry above the table; the rows
  *   and the footer stay. Its Retry re-reads every tags reader on the page,
- *   the toolbar's tag filter included.
+ *   the toolbar's tag filter included. It shows only while the rows are on
+ *   screen: hidden during the first load and a page change's skeleton, back
+ *   when the rows land.
  * - While the contacts list itself is in error, only that alert shows: the
  *   tag counts read the contacts table, so the same fault failed them, and
  *   the contacts Retry re-reads the tags too.
@@ -172,7 +174,11 @@ export function ContactsTable() {
         />
       ) : null}
 
-      {!loadError && tagsError ? (
+      {/* Only while the rows are on screen: never above the table's skeleton,
+          on the first load or a page change. `isLoading`, not
+          `data !== undefined`: during a page change `useResource` still
+          returns the previous page's data while DataTable shows its skeleton. */}
+      {!contactsPage.isLoading && !loadError && tagsError ? (
         <LoadError
           title="Could not load tags"
           message={tagsError.message}

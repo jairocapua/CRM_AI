@@ -104,13 +104,20 @@ interface PersistedDb {
         phone?: string;
         companyName?: string;
         jobTitle?: string;
+        tagIds: string[];
       }
     >;
     activities: Record<string, { contactId?: string; summary: string }>;
     opportunities: Record<
       string,
-      { name: string; status: string; expectedCloseAt?: string }
+      {
+        name: string;
+        status: string;
+        expectedCloseAt?: string;
+        tagIds: string[];
+      }
     >;
+    tags: Record<string, { name: string }>;
   };
 }
 
@@ -186,6 +193,7 @@ export interface SeededContact {
   phone: string | null;
   companyName: string | null;
   jobTitle: string | null;
+  tagIds: string[];
 }
 
 /** Every contact in the persisted database, in the store's own order. */
@@ -199,6 +207,7 @@ export async function readContacts(page: Page): Promise<SeededContact[]> {
     phone: contact.phone ?? null,
     companyName: contact.companyName ?? null,
     jobTitle: contact.jobTitle ?? null,
+    tagIds: contact.tagIds,
   }));
   expect(rows.length, "the seed has contacts").toBeGreaterThan(0);
   return rows;
@@ -210,6 +219,7 @@ export interface SeededDeal {
   status: string;
   /** As stored: a UTC ISO instant, or null when the deal has no date. */
   expectedCloseAt: string | null;
+  tagIds: string[];
 }
 
 /** Every deal in the persisted database, in the store's own order. */
@@ -220,9 +230,18 @@ export async function readDeals(page: Page): Promise<SeededDeal[]> {
     name: deal.name,
     status: deal.status,
     expectedCloseAt: deal.expectedCloseAt ?? null,
+    tagIds: deal.tagIds,
   }));
   expect(rows.length, "the seed has deals").toBeGreaterThan(0);
   return rows;
+}
+
+/** Every tag's name in the persisted database. */
+export async function readTagNames(page: Page): Promise<string[]> {
+  const { tags } = await readPersistedDb(page);
+  const names = Object.values(tags).map((tag) => tag.name);
+  expect(names.length, "the seed has tags").toBeGreaterThan(0);
+  return names;
 }
 
 /**

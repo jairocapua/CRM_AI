@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, RotateCwIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { loadErrorOf, useAction, useResource } from "@/lib/api";
+import { invalidate, loadErrorOf, useAction, useResource } from "@/lib/api";
 import type { TagColor } from "@/types";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Combobox,
   ComboboxChip,
@@ -42,6 +44,11 @@ function isCreatable(option: TagOption): option is CreatableOption {
  * nothing, not even Create: without the list there is no way to tell whether
  * a tag with that name already exists, so creating one could make a
  * duplicate. A failed re-read with tags on screen keeps them.
+ *
+ * That error state offers Retry (busy while in flight), so the form sheets
+ * and the bulk Tags popover, which have no page-level tags alert, can
+ * recover. Retry calls `invalidate("tags")`, so it re-reads every tags reader
+ * on the page, not only this picker's.
  */
 export function TagPicker({
   id,
@@ -154,9 +161,30 @@ export function TagPicker({
             )
           }
         </ComboboxList>
-        <ComboboxEmpty>
-          {tagsError ? "Could not load tags." : "No tags found."}
-        </ComboboxEmpty>
+        {tagsError ? (
+          <ComboboxEmpty className="flex-col items-center gap-2">
+            <span>Could not load tags.</span>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => invalidate("tags")}
+              // Keeps focus in the chips input, so the list stays open.
+              onMouseDown={(event) => event.preventDefault()}
+              disabled={tags.isRefreshing}
+              focusableWhenDisabled
+              className="data-disabled:opacity-50"
+            >
+              {tags.isRefreshing ? (
+                <Spinner aria-hidden data-icon="inline-start" />
+              ) : (
+                <RotateCwIcon data-icon="inline-start" />
+              )}
+              Retry
+            </Button>
+          </ComboboxEmpty>
+        ) : (
+          <ComboboxEmpty>No tags found.</ComboboxEmpty>
+        )}
       </ComboboxContent>
     </Combobox>
   );

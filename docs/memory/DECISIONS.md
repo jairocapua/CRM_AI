@@ -301,3 +301,9 @@
 - 2026-10-24 [P7-T50] D1: number fields use Number.isFinite(Number(v)); currency uses Number.isFinite(Number(v) * 100) (parseCents scale). Message stays 'Enter a number.'; required messages unchanged.
 - 2026-10-24 [P7-T50] D2: deal Value field (buildOpportunityFormSchema.value) out of scope; recorded in docs/BACKLOG.md. D3: API schemas unchanged.
 - 2026-10-24 [P7-T50] e2e asserts the Field's data-invalid='true', not the input's aria-invalid (custom-fields-section.tsx sets none; component changes out of scope). A3 reworded to match.
+- 2026-10-24 [P7-T51] Contacts tags-alert gate is `!contactsPage.isLoading`, not `data !== undefined`: on a page change the previous page's data is held while the skeleton shows.
+- 2026-10-24 [P7-T51] Single records (contact Info panel, deal detail) show the tags error only when the record has tagIds; lists (contacts table, board) show it whenever the read failed and the list loaded.
+- 2026-10-24 [P7-T51] TagPicker empty-state message wrapped in its own <span> so exact getByText still matches beside the Retry button.
+- 2026-10-24 [P7-T51] Local spec helpers retryFailsAgain(page, alert) and countTagBadges(page, tagNames); the alert-over-skeleton observer is duplicated in two tests for now.
+- 2026-10-24 [P7-T51] No new Vitest (no pure logic), no API/mock/seed changes, no SEED_VERSION bump.
+- 2026-10-24 [P7-T51] Board test's guard is the pipeline switch (new cache key shows skeleton while tags error persists); tagless test waits for readFaultThrows plus two frames before asserting no alert.
