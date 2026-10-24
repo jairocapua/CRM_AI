@@ -2429,10 +2429,13 @@ hours land around midnight–08:00 local; that is expected.
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
 ### P7-T62 — Gate fix: create() into a won/lost stage derives status
-- **Owner:** agent · **Depends:** —
-- **Scope:** create() into an isWon/isLost stage stores status 'open'; derive status/closedAt like move(). Pair with P7-T61 (same gap in update()).
+- **Owner:** agent · **Depends:** P7-T61
+- **Scope:** create() into an isWon/isLost stage stores status 'open'; derive status/closedAt like move(), using the stage helper P7-T61 shares with move(). Update create()'s doc comment and the P7-T59 DECISIONS line it supersedes. Check the deal form's create path (opportunity-form-sheet.tsx statusAfterMove reads `record.status`) still applies the user's explicit status afterwards.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] Vitest: create() into a won stage stores status won with closedAt set; into a lost stage, status lost with closedAt; into an open stage, status open with no closedAt. Red before the fix.
+  - [ ] create() into a won/lost stage logs the same won/lost activity move() does (or the doc comment says why not).
+  - [ ] Deal form: creating a deal in a Won stage with status Open saves it Open (e2e or a Vitest on the form's submit path).
+  - [ ] `npm run check` is green.
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
 ## Exit criteria (phase gate)

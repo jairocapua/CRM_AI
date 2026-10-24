@@ -82,7 +82,7 @@ Status: active · Progress: 62/66 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T59 | Gate fix: create() accepts stageId outside its pipeline | agent | review | — |  | 2026-10-24 | create() refuses unknown pipelineId and stageId outside its pipeline (422); shared stageOf() helper with update() |
 | P7-T60 | E2E: change a deal's pipeline in the Edit deal sheet | agent | todo | — |  |  |  |
 | P7-T61 | Gate fix: update() pipeline move into a won/lost stage derives status | agent | todo | P7-T58 |  |  |  |
-| P7-T62 | Gate fix: create() into a won/lost stage derives status | agent | todo | — |  |  |  |
+| P7-T62 | Gate fix: create() into a won/lost stage derives status | agent | todo | P7-T61 |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md
