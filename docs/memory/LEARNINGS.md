@@ -251,3 +251,4 @@
 - 2026-10-24 [P7-T51] Adding a button inside an element located by exact getByText changes its text; put the message in its own element.
 - 2026-10-24 [P7-T51] A Base UI SelectTrigger's textContent includes the arrow icon text ('Sales Pipeline▼'); compare against option names or use toContainText.
 - 2026-10-24 [P7-T51] To prove a skeleton gate deterministically, trigger a new useResource cache key (page or pipeline change) while the other read's error persists.
+- 2026-10-24 [P7-T52] Base UI Checkbox spreads props onto the root (role=checkbox), so aria-invalid reaches the right element; checkbox.tsx already has aria-invalid styles.

@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import { localDayIn, readDeals } from "./calendar-helpers";
 import { expect, test } from "./fixtures";
@@ -42,6 +42,16 @@ async function openNewDeal(
   return { dialog, input, field };
 }
 
+/** The seeded Monthly Retainer custom currency field in the open deal sheet. */
+async function monthlyRetainer(page: Page, dialog: Locator) {
+  const input = dialog.getByLabel("Monthly Retainer", { exact: true });
+  const field = dialog
+    .locator('[data-slot="field"]')
+    .filter({ has: page.getByLabel("Monthly Retainer", { exact: true }) });
+  await expect(field).toHaveCount(1);
+  return { input, field };
+}
+
 test("Expected close refuses a year the shared day rule refuses", async ({
   page,
   gotoApp,
@@ -82,11 +92,7 @@ test("A custom currency amount too large to store is refused under its field", a
   gotoApp,
 }) => {
   const { dialog } = await openNewDeal(page, gotoApp);
-  const input = dialog.getByLabel("Monthly Retainer", { exact: true });
-  const field = dialog
-    .locator('[data-slot="field"]')
-    .filter({ has: page.getByLabel("Monthly Retainer", { exact: true }) });
-  await expect(field).toHaveCount(1);
+  const { input, field } = await monthlyRetainer(page, dialog);
 
   await input.fill("1e308");
   await expect(input).toHaveValue("1e308");
@@ -97,11 +103,32 @@ test("A custom currency amount too large to store is refused under its field", a
     dialog.getByRole("alert").filter({ hasText: "Deal name is required." }),
   ).toBeVisible();
   await expect(field.getByRole("alert")).toHaveText("Enter a number.");
-  // custom-fields-section.tsx marks the Field, not the input: it sets no
-  // aria-invalid (see the BACKLOG's aria-invalid entry).
+  // The Field carries data-invalid for styling; the input itself carries
+  // aria-invalid so assistive tech announces the error.
   await expect(field).toHaveAttribute("data-invalid", "true");
+  await expect(input).toHaveAttribute("aria-invalid", "true");
   await expect(input).toHaveValue("1e308");
   await expect(dialog).toBeVisible();
+});
+
+test("A valid custom currency amount leaves its input unmarked", async ({
+  page,
+  gotoApp,
+}) => {
+  const { dialog } = await openNewDeal(page, gotoApp);
+  const { input, field } = await monthlyRetainer(page, dialog);
+
+  await input.fill("1500");
+  await expect(input).toHaveValue("1500");
+  await dialog.getByRole("button", { name: "Create deal" }).click();
+
+  // The empty deal name proves validation ran, so the quiet field below is a
+  // verdict. No attribute at all, not aria-invalid="false".
+  await expect(
+    dialog.getByRole("alert").filter({ hasText: "Deal name is required." }),
+  ).toBeVisible();
+  await expect(field.getByRole("alert")).toHaveCount(0);
+  await expect(input).not.toHaveAttribute("aria-invalid");
 });
 
 test("Edit deal keeps a seeded deal's Expected close day through a save", async ({

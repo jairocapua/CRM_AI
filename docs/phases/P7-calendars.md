@@ -2342,12 +2342,23 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** custom-fields-section.tsx sets data-invalid on the Field only; set aria-invalid on inputs and assert it in e2e/deal-form.spec.ts custom-field test
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [x] A1: an invalid custom-field input has aria-invalid="true"
+  - [x] A2: a valid one has no aria-invalid attribute
+  - [x] A3: all control types are wired from the same flag
+  - [x] A4: the deal-form e2e asserts it
+  - [x] A5: the gate is green
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
 ### P7-T53 — TagPicker: keyboard path to retry a failed tags read
 - **Owner:** agent · **Depends:** —
 - **Scope:** Picker Retry in portaled ComboboxEmpty is mouse-only; contact/deal form sheets and bulk Tags popover have no page alert. Make Retry keyboard-reachable or add an inline alert.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-24
+
+### P7-T54 — Custom fields: e2e for aria-invalid on select, multiselect, textarea, date
+- **Owner:** agent · **Depends:** —
+- **Scope:** Create a required custom field of each type in settings, leave empty, submit deal form, assert aria-invalid on SelectTrigger/Checkbox/Textarea/date input
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-24

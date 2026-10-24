@@ -39,16 +39,22 @@ type CustomFieldRhf = {
 function CustomFieldControl({
   field,
   rhf,
+  invalid,
 }: {
   field: CustomField;
   rhf: CustomFieldRhf;
+  invalid: boolean;
 }) {
+  // `|| undefined` drops the attribute on a valid control rather than
+  // rendering aria-invalid="false".
+  const ariaInvalid = invalid || undefined;
   switch (field.type) {
     case "textarea":
       return (
         <Textarea
           id={field.id}
           placeholder={field.placeholder}
+          aria-invalid={ariaInvalid}
           value={typeof rhf.value === "string" ? rhf.value : ""}
           onChange={rhf.onChange}
           onBlur={rhf.onBlur}
@@ -62,6 +68,7 @@ function CustomFieldControl({
           type="number"
           inputMode="decimal"
           placeholder={field.placeholder}
+          aria-invalid={ariaInvalid}
           value={typeof rhf.value === "string" ? rhf.value : ""}
           onChange={rhf.onChange}
           onBlur={rhf.onBlur}
@@ -72,6 +79,7 @@ function CustomFieldControl({
         <Input
           id={field.id}
           type="date"
+          aria-invalid={ariaInvalid}
           value={typeof rhf.value === "string" ? rhf.value : ""}
           onChange={rhf.onChange}
           onBlur={rhf.onBlur}
@@ -83,7 +91,11 @@ function CustomFieldControl({
           value={typeof rhf.value === "string" ? rhf.value : ""}
           onValueChange={rhf.onChange}
         >
-          <SelectTrigger id={field.id} className="w-full">
+          <SelectTrigger
+            id={field.id}
+            className="w-full"
+            aria-invalid={ariaInvalid}
+          >
             <SelectValue placeholder={field.placeholder ?? "Select…"}>
               {(value: string) =>
                 field.options?.find((option) => option.value === value)
@@ -113,6 +125,7 @@ function CustomFieldControl({
               >
                 <Checkbox
                   checked={checked}
+                  aria-invalid={ariaInvalid}
                   onCheckedChange={(next) => {
                     rhf.onChange(
                       next
@@ -142,6 +155,7 @@ function CustomFieldControl({
                   : "text"
           }
           placeholder={field.placeholder}
+          aria-invalid={ariaInvalid}
           value={typeof rhf.value === "string" ? rhf.value : ""}
           onChange={rhf.onChange}
           onBlur={rhf.onBlur}
@@ -187,7 +201,11 @@ export function CustomFieldsSection<TValues extends FieldValues>({
                   {field.label}
                   {field.required ? " *" : ""}
                 </FieldLabel>
-                <CustomFieldControl field={field} rhf={rhf} />
+                <CustomFieldControl
+                  field={field}
+                  rhf={rhf}
+                  invalid={Boolean(fieldState.error)}
+                />
                 {field.helpText ? (
                   <FieldDescription>{field.helpText}</FieldDescription>
                 ) : null}

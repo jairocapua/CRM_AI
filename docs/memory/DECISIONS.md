@@ -307,3 +307,6 @@
 - 2026-10-24 [P7-T51] Local spec helpers retryFailsAgain(page, alert) and countTagBadges(page, tagNames); the alert-over-skeleton observer is duplicated in two tests for now.
 - 2026-10-24 [P7-T51] No new Vitest (no pure logic), no API/mock/seed changes, no SEED_VERSION bump.
 - 2026-10-24 [P7-T51] Board test's guard is the pipeline switch (new cache key shows skeleton while tags error persists); tagless test waits for readFaultThrows plus two frames before asserting no alert.
+- 2026-10-24 [P7-T52] aria-invalid goes on SelectTrigger, not the Select root, so Base UI's hidden input never gets it.
+- 2026-10-24 [P7-T52] `invalid || undefined` so a valid control renders no attribute rather than aria-invalid="false"; the new e2e fails on that regression.
+- 2026-10-24 [P7-T52] Checkbox-type custom field left unwired: its schema is z.boolean() and cannot be invalid.
