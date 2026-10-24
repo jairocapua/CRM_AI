@@ -2444,8 +2444,13 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T63 — Deal form keeps a changed lost reason
 - **Owner:** agent · **Depends:** —
 - **Scope:** Edit deal sheet: a changed lost reason on an already-lost deal (no move) is dropped; let update() accept lostReason in one write (also avoids the double Lost entry from moveDropsReason). Add a test.
+  Also: `enterStage()` in `src/lib/api/opportunities.ts` leaves a stale `lostReason` when a lost deal enters an open/won stage; delete it there so move()/update() agree with setStatus().
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] Vitest: update() accepts `lostReason` on a lost deal and stores it in one write with no new activity entry.
+  - [ ] Vitest: update() pipeline move into a lost stage with a `lostReason` stores the reason and logs exactly one `opportunity.lost` entry.
+  - [ ] Vitest: move()/update() of a lost deal into an open stage removes `lostReason` (key absent).
+  - [ ] The deal form's `moveDropsReason` → second `setStatus()` path is removed; the form sends the reason through update(). A test (Vitest or e2e with a lost stage set up) goes red if the typed reason is dropped or a second Lost entry is logged.
+  - [ ] `npm run check` is green.
 - **Refs:** added by `progress.mjs add` on 2026-10-25
 
 ## Exit criteria (phase gate)
