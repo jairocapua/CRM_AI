@@ -3,8 +3,8 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "./fixtures";
 
 /**
- * Shared helpers for the calendars specs, contact-picker.spec.ts and
- * deal-form.spec.ts. Not a spec itself: Playwright only collects `*.spec.ts`.
+ * Shared helpers for the calendars specs, contact-picker.spec.ts,
+ * deal-form.spec.ts and deal-pipeline-move.spec.ts. Not a spec itself: Playwright only collects `*.spec.ts`.
  */
 
 export type ViewName = "Month" | "Week" | "Day";
@@ -69,6 +69,14 @@ export interface PersistedAvailabilityRule {
   windows: { start: string; end: string }[];
 }
 
+/** One pipeline stage as the store keeps it. */
+export interface PersistedStage {
+  id: string;
+  name: string;
+  isWon?: boolean;
+  isLost?: boolean;
+}
+
 interface PersistedDb {
   state: {
     seededAt: string;
@@ -113,10 +121,15 @@ interface PersistedDb {
       {
         name: string;
         status: string;
+        pipelineId: string;
+        stageId: string;
         expectedCloseAt?: string;
+        closedAt?: string;
+        lostReason?: string;
         tagIds: string[];
       }
     >;
+    pipelines: Record<string, { name: string; stages: PersistedStage[] }>;
     tags: Record<string, { name: string }>;
   };
 }
@@ -217,8 +230,13 @@ export interface SeededDeal {
   id: string;
   name: string;
   status: string;
+  pipelineId: string;
+  stageId: string;
   /** As stored: a UTC ISO instant, or null when the deal has no date. */
   expectedCloseAt: string | null;
+  /** When the deal was won or lost, or null while it is open. */
+  closedAt: string | null;
+  lostReason: string | null;
   tagIds: string[];
 }
 
@@ -229,10 +247,39 @@ export async function readDeals(page: Page): Promise<SeededDeal[]> {
     id,
     name: deal.name,
     status: deal.status,
+    pipelineId: deal.pipelineId,
+    stageId: deal.stageId,
     expectedCloseAt: deal.expectedCloseAt ?? null,
+    closedAt: deal.closedAt ?? null,
+    lostReason: deal.lostReason ?? null,
     tagIds: deal.tagIds,
   }));
   expect(rows.length, "the seed has deals").toBeGreaterThan(0);
+  return rows;
+}
+
+/** One deal as persisted, by id. Throws when there is no such deal. */
+export async function readDeal(page: Page, id: string): Promise<SeededDeal> {
+  const deal = (await readDeals(page)).find((row) => row.id === id);
+  if (!deal) throw new Error(`No deal ${id}`);
+  return deal;
+}
+
+export interface SeededPipeline {
+  id: string;
+  name: string;
+  stages: PersistedStage[];
+}
+
+/** Every pipeline in the persisted database, stages in the store's order. */
+export async function readPipelines(page: Page): Promise<SeededPipeline[]> {
+  const { pipelines } = await readPersistedDb(page);
+  const rows = Object.entries(pipelines).map(([id, pipeline]) => ({
+    id,
+    name: pipeline.name,
+    stages: pipeline.stages,
+  }));
+  expect(rows.length, "the seed has pipelines").toBeGreaterThan(0);
   return rows;
 }
 

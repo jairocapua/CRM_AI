@@ -333,3 +333,8 @@
 - 2026-10-24 [P7-T59] stageOf() takes the stage message as a parameter: update() keeps 'Pick a stage from the new pipeline.', create() says 'Pick a stage from this pipeline.'.
 - 2026-10-24 [P7-T59] create() still stores status 'open' even in an isWon/isLost stage, matching update(); now stated in its doc comment.
 - 2026-10-24 [P7-T59] No e2e run: API-only change, and the deal form already sends a stage from the selected pipeline.
+- 2026-10-24 [P7-T60] Seeded pipelines/stages are found by constant seed names (Sales Pipeline, Client Onboarding / Agreement Signed / Kickoff Call, Renewals / Renewed, New Lead); stageOf/pickOpenSalesDeal throw clearly if renamed.
+- 2026-10-24 [P7-T60] Board cards are found by `a[href="/opportunities/<id>"]` and timeline entries by full quoted summary, because seeded deal names are not unique.
+- 2026-10-24 [P7-T60] The board is reached via the detail page's back link scoped to `main` (client-side nav, so no reload races the 250ms debounced save).
+- 2026-10-24 [P7-T60] Test B checks only the end state, never that a 'Won' entry is absent, so it stays green after P7-T61.
+- 2026-10-24 [P7-T60] No Vitest added: e2e coverage of existing behaviour; API rules already unit-tested in P7-T58/T59.

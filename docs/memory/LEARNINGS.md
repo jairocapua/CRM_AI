@@ -263,3 +263,8 @@
 - 2026-10-24 [P7-T57] A targeted `npx playwright test -g` run finished in ~11s; the full `npm run e2e` still runs `next build` via webServer.
 - 2026-10-24 [P7-T58] integrityReport() in src/lib/api/settings.ts is a handy oracle for orphan-reference tests: it lists lines like '<n> opportunities sit in a stage that does not exist'.
 - 2026-10-24 [P7-T59] A test store built with db.setState that sets only `opportunities` has no pipelines; any API path that checks pipelines (create(), update() pipeline moves) needs a pipelines fixture there, or every valid call gets a 422.
+- 2026-10-24 [P7-T60] Deal detail row in e2e: `page.locator('dl > div').filter({ has: page.locator('dt', { hasText: /^Label$/ }) }).locator('dd')`; Stage text includes probability ('Kickoff Call (60%)'), so use toContainText.
+- 2026-10-24 [P7-T60] Board 'Show lost' is a Base UI Switch found by `getByRole('switch', { name: 'Show lost' })`; it is component state and resets to off when the board remounts.
+- 2026-10-24 [P7-T60] Board columns are `<section aria-label="<stage> stage">`; scope with `getByRole('region', { name, exact: true })`. After switching pipelines, wait for a new region and 0 skeletons before asserting a card is absent.
+- 2026-10-24 [P7-T60] The deal status badge has no role/label; `page.locator('h1').locator('..').getByText(label, { exact: true })` finds it.
+- 2026-10-24 [P7-T60] The e2e box has no `python` (Windows Store alias exits 49); use the Edit tool or node for scripted edits.

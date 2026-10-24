@@ -2418,7 +2418,10 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** Edit deal, switch pipeline+stage, save; assert deal on new board, timeline 'Moved ... to <stage>', chosen status applied
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] Editing an open Sales Pipeline deal to another pipeline and a non-first stage with status Lost saves it there: the persisted record has the new pipelineId and stageId, status lost, closedAt set and the lost reason; the detail page shows the new Pipeline and Stage and a Lost badge (`e2e/deal-pipeline-move.spec.ts`)
+  - [ ] The deal's timeline shows `Moved "<deal>" to <new stage>` and `Lost "<deal>" - <reason>`; the deal shows in that stage's column on the new pipeline's board (with Show lost on, since a lost deal is hidden by default) and no longer on the old pipeline's board
+  - [ ] Choosing a won stage in the new pipeline defaults Status to Won, and an explicit Open chosen afterwards wins: the deal is persisted open with no closedAt, and the timeline shows the move into the won stage
+  - [ ] Each new test is seen red against a mutation of the code it covers; `npm run check` and `npm run e2e` are green
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
 ### P7-T61 — Gate fix: update() pipeline move into a won/lost stage derives status
