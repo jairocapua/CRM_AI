@@ -107,6 +107,13 @@ management notes).
   - [ ] e2e: merging tag A into B leaves B with the combined count and A gone.
 - **Refs:** `src/lib/api/tags.ts`
 
+### P9-T07 — e2e: create required custom fields via settings UI
+- **Owner:** agent · **Depends:** —
+- **Scope:** After P9-T04 lands, replace addRequiredCustomFields/DB_KEY in e2e/deal-form.spec.ts with the custom fields manager UI.
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-24
+
 ## Exit criteria (phase gate)
 - [ ] Add a stage → the board shows the column (e2e).
 - [ ] The integrity report is clean after each destructive settings action.

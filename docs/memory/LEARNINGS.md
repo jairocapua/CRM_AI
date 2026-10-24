@@ -254,3 +254,7 @@
 - 2026-10-24 [P7-T52] Base UI Checkbox spreads props onto the root (role=checkbox), so aria-invalid reaches the right element; checkbox.tsx already has aria-invalid styles.
 - 2026-10-24 [P7-T53] For "exactly one X" checks, don't use retrying toHaveCount(1) when an unwanted second X can appear before the wanted one; wait for a state where both would exist, then count() once.
 - 2026-10-24 [P7-T53] The contacts table's tags LoadError renders only after the contacts page loads, while TagPicker's error shows as soon as the shared 'tags' resource fails, so the picker's alert can appear first.
+- 2026-10-24 [P7-T54] The multiselect custom field's FieldLabel htmlFor points at no element, so getByLabel misses it; locate via [data-slot=field] filtered by [data-slot=field-label] hasText '<label> *'.
+- 2026-10-24 [P7-T54] Playwright locator.check() works on Base UI Checkbox roots; getByRole('checkbox') in a field returns one element per option (hidden input not counted).
+- 2026-10-24 [P7-T54] Init scripts run in registration order; by the second navigation the fixture's one-shot localStorage clear is done, so a later addInitScript write survives into rehydrate.
+- 2026-10-24 [P7-T54] Playwright's webServer rebuilds on every `npx playwright test`, so each mutation run costs a full next build (~1-2 min on Windows).

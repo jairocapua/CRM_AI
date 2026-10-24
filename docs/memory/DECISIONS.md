@@ -314,3 +314,6 @@
 - 2026-10-24 [P7-T53] Focus target found via anchor.current.querySelector('[data-slot="combobox-chip-input"]'); ui/combobox.tsx unchanged.
 - 2026-10-24 [P7-T53] Inline LoadError sits in a flex-col gap-2 wrapper because Combobox.Root renders no DOM. New prop inlineLoadError (default true); contacts toolbar passes false (page alert exists).
 - 2026-10-24 [P7-T53] AC4 "one alert in main" waits for contact rows, then one-shot count(), since the toolbar alert can render before the table's.
+- 2026-10-24 [P7-T54] Custom fields injected into persisted DB by an init script on the 2nd navigation (no settings UI until P9-T04); page.evaluate would race the 250ms debounced persist that flushes on pagehide.
+- 2026-10-24 [P7-T54] E2E field labels 'E2E Tier/Channels/Brief/Kickoff', ids cf_e2e_*, positions 10-13, to avoid seeded collisions; labels read from frozen as-const REQUIRED_FIELDS[n].label.
+- 2026-10-24 [P7-T54] BACKLOG aria-invalid entry left alone: it never listed custom fields.

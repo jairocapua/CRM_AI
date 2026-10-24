@@ -15,6 +15,12 @@ import { expect, test } from "./fixtures";
  * closes, which fall on the next day in Singapore, so the sheet must show the
  * viewer's local day and save that day's local midnight. A form that read or
  * wrote the UTC day would move the close by a day on every save.
+ *
+ * The custom-field tests cover aria-invalid on each control type: the seeded
+ * Monthly Retainer (a currency input), plus required select, multiselect,
+ * textarea and date fields the spec adds to the persisted store itself
+ * (`addRequiredCustomFields`), since no settings screen for custom fields
+ * exists before P9-T04.
  */
 
 const ZONE = "Asia/Singapore";
@@ -51,6 +57,222 @@ async function monthlyRetainer(page: Page, dialog: Locator) {
   await expect(field).toHaveCount(1);
   return { input, field };
 }
+
+/** The mock database's localStorage key (src/lib/mock/db.ts). */
+const DB_KEY = "nimbus-crm-db";
+
+/**
+ * One required opportunity custom field per control type that P7-T52 gave
+ * aria-invalid. The labels are unique so no locator can match a seeded field.
+ */
+const REQUIRED_FIELDS = Object.freeze([
+  {
+    id: "cf_e2e_tier",
+    key: "e2e_tier",
+    label: "E2E Tier",
+    type: "select",
+    objectType: "opportunity",
+    group: "Deal",
+    required: true,
+    options: [
+      { value: "gold", label: "Gold" },
+      { value: "silver", label: "Silver" },
+    ],
+    position: 10,
+  },
+  {
+    id: "cf_e2e_channels",
+    key: "e2e_channels",
+    label: "E2E Channels",
+    type: "multiselect",
+    objectType: "opportunity",
+    group: "Deal",
+    required: true,
+    options: [
+      { value: "email", label: "Email" },
+      { value: "sms", label: "SMS" },
+      { value: "ads", label: "Ads" },
+    ],
+    position: 11,
+  },
+  {
+    id: "cf_e2e_brief",
+    key: "e2e_brief",
+    label: "E2E Brief",
+    type: "textarea",
+    objectType: "opportunity",
+    group: "Deal",
+    required: true,
+    position: 12,
+  },
+  {
+    id: "cf_e2e_kickoff",
+    key: "e2e_kickoff",
+    label: "E2E Kickoff",
+    type: "date",
+    objectType: "opportunity",
+    group: "Deal",
+    required: true,
+    position: 13,
+  },
+] as const);
+
+const TIER = REQUIRED_FIELDS[0].label;
+const CHANNELS = REQUIRED_FIELDS[1].label;
+const BRIEF = REQUIRED_FIELDS[2].label;
+const KICKOFF = REQUIRED_FIELDS[3].label;
+
+/**
+ * Adds REQUIRED_FIELDS to the persisted mock database. It stands in for the
+ * custom fields manager in settings, which arrives in P9-T04; once it does,
+ * this spec should create the fields through that screen instead.
+ *
+ * The first load writes the seed. The fields then go in through an init
+ * script on the next navigation (the caller's `openNewDeal`): by then the old
+ * page's pagehide has flushed the app's debounced (250ms) persist write, so
+ * that write cannot overwrite the injection, which writing from
+ * `page.evaluate` on the live page could. `version` stays as it is, so persist
+ * does not reseed, and `createdAt` is the seed's anchor, so no record lands
+ * after REF_DATE. A sessionStorage flag makes it one-shot per tab, like the
+ * fixture's storage clearing (whose own flag keeps it from wiping this data).
+ */
+async function addRequiredCustomFields(
+  page: Page,
+  gotoApp: (path: string) => Promise<void>,
+) {
+  await gotoApp("/opportunities");
+  await expect
+    .poll(() => page.evaluate((key) => localStorage.getItem(key), DB_KEY))
+    .not.toBeNull();
+  await page.addInitScript(
+    ({ key, fields }) => {
+      if (!location.protocol.startsWith("http")) return;
+      const FLAG = "e2e-custom-fields-added";
+      if (sessionStorage.getItem(FLAG)) return;
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      const persisted = JSON.parse(raw) as {
+        state: {
+          seededAt: string;
+          customFields: Record<string, unknown>;
+        };
+      };
+      const at = persisted.state.seededAt;
+      for (const field of fields) {
+        persisted.state.customFields[field.id] = {
+          ...field,
+          createdAt: at,
+          updatedAt: at,
+        };
+      }
+      localStorage.setItem(key, JSON.stringify(persisted));
+      sessionStorage.setItem(FLAG, "1");
+    },
+    { key: DB_KEY, fields: REQUIRED_FIELDS },
+  );
+}
+
+/**
+ * The Field of a required custom field, found by its ' *' label. Not
+ * `getByLabel`: the multiselect's FieldLabel points at no element (its
+ * checkboxes are labelled by their own options).
+ */
+async function requiredField(page: Page, dialog: Locator, label: string) {
+  const field = dialog.locator('[data-slot="field"]').filter({
+    has: page.locator('[data-slot="field-label"]', {
+      hasText: `${label} *`,
+    }),
+  });
+  await expect(field).toHaveCount(1);
+  return field;
+}
+
+/** The four injected fields' Fields and controls in the open deal sheet. */
+async function requiredControls(page: Page, dialog: Locator) {
+  const tier = await requiredField(page, dialog, TIER);
+  const channels = await requiredField(page, dialog, CHANNELS);
+  const brief = await requiredField(page, dialog, BRIEF);
+  const kickoff = await requiredField(page, dialog, KICKOFF);
+  const checkboxes = channels.getByRole("checkbox");
+  await expect(checkboxes).toHaveCount(3);
+  return {
+    fields: [
+      { label: TIER, field: tier },
+      { label: CHANNELS, field: channels },
+      { label: BRIEF, field: brief },
+      { label: KICKOFF, field: kickoff },
+    ],
+    select: tier.getByRole("combobox"),
+    checkboxes: await checkboxes.all(),
+    textarea: brief.getByRole("textbox"),
+    date: kickoff.locator('input[type="date"]'),
+  };
+}
+
+test("Required custom fields left empty mark every control type aria-invalid", async ({
+  page,
+  gotoApp,
+}) => {
+  await addRequiredCustomFields(page, gotoApp);
+  const { dialog } = await openNewDeal(page, gotoApp);
+  const { fields, select, checkboxes, textarea, date } = await requiredControls(
+    page,
+    dialog,
+  );
+
+  await dialog.getByRole("button", { name: "Create deal" }).click();
+
+  await expect(
+    dialog.getByRole("alert").filter({ hasText: "Deal name is required." }),
+  ).toBeVisible();
+  for (const { label, field } of fields) {
+    await expect(field.getByRole("alert")).toHaveText(`${label} is required.`);
+    await expect(field).toHaveAttribute("data-invalid", "true");
+  }
+  await expect(select).toHaveAttribute("aria-invalid", "true");
+  for (const checkbox of checkboxes) {
+    await expect(checkbox).toHaveAttribute("aria-invalid", "true");
+  }
+  await expect(textarea).toHaveAttribute("aria-invalid", "true");
+  await expect(date).toHaveAttribute("aria-invalid", "true");
+  await expect(dialog).toBeVisible();
+});
+
+test("Filled required custom fields of every control type stay unmarked", async ({
+  page,
+  gotoApp,
+}) => {
+  await addRequiredCustomFields(page, gotoApp);
+  const { dialog } = await openNewDeal(page, gotoApp);
+  const { fields, select, checkboxes, textarea, date } = await requiredControls(
+    page,
+    dialog,
+  );
+
+  await select.click();
+  await page.getByRole("option", { name: "Gold" }).click();
+  // The trigger's text includes its arrow icon, so not toHaveText.
+  await expect(select).toContainText("Gold");
+  await checkboxes[0]?.check();
+  await textarea.fill("Scope notes");
+  await date.fill("2026-10-01");
+  await dialog.getByRole("button", { name: "Create deal" }).click();
+
+  // The empty deal name proves validation ran, so the quiet fields below are
+  // a verdict. No attribute at all, not aria-invalid="false".
+  await expect(
+    dialog.getByRole("alert").filter({ hasText: "Deal name is required." }),
+  ).toBeVisible();
+  for (const { field } of fields) {
+    await expect(field.getByRole("alert")).toHaveCount(0);
+  }
+  await expect(select).not.toHaveAttribute("aria-invalid");
+  for (const checkbox of checkboxes) {
+    await expect(checkbox).not.toHaveAttribute("aria-invalid");
+  }
+  await expect(textarea).not.toHaveAttribute("aria-invalid");
+  await expect(date).not.toHaveAttribute("aria-invalid");
+});
 
 test("Expected close refuses a year the shared day rule refuses", async ({
   page,

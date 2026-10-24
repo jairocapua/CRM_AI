@@ -2362,10 +2362,15 @@ hours land around midnight–08:00 local; that is expected.
 
 ### P7-T54 — Custom fields: e2e for aria-invalid on select, multiselect, textarea, date
 - **Owner:** agent · **Depends:** —
-- **Scope:** Create a required custom field of each type in settings, leave empty, submit deal form, assert aria-invalid on SelectTrigger/Checkbox/Textarea/date input
+- **Scope:** Add a required opportunity custom field of each type (select, multiselect, textarea, date), leave them empty, submit the deal form, and assert aria-invalid on the SelectTrigger, every Checkbox, the Textarea and the date input. There is no settings screen for custom fields until P9-T04, so the spec adds the fields to the persisted store (`nimbus-crm-db`) through a one-shot init script; the spec should move to the real manager when P9-T04 lands.
 - **Acceptance:**
-  - [ ] (define before starting)
-- **Refs:** added by `progress.mjs add` on 2026-10-24
+  - [ ] A1: After the four required opportunity custom fields are added, the New deal sheet renders each of them with a ' *' label (e2e/deal-form.spec.ts: `requiredField` asserts one Field per label).
+  - [ ] A2: Submitting with them empty shows '<label> is required.' under each one and sets aria-invalid='true' on the select's SelectTrigger, every multiselect Checkbox, the Textarea and the date input (e2e 'Required custom fields left empty mark every control type aria-invalid').
+  - [ ] A3: Filled versions of the same fields carry no aria-invalid attribute at all (not 'false') and show no alert (e2e 'Filled required custom fields of every control type stay unmarked').
+  - [ ] A4: Each control's assertion can go red: removing aria-invalid from any one of the four controls in custom-fields-section.tsx fails the empty-fields test (four temporary mutation runs; the file is restored).
+  - [ ] A5: No app code changes. The fields are added only through the spec's documented one-shot init script, with createdAt at seededAt and the persist version unchanged (no reseed); the helper's doc comment names P9-T04 as the future settings path.
+  - [ ] A6: The gate is green: `npm run check`, then `npm run e2e` (one after the other).
+- **Refs:** added by `progress.mjs add` on 2026-10-24; P7-T52 (the aria-invalid wiring); P9-T04 (custom fields manager)
 
 ### P7-T55 — TagPicker: tighten inline Retry focus-restore flag
 - **Owner:** agent · **Depends:** —
