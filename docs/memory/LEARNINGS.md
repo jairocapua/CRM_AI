@@ -243,3 +243,6 @@
 - 2026-10-24 [P7-T48] The e2e _rsc / next-router-prefetch interception in calendars-availability-editor.spec.ts still works on Next 16.4.3 (wire format unchanged from 16.3.4).
 - 2026-10-24 [P7-T48] On Windows the `crm` preview dev server holds node_modules/next open; preview_stop it before npm install of next, then preview_start crm.
 - 2026-10-24 [P7-T49] In Git Bash, an inline `node -e '...'` breaks on any apostrophe in the source text; write the edit script to a scratchpad file and run that instead.
+- 2026-10-24 [P7-T50] custom-fields-section.tsx marks only the Field (data-invalid); its inputs set no aria-invalid, so an e2e expecting aria-invalid there fails even when validation works.
+- 2026-10-24 [P7-T50] parseCents('Infinity') returns 0 but parseCents('1e308') returns Infinity (finite amount, overflowing cents); a currency check must test the cents value.
+- 2026-10-24 [P7-T50] Python is not on PATH in this Windows environment; use the Edit tool or node for scripted edits.

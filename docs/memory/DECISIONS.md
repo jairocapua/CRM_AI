@@ -298,3 +298,6 @@
 - 2026-10-24 [P7-T48] shadcn lockfile resolution moved 4.21.0 -> 4.22.1 via npm audit fix (within ^4.21.0), dropping its nested zod 3.25.76; zod root 4.5.4 -> 4.6.7. package.json not edited for either.
 - 2026-10-24 [P7-T49] userMenu(page) keeps the exact unscoped page-wide getByRole locator, so the phone Sheet test resolves the same element.
 - 2026-10-24 [P7-T49] Kept `import type { Page }` in both specs (other local helpers use it); no Review/Skills lines added, matching neighbouring added tasks.
+- 2026-10-24 [P7-T50] D1: number fields use Number.isFinite(Number(v)); currency uses Number.isFinite(Number(v) * 100) (parseCents scale). Message stays 'Enter a number.'; required messages unchanged.
+- 2026-10-24 [P7-T50] D2: deal Value field (buildOpportunityFormSchema.value) out of scope; recorded in docs/BACKLOG.md. D3: API schemas unchanged.
+- 2026-10-24 [P7-T50] e2e asserts the Field's data-invalid='true', not the input's aria-invalid (custom-fields-section.tsx sets none; component changes out of scope). A3 reworded to match.

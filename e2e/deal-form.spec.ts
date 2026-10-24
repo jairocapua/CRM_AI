@@ -73,6 +73,37 @@ test("Expected close accepts a real day", async ({ page, gotoApp }) => {
   await expect(input).not.toHaveAttribute("aria-invalid");
 });
 
+// Chromium's number input will not take 'Infinity' and reads '1e400' as
+// empty, so the value a user can really hit is a dollar amount that is finite
+// but whose cents are not. Before P7-T50 it reached the API and came back as
+// a 422 toast; now it is refused under its field.
+test("A custom currency amount too large to store is refused under its field", async ({
+  page,
+  gotoApp,
+}) => {
+  const { dialog } = await openNewDeal(page, gotoApp);
+  const input = dialog.getByLabel("Monthly Retainer", { exact: true });
+  const field = dialog
+    .locator('[data-slot="field"]')
+    .filter({ has: page.getByLabel("Monthly Retainer", { exact: true }) });
+  await expect(field).toHaveCount(1);
+
+  await input.fill("1e308");
+  await expect(input).toHaveValue("1e308");
+  await dialog.getByRole("button", { name: "Create deal" }).click();
+
+  // The empty deal name proves validation ran.
+  await expect(
+    dialog.getByRole("alert").filter({ hasText: "Deal name is required." }),
+  ).toBeVisible();
+  await expect(field.getByRole("alert")).toHaveText("Enter a number.");
+  // custom-fields-section.tsx marks the Field, not the input: it sets no
+  // aria-invalid (see the BACKLOG's aria-invalid entry).
+  await expect(field).toHaveAttribute("data-invalid", "true");
+  await expect(input).toHaveValue("1e308");
+  await expect(dialog).toBeVisible();
+});
+
 test("Edit deal keeps a seeded deal's Expected close day through a save", async ({
   page,
   gotoApp,

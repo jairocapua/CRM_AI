@@ -191,8 +191,10 @@ function withoutKeys<T extends object, K extends keyof T>(
 
 /**
  * `base` (the stored deal, or create()'s defaults) with a parsed patch
- * applied. The one place a patch becomes an `Opportunity`, and it needs no
- * cast, so no `null` or `undefined` can reach the store:
+ * applied. The one place a patch becomes an `Opportunity`. Its own body has
+ * no cast: `withoutUndefined` (src/lib/api/patch.ts) casts once inside, which
+ * is what lets the spread type-check. No `null` or `undefined` can reach the
+ * store:
  *
  * - every key but the removable three is copied when it holds a value; an
  *   `undefined` one is skipped, the same as a missing key;

@@ -10,7 +10,39 @@ import { centsToInput, parseCents } from "@/lib/format";
  *
  * Nothing here is contact- or opportunity-specific — the shape is driven
  * entirely by the runtime `CustomField[]`, so both forms feed it unchanged.
+ *
+ * Number and currency fields refuse non-finite values ('Infinity', '1e400')
+ * here, under the field: stored, JSON would turn them into `null` on reload,
+ * and the opportunities API refuses them with a 422.
  */
+
+/** A number field's value is a finite number. */
+function isFiniteNumber(v: string): boolean {
+  return Number.isFinite(Number(v));
+}
+
+/**
+ * A currency field's value, typed in dollars, is finite once in cents. The
+ * `* 100` matches `parseCents`, so it can never return Infinity: '1e308'
+ * dollars is finite, its cents are not.
+ */
+function hasFiniteCents(v: string): boolean {
+  return Number.isFinite(Number(v) * 100);
+}
+
+function numericSchema(field: CustomField, isValid: (v: string) => boolean) {
+  return field.required
+    ? z
+        .string()
+        .trim()
+        .min(1, `${field.label} is required.`)
+        .refine(isValid, "Enter a number.")
+    : z
+        .string()
+        .trim()
+        .refine((v) => v === "" || isValid(v), "Enter a number.");
+}
+
 function customFieldValueSchema(field: CustomField) {
   switch (field.type) {
     case "checkbox":
@@ -20,20 +52,9 @@ function customFieldValueSchema(field: CustomField) {
         ? z.array(z.string()).min(1, `${field.label} is required.`)
         : z.array(z.string());
     case "number":
+      return numericSchema(field, isFiniteNumber);
     case "currency":
-      return field.required
-        ? z
-            .string()
-            .trim()
-            .min(1, `${field.label} is required.`)
-            .refine((v) => !Number.isNaN(Number(v)), "Enter a number.")
-        : z
-            .string()
-            .trim()
-            .refine(
-              (v) => v === "" || !Number.isNaN(Number(v)),
-              "Enter a number.",
-            );
+      return numericSchema(field, hasFiniteCents);
     default:
       return field.required
         ? z.string().trim().min(1, `${field.label} is required.`)

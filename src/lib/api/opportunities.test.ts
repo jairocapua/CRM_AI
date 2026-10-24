@@ -921,6 +921,34 @@ describe("setStatus()", () => {
     ]);
   });
 
+  it.each<OpportunityStatus>(["won", "lost", "abandoned", "open"])(
+    "%s on an unknown id is a 404 and writes nothing",
+    async (status) => {
+      const w = await world();
+      const before = {
+        deals: (await settle(w.api.list())).rows,
+        feed: await settle(w.activities.listRecent(100)),
+      };
+
+      await expect(
+        settle(w.api.setStatus("opp_missing", status, "Budget")),
+      ).rejects.toMatchObject({
+        name: "ApiError",
+        status: 404,
+        code: "NOT_FOUND",
+      });
+      expect({
+        deals: (await settle(w.api.list())).rows,
+        feed: await settle(w.activities.listRecent(100)),
+      }).toEqual(before);
+      // updatedAt included: the fixture deal is untouched.
+      expect(await settle(w.api.get(FIXTURE.id))).toEqual(FIXTURE);
+      await expect(settle(w.api.get("opp_missing"))).rejects.toMatchObject({
+        status: 404,
+      });
+    },
+  );
+
   it("won stores a new close date and no lost reason", async () => {
     const w = await world(FULL);
 

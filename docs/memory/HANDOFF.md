@@ -5,25 +5,25 @@
 ## Now
 - **Phase:** P7 Calendars (`active`)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T49 in review.
+- **Status:** P7-T50 in review.
 
 ## Last changes (this session)
-- P7-T49: e2e/fixtures.ts exports `userMenu(page)` (sidebar footer user-menu trigger; the one place P9-T02 updates).
-- calendars-availability-editor and smoke specs import it; "Jordan Reyes" now only in fixtures.ts.
-- New self-test in fixture.spec.ts (exactly one visible trigger on /dashboard). Gate green; e2e 123 passed.
+- P7-T50: custom number fields refuse non-finite values (Infinity, 1e400) inline; currency fields refuse amounts whose cents overflow (1e308).
+- New custom-fields.test.ts; setStatus() unknown-id 404 test (all 4 statuses, writes nothing); applyPatch JSDoc corrected.
+- deal-form e2e for Monthly Retainer '1e308' (asserts Field data-invalid). Gate and e2e green.
 
 ## Next up
-- **Agent:** P7-T50 (custom number fields `Number.isFinite`; setStatus() unknown-id 404 test; applyPatch doc), then P7-T51 (tags alert gating, TagPicker Retry, guard comment).
+- **Agent:** P7-T51 (tags alert gating, TagPicker Retry, guard comment), then P7-T52 (custom-field inputs set aria-invalid).
 
 ## Waiting on you
-- Review of P7-T49.
+- Review of P7-T50.
 - P7-H4: should an ended appointment that is already Cancelled stay frozen? Not blocking.
 
 ## Open suggestions (non-blocking review notes)
-- P7-T49: build userMenu's name from `CURRENT_USER.name` (wait for P9-T02); optionally add a phone-viewport case to the fixture self-test.
-- BACKLOG rows: leave guard user menu inside phone Sheet (P7-T43); negative years in INVALID_START message (P7-T44).
-- P7-T46: `parse()` reports only the first zod issue.
-- spec.md table header date (2026-09-08) predates P7-T48 re-verification of `next`.
+- P7-T50: NON_FINITE test comment true only for number fields; module doc could note currency Infinity became $0 / 1e308 became Infinity cents; widen BACKLOG aria-invalid entry to name custom-fields-section.tsx; comment that lostReason is irrelevant in the 404 test.
+- Deal Value field non-finite hole: in docs/BACKLOG.md (P7-T50 D2).
+- P7-T49: build userMenu's name from `CURRENT_USER.name` (after P9-T02); optional phone-viewport fixture case.
+- BACKLOG rows from P7-T43/T44; P7-T46 `parse()` reports first zod issue only; spec.md table date predates P7-T48.
 - Pre-existing React Compiler lint warnings (3): data-table.tsx:55, contact-form-sheet.tsx:183, opportunity-form-sheet.tsx:145.
 
 ## Blockers

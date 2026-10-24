@@ -2283,14 +2283,57 @@ hours land around midnight–08:00 local; that is expected.
 ### P7-T50 — Custom number fields: refuse non-finite values inline (Infinity, 1e400)
 - **Owner:** agent · **Depends:** —
 - **Scope:** From the P7-T46 review. src/lib/validation/custom-fields.ts number/currency checks use !Number.isNaN(Number(v)), so 'Infinity' and '1e400' pass the form and toCustomFieldsPatch stores Infinity; since P7-T46 the opportunities API's zod z.number() refuses it, so the deal form shows a 422 toast 'Deal details: Not a valid value.' instead of an inline field error (contacts likely store Infinity, which JSON turns into null on reload). Use Number.isFinite so the error shows on the field, for contacts and deals alike. Also pin the private writeStatus() error path: setStatus() on an unknown id is a 404 and writes no activity. Fix applyPatch's doc in opportunities.ts: its 'needs no cast' covers applyPatch only (withoutUndefined in src/lib/api/patch.ts casts inside).
+- **Skills:** `tdd`, `vitest`, `playwright-cli`
+  - Decided (D1): number fields accept only finite values
+    (`Number.isFinite(Number(v))`); currency fields accept only values whose
+    cents are finite (`Number.isFinite(Number(v) * 100)`, the scale
+    `parseCents` uses), so `parseCents` can never return Infinity. The message
+    stays "Enter a number." and the required messages are unchanged.
+  - Decided (D2): the deal Value field (`buildOpportunityFormSchema.value`)
+    has the same hole and is out of scope; it is a docs/BACKLOG.md entry.
+  - Decided (D3): the API schemas are unchanged.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] A1. A custom number field refuses non-finite input inline:
+        'Infinity', '-Infinity', '1e400' (required or optional) report "Enter
+        a number." on that field's key, and finite values including '', '0',
+        '-3.5', '1e308' still pass.
+  - [ ] A2. A custom currency field refuses any amount whose cents are not
+        finite ('Infinity', '1e400', '1e308') with "Enter a number.", and every
+        accepted number/currency value converts through toCustomFieldsPatch to
+        null or a finite number.
+  - [ ] A3. Contacts and deals alike: buildContactFormSchema and
+        buildOpportunityFormSchema both report the issue at
+        customFields.<key>; in the browser the deal sheet shows it under the
+        field (alert + the Field's `data-invalid`) and stays open instead of
+        a 422 toast. The custom field input itself sets no `aria-invalid`
+        (custom-fields-section.tsx); that is a follow-up, not this task.
+  - [ ] A4. setStatus() on an unknown id, for every status, is a 404
+        NOT_FOUND that writes no deal and no activity.
+  - [ ] A5. Every new test has been seen failing: the non-finite rows, the
+        currency '1e308' row and the e2e field alert are red against HEAD's
+        custom-fields.ts; the setStatus 404 test is red under a writeStatus
+        mutant that skips notFound; the remaining rows are positive controls.
+        applyPatch's JSDoc says its own body has no cast and that
+        withoutUndefined in src/lib/api/patch.ts casts inside.
+  - [ ] A6. No regression, nothing beyond scope: SEED_VERSION unchanged, no
+        faker call touched, nothing under src/lib/mock or src/components
+        changes, API schemas unchanged; `npm run check` is green; the
+        deal-form e2e passes; `npm ls @tanstack/react-table` prints 8.21.3;
+        `node scripts/progress.mjs --check` is clean; the deal Value field
+        follow-up is recorded in docs/BACKLOG.md.
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
 ### P7-T51 — Contact detail + opportunity board/detail: surface tags.list load failure
 - **Owner:** agent · **Depends:** —
 - **Scope:** Info panel and opportunity board/detail read tags with ?? [] and stay silently empty on failure; show LoadError + Retry like P7-T47.
   - From the P7-T47 review: in src/components/modules/contacts/contacts-table.tsx (~:175) the tags alert is gated only on `!loadError`, so it can show above the skeleton during the contacts first load (a fault can fail tags.list before contacts.list lands). Gate it on the rows being on screen (`contactsPage.data !== undefined && !loadError`), matching its doc comment, and do the same on the new pages. TagPicker's "Could not load tags." state also appears in the contact and deal form sheets and the bulk Tags popover with no way to retry: add a small Retry in its ComboboxEmpty that calls `invalidate("tags")`. Add a comment that the "failed tag re-read with badges on screen keeps them" e2e is a regression guard (it passes without P7-T47's fix).
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-24
+
+### P7-T52 — Custom-field inputs set aria-invalid when invalid
+- **Owner:** agent · **Depends:** —
+- **Scope:** custom-fields-section.tsx sets data-invalid on the Field only; set aria-invalid on inputs and assert it in e2e/deal-form.spec.ts custom-field test
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-24
