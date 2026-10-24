@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 63/88 tasks done (72%) · **Current phase:** P7 · **Next agent task:** P7-T61 · **Awaiting review:** P7-T60 · **Blocked:** none · **Waiting on you:** none
+**Overall:** 64/88 tasks done (73%) · **Current phase:** P7 · **Next agent task:** P7-T61 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 63/66 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 64/66 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -80,7 +80,7 @@ Status: active · Progress: 63/66 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T57 | Gate fix: smoke-test /settings/demo-data | agent | done | — | ad1f798 | 2026-10-24 | Smoke test for /settings/demo-data: title, no skeleton, h1; npm run e2e 140 passed |
 | P7-T58 | Gate fix: update() pipelineId leaves orphan stageId | agent | done | — | 797a438 | 2026-10-24 | update() refuses a pipeline change without a matching stageId (422); valid move is one write + timeline entry |
 | P7-T59 | Gate fix: create() accepts stageId outside its pipeline | agent | done | — | 22e9d60 | 2026-10-24 | create() refuses unknown pipelineId and stageId outside its pipeline (422); shared stageOf() helper with update() |
-| P7-T60 | E2E: change a deal's pipeline in the Edit deal sheet | agent | review | — |  | 2026-10-24 | E2E: Edit deal moves pipeline+stage with Lost status; won-stage defaults Won, explicit Open wins |
+| P7-T60 | E2E: change a deal's pipeline in the Edit deal sheet | agent | done | — | 9e1fd90 | 2026-10-24 | E2E: Edit deal moves pipeline+stage with Lost status; won-stage defaults Won, explicit Open wins |
 | P7-T61 | Gate fix: update() pipeline move into a won/lost stage derives status | agent | todo | P7-T58 |  |  |  |
 | P7-T62 | Gate fix: create() into a won/lost stage derives status | agent | todo | P7-T61 |  |  |  |
 
