@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 61/87 tasks done (70%) · **Current phase:** P7 · **Next agent task:** P7-T59 · **Awaiting review:** P7-T58 · **Blocked:** none · **Waiting on you:** none
+**Overall:** 62/88 tasks done (70%) · **Current phase:** P7 · **Next agent task:** P7-T60 · **Awaiting review:** P7-T59 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 61/65 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 62/66 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -78,10 +78,11 @@ Status: active · Progress: 61/65 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T55 | TagPicker: tighten inline Retry focus-restore flag | agent | done | — | 082113c | 2026-10-24 | Retry focus flag set only in onRetry; any blur leaving wrapper clears it; e2e proves no focus steal |
 | P7-T56 | Reword setStatus() 409 for an ended, cancelled appointment | agent | done | — | f6f8944 | 2026-10-24 | 409 for ended, cancelled, rebooked appt now says it cannot be marked Showed/No Show; Vitest + e2e red-capable |
 | P7-T57 | Gate fix: smoke-test /settings/demo-data | agent | done | — | ad1f798 | 2026-10-24 | Smoke test for /settings/demo-data: title, no skeleton, h1; npm run e2e 140 passed |
-| P7-T58 | Gate fix: update() pipelineId leaves orphan stageId | agent | review | — |  | 2026-10-24 | update() refuses a pipeline change without a matching stageId (422); valid move is one write + timeline entry |
-| P7-T59 | Gate fix: create() accepts stageId outside its pipeline | agent | todo | — |  |  |  |
+| P7-T58 | Gate fix: update() pipelineId leaves orphan stageId | agent | done | — | 797a438 | 2026-10-24 | update() refuses a pipeline change without a matching stageId (422); valid move is one write + timeline entry |
+| P7-T59 | Gate fix: create() accepts stageId outside its pipeline | agent | review | — |  | 2026-10-24 | create() refuses unknown pipelineId and stageId outside its pipeline (422); shared stageOf() helper with update() |
 | P7-T60 | E2E: change a deal's pipeline in the Edit deal sheet | agent | todo | — |  |  |  |
 | P7-T61 | Gate fix: update() pipeline move into a won/lost stage derives status | agent | todo | P7-T58 |  |  |  |
+| P7-T62 | Gate fix: create() into a won/lost stage derives status | agent | todo | — |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md

@@ -262,3 +262,4 @@
 - 2026-10-24 [P7-T56] An e2e copy of a seeded appointment can be injected with addInitScript plus a one-shot sessionStorage flag, then gotoApp; the fixture's storage-clear has already run, so the injected data survives.
 - 2026-10-24 [P7-T57] A targeted `npx playwright test -g` run finished in ~11s; the full `npm run e2e` still runs `next build` via webServer.
 - 2026-10-24 [P7-T58] integrityReport() in src/lib/api/settings.ts is a handy oracle for orphan-reference tests: it lists lines like '<n> opportunities sit in a stage that does not exist'.
+- 2026-10-24 [P7-T59] A test store built with db.setState that sets only `opportunities` has no pipelines; any API path that checks pipelines (create(), update() pipeline moves) needs a pipelines fixture there, or every valid call gets a 422.

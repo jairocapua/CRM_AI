@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { Opportunity, OpportunityStatus } from "@/types";
+import type { Opportunity, OpportunityStatus, Pipeline } from "@/types";
 import {
   freshModules,
   seededWorld,
@@ -161,6 +161,27 @@ const DRAFT = {
   stageId: FIXTURE.stageId,
 };
 
+/**
+ * The pipeline DRAFT and FIXTURE sit in, so a valid create() in `world()`
+ * passes its pipeline and stage check (P7-T59).
+ */
+const PIPELINE_FIXTURE: Pipeline = {
+  id: FIXTURE.pipelineId,
+  name: "Fixture pipeline",
+  position: 0,
+  stages: STAGES.map((s, i) => ({
+    id: s.id,
+    name: `Stage ${s.id}`,
+    position: i,
+    color: "slate",
+    probability: s.probability,
+  })),
+  isDefault: true,
+  currency: "USD",
+  createdAt: AT,
+  updatedAt: AT,
+};
+
 /** The 422 every refused expected close gets, word for word. */
 const INVALID_CLOSE = {
   status: 422,
@@ -176,7 +197,10 @@ async function world(start: Opportunity = FIXTURE) {
   const { db } = await import("@/lib/mock/db");
   const api = await import("./opportunities");
   const activities = await import("./activities");
-  db.setState({ opportunities: { [start.id]: start } });
+  db.setState({
+    opportunities: { [start.id]: start },
+    pipelines: { [PIPELINE_FIXTURE.id]: PIPELINE_FIXTURE },
+  });
   return { api, activities };
 }
 
@@ -977,10 +1001,15 @@ describe("the demo clock", () => {
     const storage = stubLocalStorage();
     const { db } = await import("@/lib/mock/db");
     const api = await import("./opportunities");
-    db.setState({ seededAt: AT, opportunities: { [FIXTURE.id]: FIXTURE } });
+    db.setState({
+      seededAt: AT,
+      opportunities: { [FIXTURE.id]: FIXTURE },
+      pipelines: { [PIPELINE_FIXTURE.id]: PIPELINE_FIXTURE },
+    });
 
     const refused = [
       () => api.create({ ...DRAFT, expectedCloseAt: "banana" }),
+      () => api.create({ ...DRAFT, stageId: "nope" }),
       () => api.update(FIXTURE.id, { expectedCloseAt: "banana" }),
       () => api.update(FIXTURE.id, null as unknown as OpportunityPatch),
       () => api.create({ ...DRAFT, name: null } as unknown as OpportunityDraft),
@@ -996,28 +1025,105 @@ describe("the demo clock", () => {
   });
 });
 
-describe("update() moving a deal to another pipeline", () => {
-  /** A seeded store, its first deal, and a pipeline that deal is not in. */
-  async function pipelineWorld() {
-    const { db } = await seededWorld();
-    const api = await import("./opportunities");
-    const settings = await import("./settings");
-    const activities = await import("./activities");
-    const state = db.getState();
-    const deal = Object.values(state.opportunities)[0]!;
-    const other = Object.values(state.pipelines).find(
-      (p) => p.id !== deal.pipelineId,
-    )!;
-    expect(other).toBeDefined();
-    const stageProblems = async () =>
-      (await settle(settings.integrityReport())).filter((line) =>
-        /stage that does not exist/.test(line),
-      );
-    const timeline = () =>
-      settle(activities.listForContact(deal.contactId, 1000));
-    return { db, api, deal, other, stageProblems, timeline };
-  }
+/** A seeded store, its first deal, and a pipeline that deal is not in. */
+async function pipelineWorld() {
+  const { db } = await seededWorld();
+  const api = await import("./opportunities");
+  const settings = await import("./settings");
+  const activities = await import("./activities");
+  const state = db.getState();
+  const deal = Object.values(state.opportunities)[0]!;
+  const other = Object.values(state.pipelines).find(
+    (p) => p.id !== deal.pipelineId,
+  )!;
+  expect(other).toBeDefined();
+  const stageProblems = async () =>
+    (await settle(settings.integrityReport())).filter((line) =>
+      /stage that does not exist/.test(line),
+    );
+  const timeline = () =>
+    settle(activities.listForContact(deal.contactId, 1000));
+  const dealCount = () => Object.keys(db.getState().opportunities).length;
+  return { db, api, deal, other, stageProblems, timeline, dealCount };
+}
 
+describe("create() places a deal in a stage of its pipeline", () => {
+  it("create() with a stage from another pipeline leaves no deal in a missing stage", async () => {
+    const w = await pipelineWorld();
+    const countBefore = w.dealCount();
+    const before = await w.timeline();
+
+    const outcome = await settle(
+      w.api.create({
+        name: "Cross-pipeline deal",
+        contactId: w.deal.contactId,
+        pipelineId: w.other.id,
+        stageId: w.deal.stageId,
+      }),
+    ).catch((error: unknown) => error);
+
+    // The store first: before P7-T59 the create resolved and stored a deal
+    // in a stage its pipeline does not have.
+    expect(await w.stageProblems()).toEqual([]);
+    expect(outcome).toMatchObject({
+      status: 422,
+      code: "INVALID_OPPORTUNITY",
+      field: "stageId",
+      message: "Stage: Pick a stage from this pipeline.",
+    });
+    expect(w.dealCount()).toBe(countBefore);
+    expect(await w.timeline()).toEqual(before);
+  });
+
+  it("create() refuses an unknown pipeline", async () => {
+    const w = await pipelineWorld();
+    const countBefore = w.dealCount();
+
+    await expect(
+      settle(
+        w.api.create({
+          name: "Nowhere deal",
+          contactId: w.deal.contactId,
+          pipelineId: "pipe_nope",
+          stageId: w.deal.stageId,
+        }),
+      ),
+    ).rejects.toMatchObject({
+      status: 422,
+      code: "INVALID_OPPORTUNITY",
+      field: "pipelineId",
+      message: "Pipeline: No pipeline has this id.",
+    });
+
+    expect(w.dealCount()).toBe(countBefore);
+  });
+
+  it("create() with a stage of its own pipeline saves and stays clean", async () => {
+    const w = await pipelineWorld();
+    const stage = w.other.stages[0]!;
+    const countInStage = Object.values(w.db.getState().opportunities).filter(
+      (o) => o.stageId === stage.id,
+    ).length;
+
+    const saved = await settle(
+      w.api.create({
+        name: "Clean deal",
+        contactId: w.deal.contactId,
+        pipelineId: w.other.id,
+        stageId: stage.id,
+      }),
+    );
+
+    const stored = await settle(w.api.get(saved.id));
+    expect(stored).toEqual(saved);
+    expect(stored.pipelineId).toBe(w.other.id);
+    expect(stored.stageId).toBe(stage.id);
+    expect(stored.position).toBe(countInStage);
+    expect(await w.stageProblems()).toEqual([]);
+  });
+});
+
+describe("update() moving a deal to another pipeline", () => {
   it("update() with only a new pipelineId leaves no deal in a missing stage", async () => {
     const w = await pipelineWorld();
 

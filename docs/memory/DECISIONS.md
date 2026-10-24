@@ -330,3 +330,6 @@
 - 2026-10-24 [P7-T58] update() does not derive status from the destination stage (unlike move()); setStatus() owns status/closedAt and the form applies the chosen status afterwards.
 - 2026-10-24 [P7-T58] updateSchema = editableSchema.extend({ stageId: optional }); OpportunityPatch widened with `& { stageId?: ID }`; stageId is pulled out before applyPatch.
 - 2026-10-24 [P7-T58] The acceptance test checks integrityReport() before the 422, so its red run shows the orphan stage itself.
+- 2026-10-24 [P7-T59] stageOf() takes the stage message as a parameter: update() keeps 'Pick a stage from the new pipeline.', create() says 'Pick a stage from this pipeline.'.
+- 2026-10-24 [P7-T59] create() still stores status 'open' even in an isWon/isLost stage, matching update(); now stated in its doc comment.
+- 2026-10-24 [P7-T59] No e2e run: API-only change, and the deal form already sends a stage from the selected pipeline.

@@ -89,9 +89,9 @@ const NOT_AN_AMOUNT = "Not a valid amount.";
  * value must pass. Every key is optional; `draftSchema` makes create()'s
  * required ones required. A key not named here is stripped by the parse, so
  * it can never reach the store. Ids are checked for shape only, not against
- * stored records, as `teamMemberIds` is on calendars. The one exception is a
- * pipeline change through update(), which must name a stored pipeline and
- * one of its stages (see update()).
+ * stored records, as `teamMemberIds` is on calendars. The one exception is
+ * the pipeline and stage: create(), and a pipeline change through update(),
+ * must name a stored pipeline and one of its stages (see `stageOf`).
  */
 const editableSchema = z.object({
   name: z.string().trim().min(1, "Can't be empty.").optional(),
@@ -245,6 +245,36 @@ export type OpportunityPatch = Partial<
   [K in RemovableKey]?: Opportunity[K] | null;
 } & { stageId?: ID };
 
+/**
+ * The stage `stageId` names in the stored pipeline `pipelineId`, the one
+ * check create() and update()'s pipeline change share. Throws a 422
+ * `INVALID_OPPORTUNITY` "Pipeline: No pipeline has this id." (`field`
+ * pipelineId) when the pipeline is not stored, then `stageMessage` (`field`
+ * stageId) when the stage is missing or belongs to another pipeline. Reads
+ * only, so a caller runs it before `nowIso()`.
+ */
+function stageOf(
+  state: ReturnType<typeof db.getState>,
+  pipelineId: ID,
+  stageId: ID | undefined,
+  stageMessage: string,
+): PipelineStage {
+  const pipeline = state.pipelines[pipelineId];
+  if (!pipeline) {
+    throw new ApiError(
+      "Pipeline: No pipeline has this id.",
+      422,
+      "INVALID_OPPORTUNITY",
+      "pipelineId",
+    );
+  }
+  const stage = pipeline.stages.find((s) => s.id === stageId);
+  if (!stage) {
+    throw new ApiError(stageMessage, 422, "INVALID_OPPORTUNITY", "stageId");
+  }
+  return stage;
+}
+
 function pushActivity(activity: Omit<Activity, "id">) {
   const record: Activity = { ...activity, id: newId("act") };
   db.setState((s) => ({
@@ -309,8 +339,16 @@ export type OpportunityDraft = OpportunityPatch &
  *   the deal form's words, with `field` the dotted path (see `parse`). A
  *   draft that is not an object is "Deal: Not a valid value." with no field.
  *   An expected close that is not one instant keeps P7-T35's message.
+ * - The pipeline and stage must be stored, and the stage must be one of that
+ *   pipeline's (see `stageOf`). Errors, in this order: 422 for the draft's
+ *   shape (above), then 422 `INVALID_OPPORTUNITY` "Pipeline: No pipeline has
+ *   this id." (`field` pipelineId), then "Stage: Pick a stage from this
+ *   pipeline." (`field` stageId).
  * - Every check runs before `nowIso()`, so a refused draft writes nothing and
  *   does not move the demo clock.
+ * - A new deal's status is "open" whatever its stage: create() does not
+ *   derive it from a stage's isWon/isLost, as update() does not (setStatus()
+ *   owns the status).
  * - `null` or `undefined` for expectedCloseAt, ownerId or lostReason means
  *   the deal has no such field: the key is left out, never stored.
  */
@@ -318,8 +356,15 @@ export async function create(draft: OpportunityDraft): Promise<Opportunity> {
   const opportunity = await simulate(
     () => {
       const parsed = parse(draftSchema, draft);
+      const state = db.getState();
+      stageOf(
+        state,
+        parsed.pipelineId,
+        parsed.stageId,
+        "Stage: Pick a stage from this pipeline.",
+      );
       const at = nowIso();
-      const siblings = Object.values(db.getState().opportunities).filter(
+      const siblings = Object.values(state.opportunities).filter(
         (o) => o.stageId === parsed.stageId,
       );
       const record = applyPatch(
@@ -412,27 +457,15 @@ export async function update(
     const targetPipelineId =
       fields.pipelineId !== prev.pipelineId ? fields.pipelineId : undefined;
 
-    let stage: PipelineStage | undefined;
-    if (targetPipelineId !== undefined) {
-      const pipeline = state.pipelines[targetPipelineId];
-      if (!pipeline) {
-        throw new ApiError(
-          "Pipeline: No pipeline has this id.",
-          422,
-          "INVALID_OPPORTUNITY",
-          "pipelineId",
-        );
-      }
-      stage = pipeline.stages.find((s) => s.id === stageId);
-      if (!stage) {
-        throw new ApiError(
-          "Stage: Pick a stage from the new pipeline.",
-          422,
-          "INVALID_OPPORTUNITY",
-          "stageId",
-        );
-      }
-    }
+    const stage =
+      targetPipelineId === undefined
+        ? undefined
+        : stageOf(
+            state,
+            targetPipelineId,
+            stageId,
+            "Stage: Pick a stage from the new pipeline.",
+          );
 
     const at = nowIso();
     const next = applyPatch({ ...prev, updatedAt: at }, fields, patch);

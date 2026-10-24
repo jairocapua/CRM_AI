@@ -2407,7 +2407,11 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** draftSchema checks shape only; refuse a stageId not in pipelineId with 422 INVALID_OPPORTUNITY; Vitest via integrityReport()
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] New Vitest: create() with a stageId from another pipeline is a 422 `INVALID_OPPORTUNITY` (field `stageId`, "Stage: Pick a stage from this pipeline."), and integrityReport() then shows no deal in a missing stage. It fails before the fix.
+  - [ ] create() with an unknown pipelineId is a 422 `INVALID_OPPORTUNITY` with field `pipelineId` ("Pipeline: No pipeline has this id.").
+  - [ ] A refused create writes nothing: no new deal, no timeline entry, and the demo clock does not move.
+  - [ ] A valid create in a seeded store stays clean in integrityReport(), and update()'s P7-T58 pipeline-move behaviour is unchanged (shared `stageOf()` helper).
+  - [ ] `npm run check` is green.
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
 ### P7-T60 — E2E: change a deal's pipeline in the Edit deal sheet
@@ -2422,6 +2426,13 @@ hours land around midnight–08:00 local; that is expected.
 - **Scope:** src/lib/api/opportunities.ts update() pipeline-change branch (+ opportunities.test.ts). Make it match move(): a target stage with isWon/isLost sets status and closedAt and logs opportunity.won/opportunity.lost, otherwise status open; share one stage-change helper with move() so the activity entries cannot drift. Check the deal form's statusAfterMove in opportunity-form-sheet.tsx still applies the explicit status afterwards.
 - **Acceptance:**
   - [ ] Vitest: update({pipelineId, stageId: <won stage>}) leaves status won with closedAt and a won activity, same for lost; an open target stage keeps status open; red before the fix. npm run check green.
+- **Refs:** added by `progress.mjs add` on 2026-10-24
+
+### P7-T62 — Gate fix: create() into a won/lost stage derives status
+- **Owner:** agent · **Depends:** —
+- **Scope:** create() into an isWon/isLost stage stores status 'open'; derive status/closedAt like move(). Pair with P7-T61 (same gap in update()).
+- **Acceptance:**
+  - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
 ## Exit criteria (phase gate)
