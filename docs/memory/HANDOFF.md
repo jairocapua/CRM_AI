@@ -5,27 +5,24 @@
 ## Now
 - **Phase:** P7 Calendars (`active`, gate failed on 2026-10-24; fix tasks in progress)
 - **Branch:** `phase/p7-calendars`
-- **Status:** P7-T61 in review.
+- **Status:** P7-T62 **blocked** after 2 fix rounds. Code changes are uncommitted in the tree for inspection.
 
 ## Last change
-- P7-T61: update()'s pipeline move now derives status, closedAt and the won/lost/stage_changed entry from the target stage, through helpers shared with move() (`stageStatus` exported, `enterStage`, `stageEntryActivity`).
-- move() now deletes closedAt on an open stage instead of storing undefined.
-- Deal form uses `api.opportunities.stageStatus` (lost stages predicted too) and adds a `moveDropsReason` guard. The e2e Test B now expects `Won` then `Reopened`.
-- New task P7-T63: deal form keeps a changed lost reason.
+- P7-T62 (uncommitted): create() now takes status, closedAt and the won/lost entry from its stage via `enterStage`/`stageEntryActivity`; doc comment updated; tests in opportunities.test.ts, deal-form e2e and form sheet touched.
+- The only unmet item: `docs/memory/DECISIONS.md:334` still holds the P7-T59 line "create() still stores status 'open'...", now contradicting the code. No P7-T62 entry.
 
 ## Next up
-- **P7-T62** (depends on T61): same derivation for create(). Supersede the P7-T59 DECISIONS line and remove create()'s "until P7-T62" doc note.
-- Then P7-T63, then rerun the P7 gate: `Workflow({ name: 'build-phase', args: { gate: 'P7' } })`.
+- Fix: append under "During the build" a line like `- 2026-10-25 [P7-T62] Supersedes [P7-T59] "create() still stores status open...": create() now derives status, closedAt and the won/lost entry from its stage via enterStage/stageEntryActivity, shared with move().` Then say "run task P7-T62".
+- Then P7-T63, then rerun the P7 gate.
 
 ## Waiting on you (owner)
-- Review of P7-T61 (Autopilot reviews it).
-- Before merging P7: open `/calendars?view=week&date=2026-09-08` in your own timezone and check appointment times, zone label, now line and overlaps.
+- Add the DECISIONS line above (or tell Autopilot to), then "run task P7-T62".
+- Before merging P7: open `/calendars?view=week&date=2026-09-08` in your timezone and check times, zone label, now line, overlaps.
 
 ## Open suggestions (non-blocking)
-- P7-T61: `moveDropsReason` is untested and logs a second Lost entry (P7-T63 should fix both); `enterStage` keeps a stale `lostReason` on an open stage (setStatus clears it); `stageEntryActivity` could reuse the status from `enterStage`.
-- P7-T60: statusBadge() locator is layout-fragile; pickOpenSalesDeal should exclude isLost stages; move db readers to `e2e/db-helpers.ts`.
+- P7-T61: `moveDropsReason` untested and logs a second Lost entry (P7-T63); `enterStage` keeps a stale `lostReason` on an open stage.
+- P7-T60: statusBadge() locator is fragile; pickOpenSalesDeal should exclude isLost stages.
 - P7-T59: test create() with a missing stageId; map a `pipelineId` 422 onto the Pipeline field.
-- Pre-existing React Compiler lint warnings (3): data-table.tsx, contact-form-sheet.tsx, opportunity-form-sheet.tsx.
 
 ## Blockers
-- None.
+- P7-T62: DECISIONS.md P7-T59 line not superseded (see Next up).

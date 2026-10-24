@@ -270,3 +270,6 @@
 - 2026-10-24 [P7-T60] The e2e box has no `python` (Windows Store alias exits 49); use the Edit tool or node for scripted edits.
 - 2026-10-25 [P7-T61] The first seeded deal (Object.values(opportunities)[0]) is status 'won'; a pipeline-move status test must not compare against w.deal.status.
 - 2026-10-25 [P7-T61] No seeded stage has isLost: true; lost-stage tests must mark a stage lost in the test store with db.setState.
+- 2026-10-25 [P7-T62] create()'s 'created' and won/lost entries share the same `at`; assert with toContainEqual plus toHaveLength, not order.
+- 2026-10-25 [P7-T62] In e2e, wait for the New deal sheet's Pipeline combobox to show 'Sales Pipeline' before filling: the open effect resets the form.
+- 2026-10-25 [P7-T62] Memory-doc acceptance items (DECISIONS.md) are not edited by fix rounds; the implementer must touch docs/memory explicitly or the task blocks.
