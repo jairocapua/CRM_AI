@@ -56,7 +56,9 @@ function isCreatable(option: TagOption): option is CreatableOption {
  * alert with Retry) in normal DOM order below the input, where Tab from the
  * input reaches it. When a Retry from that alert succeeds, the alert unmounts
  * with focus on its button; focus goes back to the input rather than dropping
- * to `<body>`. Pass `inlineLoadError={false}` where the page already shows a
+ * to `<body>`. That happens only after this alert's own Retry was activated
+ * and while focus has not left the alert since: a tags read started elsewhere
+ * never moves focus here. Pass `inlineLoadError={false}` where the page already shows a
  * tags `LoadError` (the contacts toolbar's filter).
  */
 export function TagPicker({
@@ -84,11 +86,13 @@ export function TagPicker({
   const tags = useResource("tags", () => api.tags.list());
   const [query, setQuery] = useState("");
   const anchor = useComboboxAnchor();
-  // Whether focus is inside the inline alert. Chromium fires no blur when a
-  // focused element is removed, so after a successful Retry unmounts the
-  // alert this is still true, and the effect below puts focus back on the
-  // input instead of leaving it on <body>. A blur to another element clears
-  // it; the activeElement check covers a browser that does fire that blur.
+  // True once the inline alert's Retry was activated, until focus leaves the
+  // alert (any blur out of it, with or without an element receiving focus).
+  // Chromium fires no blur when a focused element is removed, so after a
+  // successful Retry unmounts the alert this is still true, and the effect
+  // below puts focus back on the input instead of leaving it on <body>. A
+  // tags read started elsewhere never sets it, so it never pulls focus here.
+  // The activeElement check covers a browser that does fire that blur.
   const retryHadFocus = useRef(false);
 
   const [createTag] = useAction(async (name: string) => {
@@ -224,17 +228,24 @@ export function TagPicker({
       </Combobox>
       {tagsError && inlineLoadError ? (
         <div
-          onFocus={() => {
-            retryHadFocus.current = true;
-          }}
           onBlur={(event) => {
-            if (event.relatedTarget) retryHadFocus.current = false;
+            // Any blur out of the wrapper, including one with no element
+            // receiving focus (a click on blank space, a window switch).
+            if (
+              !event.currentTarget.contains(event.relatedTarget as Node | null)
+            ) {
+              retryHadFocus.current = false;
+            }
           }}
         >
           <LoadError
             title="Could not load tags"
             message={tagsError.message}
-            onRetry={() => invalidate("tags")}
+            onRetry={() => {
+              // A native <button>: Enter and Space fire click too.
+              retryHadFocus.current = true;
+              invalidate("tags");
+            }}
             retrying={tags.isRefreshing}
           />
         </div>

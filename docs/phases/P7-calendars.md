@@ -2376,7 +2376,10 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** Set retryHadFocus on Retry click/keydown and clear on any blur leaving the wrapper, so a later read started elsewhere never pulls focus; add e2e with bulk popover + page alert.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] After the inline Retry was activated and focus then left the alert (any blur out of its wrapper, including one with no relatedTarget), a successful tags read started elsewhere (the contacts page's tags alert Retry) leaves focus where it was, not on the picker's input.
+  - [ ] An inline Retry that succeeds still returns focus to the tag input (contact sheet, deal sheet, bulk popover), and a Retry that fails again keeps focus on the busy Retry.
+  - [ ] The contacts toolbar still shows no inline alert, and the in-list mouse Retry still works.
+  - [ ] The gate is green, and the new e2e is red against the pre-change TagPicker.
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
 ### P7-T56 — Reword setStatus() 409 for an ended, cancelled appointment

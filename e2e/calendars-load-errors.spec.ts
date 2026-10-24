@@ -41,7 +41,8 @@ import { expect, NAVIGATION, test } from "./fixtures";
  * opportunity board and a deal's details panel, and the toolbar's tag filter,
  * whose own Retry re-reads every tags reader on the page, and the pickers in
  * the contact and deal sheets and the bulk Tags popover, whose inline alert
- * gives Retry a keyboard path that hands focus back to the input. A contact that
+ * gives Retry a keyboard path that hands focus back to the input (only after
+ * that picker's own Retry, never after a read started elsewhere). A contact that
  * does not exist keeps its "Contact not found" state, not the load error. A
  * re-read that fails with a list already on screen keeps the list, with no
  * error in its place (the booking dialog's open-times test and the contacts
@@ -1594,4 +1595,83 @@ test("tag picker: bulk Tags popover offers a keyboard Retry", async ({
     '[data-slot="popover-content"]',
     popover.getByRole("combobox", { name: "Tags", exact: true }),
   );
+});
+
+test("tag picker: a tags read started elsewhere does not pull focus into the bulk popover's picker", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/calendars");
+  await failTagsThenGo(page, "Contacts", /\/contacts$/);
+  await expect(contactRows(page)).toHaveCount(PAGE_SIZE);
+  // The page's own tags alert, not the popover's (which is portaled).
+  const pageAlert = page
+    .locator("main")
+    .getByRole("alert")
+    .filter({ hasText: TAGS_ERROR });
+  await expect(pageAlert).toBeVisible();
+  const pageRetry = pageAlert.getByRole("button", {
+    name: "Retry",
+    exact: true,
+  });
+
+  await contactRows(page).first().check();
+  await page
+    .locator("main")
+    .getByRole("button", { name: "Tags", exact: true })
+    .click();
+  const popover = page.locator('[data-slot="popover-content"]');
+  await expect(popover).toBeVisible();
+  const alert = popover.getByRole("alert").filter({ hasText: TAGS_ERROR });
+  await expect(alert).toBeVisible();
+  const retry = alert.getByRole("button", { name: "Retry", exact: true });
+  const input = popover.getByRole("combobox", { name: "Tags", exact: true });
+
+  // The inline Retry is activated (by Enter) and fails again, so the alert
+  // stays and the picker has a reason to remember its Retry.
+  await input.focus();
+  await page.keyboard.press("Tab");
+  await expect(retry).toBeFocused();
+  const readWatch = await watchRetry(page, '[data-slot="popover-content"]');
+  await page.keyboard.press("Enter");
+  await expect.poll(async () => (await readWatch()).sawBusy).toBe(true);
+  await expect(retry).toBeEnabled();
+  await expect(alert).toBeVisible();
+
+  // Focus leaves the alert with no element receiving it (relatedTarget
+  // null), as a click on blank space or a window switch does.
+  await page.evaluate(() =>
+    (document.activeElement as HTMLElement | null)?.blur(),
+  );
+  await expect(popover).toBeVisible();
+  await expect(alert).toBeVisible();
+  expect(
+    await page.evaluate(() => document.activeElement === document.body),
+  ).toBe(true);
+
+  // A read started elsewhere succeeds, with the popover and its picker still
+  // mounted. A real .click() would close the popover (an outside press) and
+  // let this test pass without proving anything. The synthetic click fires
+  // React's onClick with no press before it; Base UI's useDismiss ignores
+  // such a click only when it has a click count (`detail`), since a
+  // detail-0 click reads as a keyboard or assistive-technology activation,
+  // which does dismiss.
+  await restoreReads(page);
+  await pageRetry.dispatchEvent("click", { detail: 1 });
+  await expect(pageAlert).toHaveCount(0);
+  await expect(alert).toHaveCount(0);
+  await expect(popover).toBeVisible();
+  // Let any focus effect run before reading focus.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => setTimeout(resolve, 50)),
+        ),
+      ),
+  );
+  await expect(input).not.toBeFocused();
+  expect(
+    await page.evaluate(() => document.activeElement === document.body),
+  ).toBe(true);
 });

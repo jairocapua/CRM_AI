@@ -258,3 +258,4 @@
 - 2026-10-24 [P7-T54] Playwright locator.check() works on Base UI Checkbox roots; getByRole('checkbox') in a field returns one element per option (hidden input not counted).
 - 2026-10-24 [P7-T54] Init scripts run in registration order; by the second navigation the fixture's one-shot localStorage clear is done, so a later addInitScript write survives into rehydrate.
 - 2026-10-24 [P7-T54] Playwright's webServer rebuilds on every `npx playwright test`, so each mutation run costs a full next build (~1-2 min on Windows).
+- 2026-10-24 [P7-T55] Base UI non-modal Popover dismisses on outside clicks with detail 0 (virtual); Playwright dispatchEvent('click') sends detail 0, so pass { detail: 1 } to click outside without closing it (useDismiss.js 'Press-less clicks').
