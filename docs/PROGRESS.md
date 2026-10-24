@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 65/89 tasks done (73%) · **Current phase:** P7 · **Next agent task:** P7-T63 · **Awaiting review:** none · **Blocked:** P7-T62 · **Waiting on you:** none
+**Overall:** 66/89 tasks done (74%) · **Current phase:** P7 · **Next agent task:** P7-T63 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 65/67 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 66/67 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -82,7 +82,7 @@ Status: active · Progress: 65/67 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T59 | Gate fix: create() accepts stageId outside its pipeline | agent | done | — | 22e9d60 | 2026-10-24 | create() refuses unknown pipelineId and stageId outside its pipeline (422); shared stageOf() helper with update() |
 | P7-T60 | E2E: change a deal's pipeline in the Edit deal sheet | agent | done | — | 9e1fd90 | 2026-10-24 | E2E: Edit deal moves pipeline+stage with Lost status; won-stage defaults Won, explicit Open wins |
 | P7-T61 | Gate fix: update() pipeline move into a won/lost stage derives status | agent | done | P7-T58 | 81ab530 | 2026-10-25 | update() pipeline move derives status/closedAt/activity from target stage via helpers shared with move() |
-| P7-T62 | Gate fix: create() into a won/lost stage derives status | agent | blocked | P7-T61 |  | 2026-10-25 | Code done; DECISIONS.md P7-T59 line (334) not superseded after 2 fix rounds. Add a P7-T62 supersede line, then run task P7-T62. |
+| P7-T62 | Gate fix: create() into a won/lost stage derives status | agent | done | P7-T61 | ff13a39 | 2026-10-25 | Autopilot: committed by reviewer after workflow blocked on DECISIONS.md line |
 | P7-T63 | Deal form keeps a changed lost reason | agent | todo | — |  |  |  |
 
 ## P8 — Automation
