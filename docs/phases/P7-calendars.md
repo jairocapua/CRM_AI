@@ -2379,6 +2379,13 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
+### P7-T56 — Reword setStatus() 409 for an ended, cancelled appointment
+- **Owner:** agent · **Depends:** —
+- **Scope:** P7-H4 decided: an ended Cancelled appointment can still be marked Showed or No Show (no rule change). When its time has been rebooked, setStatus() answers 409 SLOT_UNAVAILABLE with 'Book a new slot instead.', which makes no sense for a past appointment. Give the ended case its own message (e.g. 'Another booking now holds this time, so this cancelled appointment cannot be marked Showed or No Show.') in src/lib/api/calendars.ts, keep the code SLOT_UNAVAILABLE, update the setStatus JSDoc, add a Vitest row for the ended+rebooked case and check the details dialog shows the new message
+- **Acceptance:**
+  - [ ] Ended+cancelled+rebooked setStatus to showed/no_show is a 409 SLOT_UNAVAILABLE with the ended-case message and writes nothing; a future cancelled+rebooked appointment keeps the old message; Vitest rows seen red; npm run check green
+- **Refs:** added by `progress.mjs add` on 2026-10-24
+
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
       timeline, and in the dashboard Upcoming card, and its slot disappears

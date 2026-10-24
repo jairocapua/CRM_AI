@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 57/81 tasks done (70%) · **Current phase:** P7 · **Next agent task:** P7-T55 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** P7-H4
+**Overall:** 58/82 tasks done (71%) · **Current phase:** P7 · **Next agent task:** P7-T56 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 57/59 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 58/60 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -58,7 +58,7 @@ Status: active · Progress: 57/59 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T36 | Booking dialog: error state and Retry when calendars.list fails | agent | done | — | 3e7c603 | 2026-10-24 | Calendar field LoadError + busy Retry, disabled select; e2e red on 3 mutants; P7-T30 e2e cleanups |
 | P7-T37 | Contacts list: error state instead of false 'No contacts found' on list failure | agent | done | — | 128a5a3 | 2026-10-24 | Contacts list shows LoadError+Retry on failed load/page change; new loadErrorOf helper replaces inline guards |
 | P7-T38 | useResource unit test: failed refetch keeps data for same query | agent | done | — | b5b8fe1 | 2026-10-24 | useResource hook test (happy-dom): failed refetch keeps data, new failing query drops it; 4 mutants red |
-| P7-H4 | Decide: should an ended, already-Cancelled appointment stay frozen? | human | todo | — |  |  |  |
+| P7-H4 | Decide: should an ended, already-Cancelled appointment stay frozen? | human | done | — |  | 2026-10-24 | Owner: allow changes (not frozen); see DECISIONS 2026-10-24 [P7-H4] |
 | P7-T39 | Name the remaining TagPickers and the contacts search box | agent | done | — | 1f06927 | 2026-10-24 | TagPicker aria-label prop; toolbar/bulk/deal TagPickers + contacts search named; 3 new e2e; P7-T28 doc fixes |
 | P7-T40 | ContactPicker: hold fetched contact for outside-set values | agent | done | — | 6b06212 | 2026-10-24 | useHeldValue hook holds first fetched copy per id; 4 hook tests (mutant-checked); shared e2e pick helpers; check+e2e green |
 | P7-T41 | Document the Base UI trigger exception in LinkButton JSDoc | agent | done | — | 3f4f697 | 2026-10-24 | LinkButton JSDoc names both nativeButton exceptions; lint-message clauses asserted once each; spec padding cause |
@@ -75,7 +75,8 @@ Status: active · Progress: 57/59 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T52 | Custom-field inputs set aria-invalid when invalid | agent | done | — | 662677d | 2026-10-24 | aria-invalid on all custom-field controls from one flag; e2e asserts true when invalid, absent when valid |
 | P7-T53 | TagPicker: keyboard path to retry a failed tags read | agent | done | — | 9e38443 | 2026-10-24 | TagPicker shows inline LoadError with keyboard Retry; focus returns to input on success; toolbar opts out |
 | P7-T54 | Custom fields: e2e for aria-invalid on select, multiselect, textarea, date | agent | done | — | 9aca3a8 | 2026-10-24 | e2e: required select/multiselect/textarea/date custom fields set aria-invalid when empty, none when filled |
-| P7-T55 | TagPicker: tighten inline Retry focus-restore flag | agent | todo | — |  |  |  |
+| P7-T55 | TagPicker: tighten inline Retry focus-restore flag | agent | in-progress | — |  | 2026-10-24 |  |
+| P7-T56 | Reword setStatus() 409 for an ended, cancelled appointment | agent | todo | — |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md

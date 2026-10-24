@@ -317,3 +317,4 @@
 - 2026-10-24 [P7-T54] Custom fields injected into persisted DB by an init script on the 2nd navigation (no settings UI until P9-T04); page.evaluate would race the 250ms debounced persist that flushes on pagehide.
 - 2026-10-24 [P7-T54] E2E field labels 'E2E Tier/Channels/Brief/Kickoff', ids cf_e2e_*, positions 10-13, to avoid seeded collisions; labels read from frozen as-const REQUIRED_FIELDS[n].label.
 - 2026-10-24 [P7-T54] BACKLOG aria-invalid entry left alone: it never listed custom fields.
+- 2026-10-24 [P7-H4] Owner decision: an ended appointment that is already Cancelled is NOT frozen. It can still be marked Showed or No Show (the current target-only rule in `canMoveToStatus` stays; no code change). The 409 SLOT_UNAVAILABLE check still applies when its time has been rebooked; P7-T56 rewords that message for an ended appointment.

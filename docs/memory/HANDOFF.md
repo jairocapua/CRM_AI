@@ -20,7 +20,7 @@
 - **Agent:** P7-T55 (tighten TagPicker's inline Retry focus-restore flag: set it on Retry activation, clear on any blur leaving the wrapper).
 
 ## Waiting on you
-- P7-H4: should an ended appointment that is already Cancelled stay frozen? Not blocking.
+- Nothing. P7-H4 decided 2026-10-24: not frozen (allow changes); P7-T56 rewords the 409 for that case.
 
 ## Open suggestions (non-blocking review notes)
 - BACKLOG rows added this session: userMenu phone self-test; custom-fields comment accuracy; TagPicker keyboard Retry (now P7-T53, done); load-error skeleton tests can pass vacuously (add `__sawSkeleton`); Deal Value non-finite amounts.
