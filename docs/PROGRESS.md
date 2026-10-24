@@ -9,11 +9,11 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 54/79 tasks done (68%) · **Current phase:** P7 · **Next agent task:** P7-T53 · **Awaiting review:** P7-T52 · **Blocked:** none · **Waiting on you:** P7-H4
+**Overall:** 55/80 tasks done (69%) · **Current phase:** P7 · **Next agent task:** P7-T54 · **Awaiting review:** P7-T53 · **Blocked:** none · **Waiting on you:** P7-H4
 <!-- summary:end -->
 
 ## P7 — Calendars
-Status: active · Progress: 54/58 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
+Status: active · Progress: 55/59 · Points: 7 (5 for Calendars + 2 for the test harness) · Branch: phase/p7-calendars · File: docs/phases/P7-calendars.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -72,9 +72,10 @@ Status: active · Progress: 54/58 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T49 | Shared userMenu(page) e2e helper | agent | done | — | a686dd7 | 2026-10-24 | userMenu(page) helper in e2e/fixtures.ts; specs import it; self-test in fixture.spec.ts; e2e 123 green |
 | P7-T50 | Custom number fields: refuse non-finite values inline (Infinity, 1e400) | agent | done | — | a92f13a | 2026-10-24 | Number fields require finite values, currency checks finite cents; setStatus 404 test; applyPatch JSDoc fixed |
 | P7-T51 | Contact detail + opportunity board/detail: surface tags.list load failure | agent | done | — | f2f0c34 | 2026-10-24 | Tags load errors with Retry on contacts table, contact panel, board, deal detail; TagPicker Retry; 5 new e2e |
-| P7-T52 | Custom-field inputs set aria-invalid when invalid | agent | review | — |  | 2026-10-24 | aria-invalid on all custom-field controls from one flag; e2e asserts true when invalid, absent when valid |
-| P7-T53 | TagPicker: keyboard path to retry a failed tags read | agent | todo | — |  |  |  |
+| P7-T52 | Custom-field inputs set aria-invalid when invalid | agent | done | — | 662677d | 2026-10-24 | aria-invalid on all custom-field controls from one flag; e2e asserts true when invalid, absent when valid |
+| P7-T53 | TagPicker: keyboard path to retry a failed tags read | agent | review | — |  | 2026-10-24 | TagPicker shows inline LoadError with keyboard Retry; focus returns to input on success; toolbar opts out |
 | P7-T54 | Custom fields: e2e for aria-invalid on select, multiselect, textarea, date | agent | todo | — |  |  |  |
+| P7-T55 | TagPicker: tighten inline Retry focus-restore flag | agent | todo | — |  |  |  |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md

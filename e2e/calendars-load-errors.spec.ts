@@ -39,7 +39,9 @@ import { expect, NAVIGATION, test } from "./fixtures";
  * whose skeleton the tags alert never sits above). The tag read fails the
  * same way on the other screens that draw tags: a contact's Tags card, the
  * opportunity board and a deal's details panel, and the toolbar's tag filter,
- * whose own Retry re-reads every tags reader on the page. A contact that
+ * whose own Retry re-reads every tags reader on the page, and the pickers in
+ * the contact and deal sheets and the bulk Tags popover, whose inline alert
+ * gives Retry a keyboard path that hands focus back to the input. A contact that
  * does not exist keeps its "Contact not found" state, not the load error. A
  * re-read that fails with a list already on screen keeps the list, with no
  * error in its place (the booking dialog's open-times test and the contacts
@@ -1405,6 +1407,18 @@ test("tag picker: Retry in a failed tag list re-reads the tags", async ({
     .click();
   await expect(page).toHaveURL(/\/contacts$/, NAVIGATION);
   const pageAlert = loadErrorAlert(page, TAGS_ERROR);
+  // Only the table's tags alert: the toolbar filter adds no inline one. The
+  // table's alert renders with the rows, so the count is read once both are
+  // on screen; a retrying toHaveCount(1) could pass on a toolbar alert alone.
+  await expect(contactRows(page)).toHaveCount(PAGE_SIZE);
+  await expect(pageAlert.first()).toBeVisible();
+  expect(
+    await page
+      .locator("main")
+      .getByRole("alert")
+      .filter({ hasText: TAGS_ERROR })
+      .count(),
+  ).toBe(1);
   await expect(pageAlert).toBeVisible();
 
   await tagFilter(page).click();
@@ -1450,4 +1464,134 @@ test("tag picker: Retry in a failed tag list re-reads the tags", async ({
   await expect(page.getByRole("listbox")).toHaveCount(0);
   await expect(pageAlert).toHaveCount(0);
   await expect(tagBadges(page).first()).toBeVisible();
+});
+
+/**
+ * Fails the tag read on the calendars page, then goes to `link` in the
+ * sidebar by a client-side navigation, so the fault survives.
+ */
+async function failTagsThenGo(page: Page, link: string, url: RegExp) {
+  await expectViewLoaded(page, "Month");
+  await failReads(page, "tags");
+  await page
+    .locator('[data-slot="sidebar"]')
+    .getByRole("link", { name: link, exact: true })
+    .click();
+  await expect(page).toHaveURL(url, NAVIGATION);
+}
+
+/**
+ * The keyboard path to a TagPicker's inline Retry (P7-T53): Tab from the tag
+ * input focuses the alert's Retry. With `failAgain`, Enter with the fault
+ * still on: the button goes busy, keeps focus and comes back, and the alert
+ * stays with no skeleton in `scope`. Then the fault clears and Enter removes
+ * the alert, puts focus back on the input, and the list offers tags.
+ */
+async function keyboardRetry(
+  page: Page,
+  container: Locator,
+  scope: string,
+  input: Locator,
+  { failAgain = false } = {},
+) {
+  const alert = container.getByRole("alert").filter({ hasText: TAGS_ERROR });
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText(FAULT_MESSAGE);
+  // Shown without opening the list.
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  const retry = alert.getByRole("button", { name: "Retry", exact: true });
+
+  await input.focus();
+  await page.keyboard.press("Tab");
+  await expect(retry).toBeFocused();
+
+  if (failAgain) {
+    const readWatch = await watchRetry(page, scope);
+    await page.keyboard.press("Enter");
+    await expect.poll(async () => (await readWatch()).sawBusy).toBe(true);
+    await expect(retry).toBeEnabled();
+    await expect(alert).toBeVisible();
+    await expect(alert).toContainText(FAULT_MESSAGE);
+    await expect(retry).toBeFocused();
+    expect(await readWatch()).toEqual({
+      sawBusy: true,
+      sawSkeleton: false,
+      sawLabelledSpinner: false,
+    });
+  }
+
+  await restoreReads(page);
+  await page.keyboard.press("Enter");
+  await expect(alert).toHaveCount(0);
+  await expect(input).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("option").first()).toBeVisible();
+  await expect(page.getByText(TAG_PICKER_ERROR, { exact: true })).toHaveCount(
+    0,
+  );
+}
+
+test("tag picker: contact form sheet: a failed tag read offers a keyboard Retry", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/calendars");
+  await failTagsThenGo(page, "Contacts", /\/contacts$/);
+  await expect(loadErrorAlert(page, TAGS_ERROR)).toBeVisible();
+
+  await page
+    .locator("main")
+    .getByRole("button", { name: "Add contact", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "Add contact" });
+  await expect(dialog).toBeVisible();
+  await keyboardRetry(
+    page,
+    dialog,
+    '[data-slot="sheet-content"]',
+    dialog.locator("#tagIds"),
+    { failAgain: true },
+  );
+});
+
+test("tag picker: deal form sheet shows the tags error with Retry", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/calendars");
+  await failTagsThenGo(page, "Opportunities", /\/opportunities$/);
+  await expect(loadErrorAlert(page, TAGS_ERROR)).toBeVisible();
+
+  await page.getByRole("button", { name: "New deal", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "New deal" });
+  await expect(dialog).toBeVisible();
+  await keyboardRetry(
+    page,
+    dialog,
+    '[data-slot="sheet-content"]',
+    dialog.locator("#tagIds"),
+  );
+});
+
+test("tag picker: bulk Tags popover offers a keyboard Retry", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/calendars");
+  await failTagsThenGo(page, "Contacts", /\/contacts$/);
+  await expect(contactRows(page)).toHaveCount(PAGE_SIZE);
+
+  await contactRows(page).first().check();
+  await page
+    .locator("main")
+    .getByRole("button", { name: "Tags", exact: true })
+    .click();
+  const popover = page.locator('[data-slot="popover-content"]');
+  await expect(popover).toBeVisible();
+  await keyboardRetry(
+    page,
+    popover,
+    '[data-slot="popover-content"]',
+    popover.getByRole("combobox", { name: "Tags", exact: true }),
+  );
 });

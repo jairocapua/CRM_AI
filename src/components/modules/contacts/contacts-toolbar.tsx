@@ -70,6 +70,8 @@ export function ContactsToolbar({
       <div className="w-56">
         <TagPicker
           aria-label="Filter by tags"
+          // The contacts table's "Could not load tags" alert covers it.
+          inlineLoadError={false}
           value={tagIds}
           onChange={onTagIdsChange}
         />

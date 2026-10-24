@@ -310,3 +310,7 @@
 - 2026-10-24 [P7-T52] aria-invalid goes on SelectTrigger, not the Select root, so Base UI's hidden input never gets it.
 - 2026-10-24 [P7-T52] `invalid || undefined` so a valid control renders no attribute rather than aria-invalid="false"; the new e2e fails on that regression.
 - 2026-10-24 [P7-T52] Checkbox-type custom field left unwired: its schema is z.boolean() and cannot be invalid.
+- 2026-10-24 [P7-T53] TagPicker focus restore needs a "focus was in the alert" ref (cleared only by a blur with relatedTarget) AND activeElement body/null, so it never steals focus.
+- 2026-10-24 [P7-T53] Focus target found via anchor.current.querySelector('[data-slot="combobox-chip-input"]'); ui/combobox.tsx unchanged.
+- 2026-10-24 [P7-T53] Inline LoadError sits in a flex-col gap-2 wrapper because Combobox.Root renders no DOM. New prop inlineLoadError (default true); contacts toolbar passes false (page alert exists).
+- 2026-10-24 [P7-T53] AC4 "one alert in main" waits for contact rows, then one-shot count(), since the toolbar alert can render before the table's.

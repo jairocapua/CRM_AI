@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PlusIcon, RotateCwIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
 import { invalidate, loadErrorOf, useAction, useResource } from "@/lib/api";
 import type { TagColor } from "@/types";
+import { LoadError } from "@/components/common/load-error";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -49,6 +50,14 @@ function isCreatable(option: TagOption): option is CreatableOption {
  * and the bulk Tags popover, which have no page-level tags alert, can
  * recover. Retry calls `invalidate("tags")`, so it re-reads every tags reader
  * on the page, not only this picker's.
+ *
+ * That in-list Retry is mouse-only: the list is portaled, and Tab from the
+ * chips input closes it. So the same error also shows as a `LoadError` (an
+ * alert with Retry) in normal DOM order below the input, where Tab from the
+ * input reaches it. When a Retry from that alert succeeds, the alert unmounts
+ * with focus on its button; focus goes back to the input rather than dropping
+ * to `<body>`. Pass `inlineLoadError={false}` where the page already shows a
+ * tags `LoadError` (the contacts toolbar's filter).
  */
 export function TagPicker({
   id,
@@ -56,6 +65,7 @@ export function TagPicker({
   value,
   onChange,
   disabled = false,
+  inlineLoadError = true,
 }: {
   /** Id for the text input, so a `<label htmlFor>` names it. */
   id?: string;
@@ -64,10 +74,22 @@ export function TagPicker({
   value: string[];
   onChange: (tagIds: string[]) => void;
   disabled?: boolean;
+  /**
+   * Shows a failed tags read as an alert with Retry below the input, the
+   * keyboard path to Retry (default). Pass false only where the page already
+   * shows a tags `LoadError`.
+   */
+  inlineLoadError?: boolean;
 }) {
   const tags = useResource("tags", () => api.tags.list());
   const [query, setQuery] = useState("");
   const anchor = useComboboxAnchor();
+  // Whether focus is inside the inline alert. Chromium fires no blur when a
+  // focused element is removed, so after a successful Retry unmounts the
+  // alert this is still true, and the effect below puts focus back on the
+  // input instead of leaving it on <body>. A blur to another element clears
+  // it; the activeElement check covers a browser that does fire that blur.
+  const retryHadFocus = useRef(false);
 
   const [createTag] = useAction(async (name: string) => {
     const color =
@@ -78,6 +100,16 @@ export function TagPicker({
   });
 
   const tagsError = loadErrorOf(tags);
+
+  useEffect(() => {
+    if (tagsError || !retryHadFocus.current) return;
+    retryHadFocus.current = false;
+    const active = document.activeElement;
+    if (active && active !== document.body) return;
+    anchor.current
+      ?.querySelector<HTMLInputElement>('[data-slot="combobox-chip-input"]')
+      ?.focus();
+  }, [tagsError, anchor]);
   const allTags = tags.data ?? [];
   const selected = allTags.filter((t) => value.includes(t.id));
 
@@ -100,92 +132,113 @@ export function TagPicker({
       : allTags;
 
   return (
-    <Combobox<TagOption, true>
-      items={itemsForView}
-      multiple
-      disabled={disabled}
-      value={selected}
-      isItemEqualToValue={(a, b) => a.id === b.id}
-      itemToStringLabel={(item) => item.name}
-      inputValue={query}
-      onInputValueChange={setQuery}
-      onValueChange={(next) => {
-        const creatable = next.find(isCreatable);
-        if (creatable) {
-          void createTag(creatable.creatable).then((tag) => {
-            onChange([...value, tag.id]);
-          });
-          setQuery("");
-          return;
-        }
-        onChange(next.map((t) => t.id));
-        setQuery("");
-      }}
-    >
-      <ComboboxChips ref={anchor}>
-        {selected.map((tag) => (
-          <ComboboxChip key={tag.id}>
-            <span
-              className={cn(
-                "size-1.5 rounded-full",
-                TAG_DOT_CLASSES[tag.color],
-              )}
-            />
-            {tag.name}
-          </ComboboxChip>
-        ))}
-        <ComboboxChipsInput
-          id={id}
-          aria-label={ariaLabel}
-          placeholder={selected.length ? "" : "Add tags…"}
-        />
-      </ComboboxChips>
-      <ComboboxContent anchor={anchor}>
-        <ComboboxList>
-          {(item: TagOption) =>
-            isCreatable(item) ? (
-              <ComboboxItem key={item.id} value={item}>
-                <PlusIcon className="size-4" />
-                Create &ldquo;{item.creatable}&rdquo;
-              </ComboboxItem>
-            ) : (
-              <ComboboxItem key={item.id} value={item}>
-                <span
-                  className={cn(
-                    "size-2 rounded-full",
-                    TAG_DOT_CLASSES[item.color],
-                  )}
-                />
-                {item.name}
-              </ComboboxItem>
-            )
+    // Combobox's root renders no element: this div holds the inline alert
+    // below the chips.
+    <div className="flex flex-col gap-2">
+      <Combobox<TagOption, true>
+        items={itemsForView}
+        multiple
+        disabled={disabled}
+        value={selected}
+        isItemEqualToValue={(a, b) => a.id === b.id}
+        itemToStringLabel={(item) => item.name}
+        inputValue={query}
+        onInputValueChange={setQuery}
+        onValueChange={(next) => {
+          const creatable = next.find(isCreatable);
+          if (creatable) {
+            void createTag(creatable.creatable).then((tag) => {
+              onChange([...value, tag.id]);
+            });
+            setQuery("");
+            return;
           }
-        </ComboboxList>
-        {tagsError ? (
-          <ComboboxEmpty className="flex-col items-center gap-2">
-            <span>Could not load tags.</span>
-            <Button
-              size="xs"
-              variant="outline"
-              onClick={() => invalidate("tags")}
-              // Keeps focus in the chips input, so the list stays open.
-              onMouseDown={(event) => event.preventDefault()}
-              disabled={tags.isRefreshing}
-              focusableWhenDisabled
-              className="data-disabled:opacity-50"
-            >
-              {tags.isRefreshing ? (
-                <Spinner aria-hidden data-icon="inline-start" />
+          onChange(next.map((t) => t.id));
+          setQuery("");
+        }}
+      >
+        <ComboboxChips ref={anchor}>
+          {selected.map((tag) => (
+            <ComboboxChip key={tag.id}>
+              <span
+                className={cn(
+                  "size-1.5 rounded-full",
+                  TAG_DOT_CLASSES[tag.color],
+                )}
+              />
+              {tag.name}
+            </ComboboxChip>
+          ))}
+          <ComboboxChipsInput
+            id={id}
+            aria-label={ariaLabel}
+            placeholder={selected.length ? "" : "Add tags…"}
+          />
+        </ComboboxChips>
+        <ComboboxContent anchor={anchor}>
+          <ComboboxList>
+            {(item: TagOption) =>
+              isCreatable(item) ? (
+                <ComboboxItem key={item.id} value={item}>
+                  <PlusIcon className="size-4" />
+                  Create &ldquo;{item.creatable}&rdquo;
+                </ComboboxItem>
               ) : (
-                <RotateCwIcon data-icon="inline-start" />
-              )}
-              Retry
-            </Button>
-          </ComboboxEmpty>
-        ) : (
-          <ComboboxEmpty>No tags found.</ComboboxEmpty>
-        )}
-      </ComboboxContent>
-    </Combobox>
+                <ComboboxItem key={item.id} value={item}>
+                  <span
+                    className={cn(
+                      "size-2 rounded-full",
+                      TAG_DOT_CLASSES[item.color],
+                    )}
+                  />
+                  {item.name}
+                </ComboboxItem>
+              )
+            }
+          </ComboboxList>
+          {tagsError ? (
+            <ComboboxEmpty className="flex-col items-center gap-2">
+              <span>Could not load tags.</span>
+              <Button
+                size="xs"
+                variant="outline"
+                onClick={() => invalidate("tags")}
+                // Keeps focus in the chips input, so the list stays open.
+                onMouseDown={(event) => event.preventDefault()}
+                disabled={tags.isRefreshing}
+                focusableWhenDisabled
+                className="data-disabled:opacity-50"
+              >
+                {tags.isRefreshing ? (
+                  <Spinner aria-hidden data-icon="inline-start" />
+                ) : (
+                  <RotateCwIcon data-icon="inline-start" />
+                )}
+                Retry
+              </Button>
+            </ComboboxEmpty>
+          ) : (
+            <ComboboxEmpty>No tags found.</ComboboxEmpty>
+          )}
+        </ComboboxContent>
+      </Combobox>
+      {tagsError && inlineLoadError ? (
+        <div
+          onFocus={() => {
+            retryHadFocus.current = true;
+          }}
+          onBlur={(event) => {
+            if (event.relatedTarget) retryHadFocus.current = false;
+          }}
+        >
+          <LoadError
+            title="Could not load tags"
+            message={tagsError.message}
+            onRetry={() => invalidate("tags")}
+            retrying={tags.isRefreshing}
+          />
+        </div>
+      ) : null}
+    </div>
   );
 }

@@ -2353,12 +2353,23 @@ hours land around midnight–08:00 local; that is expected.
 - **Owner:** agent · **Depends:** —
 - **Scope:** Picker Retry in portaled ComboboxEmpty is mouse-only; contact/deal form sheets and bulk Tags popover have no page alert. Make Retry keyboard-reachable or add an inline alert.
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] AC1: In the contact form sheet, the deal form sheet and the bulk Tags popover, a tags read that failed with no tags to show displays a 'Could not load tags' LoadError (error message plus Retry) below the tag input, visible without opening the list.
+  - [ ] AC2: Retry is reachable by keyboard: Tab from the tag input focuses it, and Enter runs `invalidate("tags")`. While in flight the button is busy (aria-disabled) and keeps focus. A Retry that fails again leaves the alert in place with no skeleton.
+  - [ ] AC3: Once the fault clears, Retry removes the alert, focus returns to the tag input (not `<body>`), and the list offers tags again.
+  - [ ] AC4: The contacts toolbar filter adds no inline alert (the page's tags LoadError already covers it). The in-list 'Could not load tags.' message and its mouse Retry still work.
+  - [ ] AC5: The gate is green and nothing else regressed.
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
 ### P7-T54 — Custom fields: e2e for aria-invalid on select, multiselect, textarea, date
 - **Owner:** agent · **Depends:** —
 - **Scope:** Create a required custom field of each type in settings, leave empty, submit deal form, assert aria-invalid on SelectTrigger/Checkbox/Textarea/date input
+- **Acceptance:**
+  - [ ] (define before starting)
+- **Refs:** added by `progress.mjs add` on 2026-10-24
+
+### P7-T55 — TagPicker: tighten inline Retry focus-restore flag
+- **Owner:** agent · **Depends:** —
+- **Scope:** Set retryHadFocus on Retry click/keydown and clear on any blur leaving the wrapper, so a later read started elsewhere never pulls focus; add e2e with bulk popover + page alert.
 - **Acceptance:**
   - [ ] (define before starting)
 - **Refs:** added by `progress.mjs add` on 2026-10-24

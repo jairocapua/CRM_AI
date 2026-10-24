@@ -252,3 +252,5 @@
 - 2026-10-24 [P7-T51] A Base UI SelectTrigger's textContent includes the arrow icon text ('Sales Pipeline▼'); compare against option names or use toContainText.
 - 2026-10-24 [P7-T51] To prove a skeleton gate deterministically, trigger a new useResource cache key (page or pipeline change) while the other read's error persists.
 - 2026-10-24 [P7-T52] Base UI Checkbox spreads props onto the root (role=checkbox), so aria-invalid reaches the right element; checkbox.tsx already has aria-invalid styles.
+- 2026-10-24 [P7-T53] For "exactly one X" checks, don't use retrying toHaveCount(1) when an unwanted second X can appear before the wanted one; wait for a state where both would exist, then count() once.
+- 2026-10-24 [P7-T53] The contacts table's tags LoadError renders only after the contacts page loads, while TagPicker's error shows as soon as the shared 'tags' resource fails, so the picker's alert can appear first.
