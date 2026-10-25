@@ -35,7 +35,7 @@ directly. The mock database lives in `src/lib/mock/` behind `src/lib/api/`.
 - ESLint enforces this with `no-restricted-imports`: nothing outside
   `src/lib/api/**` (and the mock internals) may import `@/lib/mock/*`, and
   `@faker-js/faker` is confined to `src/lib/mock/seed/**`.
-- **Automations are the one thing that is not mock data.** From Phase 8a they
+- **Automations are the one thing that is not mock data.** From Phase 8 they
   live as typed modules in `src/lib/automations/` — a developer writes them,
   staff can only view them, and the file is the permission boundary. They are
   still read *through* `api.workflows.*`, for the migration story rather than
