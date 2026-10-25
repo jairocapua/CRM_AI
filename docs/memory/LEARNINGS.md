@@ -288,3 +288,7 @@
 - 2026-10-25 [P8-T02] The automation registry is evaluated during `next build` (app-sidebar imports @/lib/api, whose barrel imports workflows → LAYOUTS), so a throw at module scope fails the build while prerendering any page.
 - 2026-10-25 [P8-T02] In git-bash, `$TMPDIR` may resolve to /tmp (C:\tmp), not the Hermes scratch dir; use the full scratch path for node scripts.
 - 2026-10-25 [P8-T02] A mutation that stays green (e.g. an overlap check ignoring height) usually means a missing case; add the case (reversed-order touching boxes) until the mutant goes red.
+- 2026-10-25 [P8-T03] On a Next 16 production build, a <Link> to a missing route logs a 404 for its ?_rsc prefetch as soon as it renders, which fails the e2e console fixture; give the target a placeholder page instead of prefetch={false}.
+- 2026-10-25 [P8-T03] On the mock, any read that resolves keys from another table (workflows.list → users, tags) fails whenever that table's fault is on; e2e fault scenarios must account for it.
+- 2026-10-25 [P8-T03] An e2e mutation run leaves the mutated build in .next; rebuild (or rerun the spec after restoring) before screenshots or the final e2e run.
+- 2026-10-25 [P8-T03] For screenshots of a UI task, run `npx next start -H 127.0.0.1 -p 3101` on the current build plus a throwaway Playwright script in the scratch dir; kill it with `taskkill /PID <n> /F /T` (single-slash flags in git-bash).
