@@ -1,6 +1,7 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useMemo } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowLeftIcon, WorkflowIcon } from "lucide-react";
 
@@ -9,8 +10,10 @@ import { invalidate, loadErrorOf, useResource } from "@/lib/api";
 import { EmptyState } from "@/components/common/empty-state";
 import { LoadError } from "@/components/common/load-error";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import { AutomationStatusBadge } from "./automation-card";
+import { canvasHeight } from "./automation-flow";
 import { AutomationStepList } from "./automation-step-list";
 import { behaviourCopy, sourcePath } from "./automation-steps";
 import {
@@ -19,6 +22,17 @@ import {
   ownerName,
   triggerSummary,
 } from "./automation-summary";
+
+/**
+ * The diagram, loaded on demand: React Flow (and its chunk) stays off the
+ * first load of this page and out of every other route, and a phone, which
+ * never mounts it, never downloads it. `ssr: false` because it only ever
+ * mounts after the client has read the automation.
+ */
+const AutomationGraph = dynamic(() => import("./automation-graph"), {
+  ssr: false,
+  loading: () => <Skeleton className="size-full rounded-none" />,
+});
 
 /**
  * One automation's page (`/automation/[id]`): what it is, who owns it, where
@@ -36,12 +50,30 @@ import {
  * - The users or tags read failing alone shows a `LoadError` above the page,
  *   which still draws: the owner reads "Unknown owner" and steps leave out
  *   the names they cannot resolve until a Retry (`invalidate`) succeeds.
+ * - On screens 768px and wider a read-only diagram sits above the steps.
+ *   Below that it is not mounted at all: the step list, which renders at
+ *   every width, is the whole picture (and the accessible one).
  */
 export function AutomationDetail({ id }: { id: string }) {
   const workflow = useResource("workflows", () => api.workflows.get(id), id);
   const users = useResource("users", () => api.users.list());
   const tags = useResource("tags", () => api.tags.list());
   const stepsHeadingId = useId();
+  const diagramHeadingId = useId();
+  const isMobile = useIsMobile();
+
+  // Memoised so `names` keeps its identity between renders: the diagram's
+  // `useMemo([workflow, names])` would otherwise rebuild every React Flow
+  // node and edge on each render.
+  const usersById = useMemo(
+    () => new Map((users.data ?? []).map((u) => [u.id, u])),
+    [users.data],
+  );
+  const tagNames = useMemo(
+    () => new Map((tags.data ?? []).map((t) => [t.id, t.name])),
+    [tags.data],
+  );
+  const names = useMemo(() => ({ tagNames, usersById }), [tagNames, usersById]);
 
   const backLink = (
     <Link
@@ -98,8 +130,6 @@ export function AutomationDetail({ id }: { id: string }) {
   }
 
   const record = workflow.data;
-  const usersById = new Map((users.data ?? []).map((u) => [u.id, u]));
-  const tagNames = new Map((tags.data ?? []).map((t) => [t.id, t.name]));
   const status = STATUS_COPY[record.status];
 
   return (
@@ -140,11 +170,24 @@ export function AutomationDetail({ id }: { id: string }) {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-4">
-          {/*
-            The read-only diagram (P8-T05) mounts here, above the steps, on
-            screens 768px and wider (`useIsMobile()` false). Below 768px it is
-            not mounted at all and the step list is the whole picture.
-          */}
+          {isMobile ? null : (
+            <section
+              aria-labelledby={diagramHeadingId}
+              className="flex flex-col gap-3"
+            >
+              <h2 id={diagramHeadingId} className="text-sm font-medium">
+                Diagram
+              </h2>
+              {/* An explicit height: React Flow draws nothing without one.
+                  Capped by the window, so the fitted diagram is seen whole. */}
+              <div
+                className="max-h-[80svh] overflow-hidden rounded-xl border"
+                style={{ height: canvasHeight(record.nodes) }}
+              >
+                <AutomationGraph workflow={record} names={names} />
+              </div>
+            </section>
+          )}
           <section
             aria-labelledby={stepsHeadingId}
             className="flex flex-col gap-3"
@@ -154,7 +197,7 @@ export function AutomationDetail({ id }: { id: string }) {
             </h2>
             <AutomationStepList
               workflow={record}
-              names={{ tagNames, usersById }}
+              names={names}
               labelledBy={stepsHeadingId}
             />
           </section>
@@ -224,7 +267,13 @@ function Detail({
   );
 }
 
-/** The detail page's first-load placeholder: header, steps and side panel. */
+/**
+ * The detail page's first-load placeholder: header, diagram (768px and
+ * wider, as the diagram itself), steps and side panel. The diagram block is
+ * about a typical canvas's height (`canvasHeight` gives the shipped graphs
+ * 413 to 720px, capped by the window), so the page shifts little when the
+ * real one arrives.
+ */
 function AutomationDetailSkeleton() {
   return (
     <div className="flex flex-col gap-4">
@@ -232,6 +281,7 @@ function AutomationDetailSkeleton() {
       <Skeleton className="h-4 w-full max-w-xl" />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex flex-col gap-2">
+          <Skeleton className="mb-2 hidden h-[min(32rem,80svh)] w-full rounded-xl md:block" />
           {Array.from({ length: 5 }, (_, i) => (
             <Skeleton key={i} className="h-16 w-full rounded-lg" />
           ))}

@@ -186,6 +186,15 @@ export function layout(definition: AutomationDefinition): Layout {
       if (next) fail(`step "${next.id}" follows the branch "${step.id}"`);
       const { branches } = step.config;
       if (branches.length === 0) fail(`"${step.id}" has no branches`);
+      // The diagram keys the fork's source handles by branch id and each
+      // branch edge's sourceHandle names one, so ids must differ per fork.
+      const branchIds = new Set<ID>();
+      for (const b of branches) {
+        if (branchIds.has(b.id)) {
+          fail(`branch id "${b.id}" is used twice in "${step.id}"`);
+        }
+        branchIds.add(b.id);
+      }
       for (const b of branches) {
         if (b.steps.length === 0) {
           fail(`branch "${b.label}" of "${step.id}" has no steps`);

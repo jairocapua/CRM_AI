@@ -370,6 +370,40 @@ describe("layout()", () => {
       );
     });
 
+    it("throws on a branch id repeated within one fork", () => {
+      // The diagram keys a fork's source handles by branch id, and each
+      // branch edge's sourceHandle names one, so two alike would draw both
+      // edges out of one handle.
+      const f = fork("f", [sms("a")], [sms("b")], [sms("c")]);
+      const [first, second, third] = f.config.branches;
+      const repeated: BranchStep = {
+        ...f,
+        config: {
+          ...f.config,
+          branches: [first!, second!, { ...third!, id: first!.id }],
+        },
+      };
+      expect(() => layout(definition([repeated]))).toThrow(
+        'Cannot lay out "Fixture": branch id "f_b0" is used twice in "f"',
+      );
+    });
+
+    it("allows the same branch id in two different forks", () => {
+      const inner = fork("inner", [sms("a")], [sms("b")]);
+      const outer = fork("outer", [inner], [sms("c")]);
+      const reused: BranchStep = {
+        ...outer,
+        config: {
+          ...outer.config,
+          branches: outer.config.branches.map((b, i) => ({
+            ...b,
+            id: inner.config.branches[i]!.id,
+          })),
+        },
+      };
+      expect(() => layout(definition([reused]))).not.toThrow();
+    });
+
     it("throws when an authored id collides with an emitted end node", () => {
       expect(() => layout(definition([sms("end:b"), sms("b")]))).toThrow(
         'node id "end:b" is used twice',

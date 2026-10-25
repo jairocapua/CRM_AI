@@ -296,3 +296,10 @@
 - 2026-10-25 [P8-T04] React Compiler lint rejects `const Icon = pick(); <Icon />` (a component created during render); read a module-level map inside a small component (`StepIcon`, like `ChannelIcon`).
 - 2026-10-25 [P8-T04] `getByRole("main")` includes the app header's buttons; a "no editor controls" e2e must scope to the page's own regions.
 - 2026-10-25 [P8-T04] To fail a detail page's reads in e2e, load the list page, turn the fault on, then click through: useResource reads on mount, so the detail page reads while the fault is on.
+- 2026-10-25 [P8-T05] In @xyflow/react 12, `nodesFocusable={false}` does not remove the keyboard hints: nodes keep `aria-describedby` and the live region (id `react-flow__aria-live-<rfId>`, no class) mounts until `disableKeyboardA11y` is set.
+- 2026-10-25 [P8-T05] Wait for React Flow's fitView in e2e by polling the `.react-flow__viewport` inline transform until two reads match and it is no longer the initial `translate(0px, 0px) scale(1)`; "scale is not 1" breaks whenever a graph fits at maxZoom 1.
+- 2026-10-25 [P8-T05] A React Flow node without `draggable` has no `nopan` class, so dragging on a node pans the canvas.
+- 2026-10-25 [P8-T05] Chromium reports computed colours for oklch tokens as `lab(...)`; compare against a probe element styled `color: var(--token)`, never a literal.
+- 2026-10-25 [P8-T05] To prove a lazily loaded library was not downloaded, match a string literal from its code in script response bodies (chunk names are hashed), and pair it with a positive-control test where it is loaded.
+- 2026-10-25 [P8-T05] `next dev` rewrites AGENTS.md; restore it afterwards. A component-folder unit test cannot import `@/lib/mock/testing` (API-seam lint); build fixtures from `LAYOUTS`.
+- 2026-10-25 [P8-T05] A useMemo keyed on an object rebuilt every render never hits; memoise the inputs (Maps built from `useResource` data) above the component's early returns.

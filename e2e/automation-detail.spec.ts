@@ -17,8 +17,8 @@ import { expect, NAVIGATION, test, waitForBoot } from "./fixtures";
  * "How this behaves" sentences from its settings, and its steps as a nested
  * ordered list. A fork closes its list with one nested list per branch,
  * named by the branch label, and every path ends with an End step. The
- * diagram (P8-T05) is not part of this page yet; below 768px only the list
- * ever renders.
+ * read-only diagram above the list (768px and wider) has its own spec,
+ * automation-diagram.spec.ts; below 768px only the list ever renders.
  *
  * The pages are prerendered from the registry (`generateStaticParams`), so a
  * hard refresh on one is a real server hit on a built page, not a client

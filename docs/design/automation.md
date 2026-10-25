@@ -8,6 +8,9 @@
 > P8-T01 (2026-10-25) built §1, §2, §4 and §7 with recorded deviations:
 > `trigger.kind` dropped, users keyed by a new `User.slug`, seven keyed config
 > kinds plus `owner`. See `docs/memory/DECISIONS.md` lines tagged [P8-T01].
+> P8-T05 deviations: no edge-to-edge canvas (§8; the detail page keeps its
+> padding), invisible handles (§6), `maxZoom: 1` and `minZoom: 0.2` (§5), and
+> `disableKeyboardA11y`. See [P8-T05] in DECISIONS.md.
 
 ## Context
 
