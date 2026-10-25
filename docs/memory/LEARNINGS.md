@@ -277,3 +277,6 @@
 - 2026-10-25 [P7-T63] enterStage() is shared by create(), move() and update(); changing it changes what create() saves, so grep tests for drafts that create into an open stage with that field set.
 - 2026-10-25 [P7-T63] `vi.spyOn(db, "setState")` on the zustand store (import @/lib/mock/db after world()) proves "one write".
 - 2026-10-25 [P7-T63] To count activities in e2e, poll until the stored record settles, then read readDealActivities() once: the record and its activities persist in the same flush.
+- 2026-10-25 [P7-T64] Rewriting a repo file with Python open().write() on Windows turns LF into CRLF; normalise back or use a patch tool, or format:check fails.
+- 2026-10-25 [P7-T64] The deal-form e2e lost-stage specs count opportunity.lost entries by type, not text, so changing the lost-entry wording leaves them green.
+- 2026-10-25 [P7-T64] No e2e spec drags a deal card on the board; same-column reorder is proven at the API level only (move() renumbering tests).

@@ -4,26 +4,25 @@
 > Since 2026-10-25 the build may also run from Hermes Agent, which has no `Workflow` tool: the orchestrator follows `.claude/workflows/build-phase.js` step by step with helper agents (implementer, then verifier + reviewer in parallel, up to 2 fix rounds) and does the recorder steps itself.
 
 ## Now
-- **Phase:** P7 Calendars (`active`, gate failed on 2026-10-24; fix tasks in progress)
-- **Branch:** `phase/p7-calendars`
-- **Status:** P7-T63 approved on Autopilot (verifier pass, reviewer no must-fix). P7-T64 added from its review.
+- **Phase:** P7 Calendars — **gate passed** on 2026-10-25 (re-run after the 2026-10-24 failure); phase `done`.
+- **Branch:** `phase/p7-calendars`. GitHub `master` already holds it up to `6f04958` (PR #1); the commits after that (P7-T64 and this gate record) still need merging.
+- **Status:** owner human check passed 2026-10-25 (Asia/Singapore: zone label, local times, now line, side-by-side overlap all correct); waiting on the owner to merge. Next phase: P8 Automation (branch `phase/p8-automation`, cut from `master` after the merge).
 
 ## Last change
-- P7-T63: the deal form sends `lostReason` in its single `create()`/`update()` write; the `moveDropsReason` → second `setStatus()` path is gone, so an edited reason on a lost deal saves with no timeline entry and a move into a lost stage logs exactly one Lost entry.
-- `enterStage()` deletes `lostReason` whenever the deal does not end up lost, so `create()`, `move()` and `update()` agree with `setStatus()`.
-- Tests: 5 Vitest cases in `opportunities.test.ts`, 2 new e2e cases + 1 extended in `e2e/deal-form.spec.ts` (`readDealActivities()` helper in `e2e/calendar-helpers.ts`).
+- Gate verify: `npm run check` green (799 Vitest), `npm run e2e` 146 passed (no flakes), `@tanstack/react-table` 8.21.3, tracker OK. Exit criteria 1–4 proven by `calendars-booking.spec.ts:139`, `calendars.spec.ts:26`, `smoke.spec.ts` + the console-watching fixture.
+- Gate review: no must-fix; every earlier gate finding (P7-T57..T64) confirmed resolved in code. Four non-blocking suggestions went to `docs/BACKLOG.md`.
 
 ## Next up
-- P7-T64: Lost entry text and same-stage move status (from the P7-T63 review).
-- Then rerun the P7 gate.
+- After the merge: "Autopilot: continue the build per CLAUDE.md" starts P8 (`node scripts/progress.mjs next --phase P8`).
 
 ## Waiting on you (owner)
-- Before merging P7: open `/calendars?view=week&date=2026-09-08` in your timezone and check times, zone label, now line, overlaps.
+- Merge P7 into `master`. Locally: `git switch master && git pull && git merge --no-ff phase/p7-calendars`. Or, since you used GitHub before: push the branch and open a second PR.
 
 ## Open suggestions (non-blocking)
 - P7-T63: partial save if `setStatus()` fails after `update()` wrote the reason (only a concurrent delete's 404 can cause it).
 - P7-T60: statusBadge() locator is fragile; pickOpenSalesDeal should exclude isLost stages.
 - P7-T59: test create() with a missing stageId; map a `pipelineId` 422 onto the Pipeline field.
+- Gate review items are in `docs/BACKLOG.md` (doc-comment tidy, creation wording, move() stage check, create-then-setStatus e2e).
 
 ## Blockers
 - None.

@@ -353,8 +353,8 @@ export type OpportunityDraft = OpportunityPatch &
  *   status open with no closedAt key. A won or lost stage also adds the same
  *   timeline entry move() writes (`stageEntryActivity`) after the "created"
  *   entry, at the same instant: `opportunity.won` "Won <deal>", or
- *   `opportunity.lost` "Moved <deal> to <stage>" (move()'s wording, kept so
- *   the two cannot drift). An open stage adds only the "created" entry.
+ *   `opportunity.lost` "Moved <deal> to <stage>", plus " - <reason>" when a
+ *   lostReason is sent (move()'s wording, kept so the two cannot drift). An open stage adds only the "created" entry.
  * - A lostReason is kept only in a lost stage, where it is saved with the
  *   deal in the same write as its one `opportunity.lost` entry; in an open
  *   or won stage it is dropped (`enterStage`), as setStatus() drops it.
@@ -444,7 +444,8 @@ export async function create(draft: OpportunityDraft): Promise<Opportunity> {
  *   exactly one matching entry
  *   (`stageEntryActivity`): `opportunity.won` "Won <deal>",
  *   `opportunity.lost` or `opportunity.stage_changed` "Moved <deal> to
- *   <stage>". A stageId with no pipelineId, or with the deal's own, is
+ *   <stage>" (a lost entry adds " - <reason>" when the patch keeps a
+ *   lostReason). A stageId with no pipelineId, or with the deal's own, is
  *   ignored.
  * - Errors, in this order, and nothing is written on any: 404 `NOT_FOUND`
  *   for an unknown id, then 422 `INVALID_OPPORTUNITY` for a wrong-typed
@@ -548,7 +549,10 @@ function enterStage(
  * The timeline entry for a deal entering `stage`, shared by move(),
  * update()'s pipeline move and create() (won or lost stages only) so they
  * cannot drift: "Won <deal>" for a won stage, otherwise "Moved <deal> to
- * <stage>", typed won, lost or stage_changed by the stage.
+ * <stage>", typed won, lost or stage_changed by the stage. A lost stage
+ * appends the lost reason the deal carries after `enterStage`, the way
+ * setStatus() writes "Lost <deal> - <reason>": "Moved <deal> to <stage> -
+ * <reason>"; with no reason the text is unchanged.
  */
 function stageEntryActivity(
   deal: Opportunity,
@@ -571,16 +575,24 @@ function stageEntryActivity(
     summary:
       status === "won"
         ? `Won "${deal.name}"`
-        : `Moved "${deal.name}" to ${stage?.name ?? "a new stage"}`,
+        : `Moved "${deal.name}" to ${stage?.name ?? "a new stage"}${
+            status === "lost" && deal.lostReason ? ` - ${deal.lostReason}` : ""
+          }`,
     meta: { to: stage?.name },
   };
 }
 
 /**
  * Commits a board drag. The optimistic reorder already happened locally, so
- * this rewrites the positions of both affected columns and records the move on
- * the contact's timeline. The status, close date and lost reason follow the
- * target stage (`enterStage`): an open or won stage removes the lost reason.
+ * this rewrites the positions of both affected columns.
+ *
+ * - Into another stage: records the move on the contact's timeline
+ *   (`stageEntryActivity`), and the status, close date and lost reason follow
+ *   the target stage (`enterStage`): an open or won stage removes the lost
+ *   reason.
+ * - Within the deal's own stage (a reorder): only positions and updatedAt
+ *   change. The status, closedAt and lostReason are kept and no timeline
+ *   entry is written, so a lost or won deal in an open stage stays closed.
  */
 export async function move(
   id: ID,
@@ -602,7 +614,10 @@ export async function move(
       stageEnteredAt: changedStage ? at : prev.stageEnteredAt,
       updatedAt: at,
     };
-    enterStage(next, stage, at);
+    // A same-stage move is a pure reorder: the stage did not change, so
+    // neither do the status, close date or lost reason (P7-T64). Seeded lost
+    // and won deals sit in open stages and would otherwise reopen here.
+    if (changedStage) enterStage(next, stage, at);
 
     // Renumber the destination column so positions stay dense and stable.
     db.setState((s) => {

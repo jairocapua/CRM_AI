@@ -134,10 +134,11 @@ export function DealCardBody({
  * A draggable board card. The pointer sensor uses a small distance threshold,
  * so a click that never moves opens the deal instead of starting a drag.
  *
- * Dead deals are shown but pinned in place. Dragging one would resurrect it:
- * `api.opportunities.move` recomputes `status` from the destination stage, and
- * since no seeded stage carries `isLost`, every destination reads as "open" —
- * clearing `closedAt` while a stale `lostReason` stays attached.
+ * Dead deals are shown but pinned in place. Dragging one into another column
+ * would resurrect it: `api.opportunities.move` recomputes `status` from a new
+ * destination stage, and since no seeded stage carries `isLost`, every other
+ * column reads as "open" (clearing `closedAt` and the `lostReason`). A
+ * same-column reorder keeps the status (P7-T64), but the pin stays simple.
  */
 export function DealCard({
   opportunity,
