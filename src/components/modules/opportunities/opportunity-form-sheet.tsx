@@ -148,6 +148,14 @@ export function OpportunityFormSheet({
   const status = form.watch("status");
 
   const [save, isSaving] = useAction(async (values: OpportunityFormValues) => {
+    // The reason travels in the same write as everything else: a changed
+    // reason on a lost deal is saved by update() alone, and a create or move
+    // into a lost stage keeps it with its one Lost entry. Any status but Lost
+    // clears it.
+    const lostReason =
+      values.status === "lost"
+        ? values.lostReason.trim() || undefined
+        : undefined;
     const patch = {
       name: values.name.trim(),
       contactId: values.contactId,
@@ -159,6 +167,7 @@ export function OpportunityFormSheet({
       ownerId: values.ownerId || undefined,
       tagIds: values.tagIds,
       expectedCloseAt: dateInputToIso(values.expectedCloseAt),
+      lostReason,
       customFields: toCustomFieldsPatch(values.customFields, fields),
     };
 
@@ -168,9 +177,10 @@ export function OpportunityFormSheet({
      * `update()` reads `stageId` only when the pipeline changes: it then moves
      * the deal to that stage of the new pipeline in the same write, with the
      * status that stage gives (as `move()` does). `create()` also takes the
-     * status from the new deal's stage. A stage
-     * change inside the same pipeline goes through `move()`, which owns column
-     * `position` and `stageEnteredAt` there.
+     * status from the new deal's stage. A stage change inside the same
+     * pipeline goes through `move()`, which owns column `position` and
+     * `stageEnteredAt` there. Each keeps `lostReason` only when it leaves the
+     * deal in a lost stage.
      */
     const record = opportunity
       ? await api.opportunities.update(opportunity.id, patch)
@@ -201,19 +211,10 @@ export function OpportunityFormSheet({
           selectedPipeline?.stages.find((s) => s.id === values.stageId),
         )
       : (record.status ?? "open");
-    const lostReason =
-      values.status === "lost"
-        ? values.lostReason.trim() || undefined
-        : undefined;
-    // A create or move into a lost stage already leaves the deal lost, so the
-    // status alone would skip `setStatus()` and drop the reason the user typed
-    // (neither `create()` nor `update()` takes `lostReason`).
-    const moveDropsReason =
-      (!opportunity || pipelineChanged || stageChanged) &&
-      statusAfterMove === "lost" &&
-      lostReason !== undefined &&
-      lostReason !== record.lostReason;
-    if (values.status !== statusAfterMove || moveDropsReason) {
+    // Only a status the save did not already leave needs `setStatus()`: the
+    // reason is already stored, so calling it for the reason alone would log
+    // a second Lost entry.
+    if (values.status !== statusAfterMove) {
       await api.opportunities.setStatus(record.id, values.status, lostReason);
     }
 

@@ -803,9 +803,19 @@ describe.each<Operation>(["create", "update"])(
           : w.api.update(FIXTURE.id, VALID_FIELDS),
       );
 
-      const expected = { ...VALID_FIELDS, name: "Renamed" };
-      expect(saved).toMatchObject(expected);
-      expect(await settle(w.api.get(saved.id))).toMatchObject(expected);
+      // create() puts the deal in an open stage, which keeps no lost reason
+      // (P7-T63, as setStatus() does); update() without a move stores it.
+      const { lostReason, ...rest } = VALID_FIELDS;
+      const expected =
+        operation === "create"
+          ? { ...rest, name: "Renamed" }
+          : { ...rest, lostReason, name: "Renamed" };
+      for (const record of [saved, await settle(w.api.get(saved.id))]) {
+        expect(record).toMatchObject(expected);
+        if (operation === "create") {
+          expect(Object.keys(record)).not.toContain("lostReason");
+        }
+      }
     });
   },
 );
@@ -1462,6 +1472,157 @@ describe("update() moving a deal to another pipeline", () => {
     for (const call of refused) {
       await expect(settle(call())).rejects.toMatchObject({ status: 422 });
       expect(storage.getItem("nimbus-crm-clock")).toBeNull();
+    }
+  });
+});
+
+/**
+ * The lost reason through update() and move() (P7-T63). The deal form sends
+ * the typed reason with its update() or create(), so a changed reason on a
+ * lost deal is kept and a move into a lost stage logs one loss, not two.
+ * Entering an open or won stage drops the reason, as setStatus() does.
+ */
+describe("the lost reason through update() and move()", () => {
+  /** pipelineWorld() with `stageId` of `pipeline` marked isLost. */
+  function markLost(
+    w: Awaited<ReturnType<typeof pipelineWorld>>,
+    pipeline: Pipeline,
+    stageId: string,
+  ) {
+    w.db.setState((s) => ({
+      pipelines: {
+        ...s.pipelines,
+        [pipeline.id]: {
+          ...pipeline,
+          stages: pipeline.stages.map((stage) =>
+            stage.id === stageId ? { ...stage, isLost: true } : stage,
+          ),
+        },
+      },
+    }));
+  }
+
+  /** The seeded deal made lost, with a reason, in its own stage. */
+  function makeLost(w: Awaited<ReturnType<typeof pipelineWorld>>) {
+    const lost: Opportunity = {
+      ...w.deal,
+      status: "lost",
+      lostReason: "Went with a competitor",
+      closedAt: w.deal.updatedAt,
+    };
+    w.db.setState((s) => ({
+      opportunities: { ...s.opportunities, [lost.id]: lost },
+    }));
+    return lost;
+  }
+
+  it("update() stores a changed lostReason on a lost deal in one write, with no activity", async () => {
+    const w = await world(FULL);
+    const { db } = await import("@/lib/mock/db");
+    const before = await settle(w.activities.listRecent(100));
+    const writes = vi.spyOn(db, "setState");
+
+    const saved = await settle(
+      w.api.update(FULL.id, { lostReason: "Budget cut" }),
+    );
+
+    expect(writes).toHaveBeenCalledTimes(1);
+    const stored = await settle(w.api.get(FULL.id));
+    expect(stored).toEqual(saved);
+    expect(stored).toStrictEqual({
+      ...FULL,
+      lostReason: "Budget cut",
+      updatedAt: stored.updatedAt,
+    });
+    expect(await settle(w.activities.listRecent(100))).toEqual(before);
+  });
+
+  it("update() into another pipeline's lost stage with a lostReason stores it and logs one loss", async () => {
+    const w = await pipelineWorld();
+    const lost = w.other.stages.find((s) => !s.isWon)!;
+    markLost(w, w.other, lost.id);
+    const seen = new Set((await w.timeline()).map((a) => a.id));
+
+    const saved = await settle(
+      w.api.update(w.deal.id, {
+        pipelineId: w.other.id,
+        stageId: lost.id,
+        lostReason: "Budget cut",
+      }),
+    );
+
+    const stored = await settle(w.api.get(w.deal.id));
+    expect(stored).toEqual(saved);
+    expect(stored).toMatchObject({
+      status: "lost",
+      stageId: lost.id,
+      lostReason: "Budget cut",
+    });
+    const entries = (await w.timeline()).filter(
+      (a) => !seen.has(a.id) && a.opportunityId === w.deal.id,
+    );
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ type: "opportunity.lost" });
+  });
+
+  it("move() of a lost deal into an open stage removes the lost reason", async () => {
+    const w = await pipelineWorld();
+    const lost = makeLost(w);
+    const pipeline = w.db.getState().pipelines[lost.pipelineId]!;
+    const open = pipeline.stages.find(
+      (s) => s.id !== lost.stageId && !s.isWon && !s.isLost,
+    )!;
+    expect(open).toBeDefined();
+
+    const saved = await settle(
+      w.api.move(lost.id, { stageId: open.id, position: 0 }),
+    );
+
+    for (const record of [saved, await settle(w.api.get(lost.id))]) {
+      expect(record.status).toBe("open");
+      expect(Object.keys(record)).not.toContain("lostReason");
+    }
+  });
+
+  it("move() of a lost deal into a won stage removes the lost reason", async () => {
+    const w = await pipelineWorld();
+    const lost = makeLost(w);
+    const pipeline = w.db.getState().pipelines[lost.pipelineId]!;
+    const won = pipeline.stages.find((s) => s.isWon)!;
+    expect(won).toBeDefined();
+    // Not already in it, so this is a real stage change.
+    w.db.setState((s) => ({
+      opportunities: {
+        ...s.opportunities,
+        [lost.id]: {
+          ...lost,
+          stageId: pipeline.stages.find((st) => !st.isWon)!.id,
+        },
+      },
+    }));
+
+    const saved = await settle(
+      w.api.move(lost.id, { stageId: won.id, position: 0 }),
+    );
+
+    for (const record of [saved, await settle(w.api.get(lost.id))]) {
+      expect(record.status).toBe("won");
+      expect(Object.keys(record)).not.toContain("lostReason");
+    }
+  });
+
+  it("update() moving a lost deal into another pipeline's open stage removes the lost reason", async () => {
+    const w = await pipelineWorld();
+    const lost = makeLost(w);
+    const open = w.other.stages.find((s) => !s.isWon && !s.isLost)!;
+
+    const saved = await settle(
+      w.api.update(lost.id, { pipelineId: w.other.id, stageId: open.id }),
+    );
+
+    for (const record of [saved, await settle(w.api.get(lost.id))]) {
+      expect(record.status).toBe("open");
+      expect(Object.keys(record)).not.toContain("lostReason");
     }
   });
 });

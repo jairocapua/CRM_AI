@@ -355,6 +355,9 @@ export type OpportunityDraft = OpportunityPatch &
  *   entry, at the same instant: `opportunity.won` "Won <deal>", or
  *   `opportunity.lost` "Moved <deal> to <stage>" (move()'s wording, kept so
  *   the two cannot drift). An open stage adds only the "created" entry.
+ * - A lostReason is kept only in a lost stage, where it is saved with the
+ *   deal in the same write as its one `opportunity.lost` entry; in an open
+ *   or won stage it is dropped (`enterStage`), as setStatus() drops it.
  * - `null` or `undefined` for expectedCloseAt, ownerId or lostReason means
  *   the deal has no such field: the key is left out, never stored.
  */
@@ -436,7 +439,9 @@ export async function create(draft: OpportunityDraft): Promise<Opportunity> {
  *   column, stageEnteredAt now, and the status and close date the target
  *   stage gives, the way move() does (`enterStage`): a won or lost stage sets
  *   status won or lost with closedAt now, an open stage sets status open and
- *   removes closedAt. The contact's timeline gets the matching entry
+ *   removes closedAt. A lost stage keeps a lostReason sent in the same patch;
+ *   an open or won stage removes any lost reason. The contact's timeline gets
+ *   exactly one matching entry
  *   (`stageEntryActivity`): `opportunity.won` "Won <deal>",
  *   `opportunity.lost` or `opportunity.stage_changed` "Moved <deal> to
  *   <stage>". A stageId with no pipelineId, or with the deal's own, is
@@ -457,6 +462,8 @@ export async function create(draft: OpportunityDraft): Promise<Opportunity> {
  *   client's) removes the field: the key is deleted, never stored.
  * - The lost reason is not checked against the status: clearing it on a lost
  *   deal is allowed, as the deal form already saves a loss with no reason.
+ *   Changing it without a move is one write with no timeline entry (the
+ *   deal form saves an edited reason this way).
  */
 export async function update(
   id: ID,
@@ -518,9 +525,13 @@ export function stageStatus(
 }
 
 /**
- * Sets the status and close date a deal takes on entering `stage`: a won or
- * lost stage closes it at `at`, an open one deletes the close date (the key
- * is removed, never stored as `undefined`).
+ * Sets the status, close date and lost reason a deal takes on entering
+ * `stage`: a won or lost stage closes it at `at`, an open one deletes the
+ * close date. Any stage but a lost one deletes the lost reason, as
+ * setStatus() does, so a lost deal moved to an open or won stage keeps no
+ * stale reason; a lost stage keeps the reason the deal holds (one the caller
+ * just wrote, such as update()'s or create()'s `lostReason`). Keys are
+ * removed, never stored as `undefined`.
  */
 function enterStage(
   next: Opportunity,
@@ -530,6 +541,7 @@ function enterStage(
   next.status = stageStatus(stage);
   if (next.status === "open") delete next.closedAt;
   else next.closedAt = at;
+  if (next.status !== "lost") delete next.lostReason;
 }
 
 /**
@@ -567,7 +579,8 @@ function stageEntryActivity(
 /**
  * Commits a board drag. The optimistic reorder already happened locally, so
  * this rewrites the positions of both affected columns and records the move on
- * the contact's timeline.
+ * the contact's timeline. The status, close date and lost reason follow the
+ * target stage (`enterStage`): an open or won stage removes the lost reason.
  */
 export async function move(
   id: ID,

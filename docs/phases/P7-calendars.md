@@ -2453,6 +2453,13 @@ hours land around midnight–08:00 local; that is expected.
   - [ ] `npm run check` is green.
 - **Refs:** added by `progress.mjs add` on 2026-10-25
 
+### P7-T64 — Lost entry text and same-stage move status
+- **Owner:** agent · **Depends:** —
+- **Scope:** From the P7-T63 review: (1) a move into a lost stage logs 'Moved X to <stage>' with no reason, unlike setStatus's 'Lost X - reason'; (2) seeded lost deals sit in open stages, so a same-column move()/reorder re-derives status open, drops the reason, and the form then logs a fresh Lost entry. Consider not deriving status when the stage does not change.
+- **Acceptance:**
+  - [ ] Vitest: move() within the same stage keeps status and lostReason; decision on Lost entry wording logged in DECISIONS.md
+- **Refs:** added by `progress.mjs add` on 2026-10-25
+
 ## Exit criteria (phase gate)
 - [ ] A booking appears in month, week and day views, on the contact
       timeline, and in the dashboard Upcoming card, and its slot disappears

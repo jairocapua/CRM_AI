@@ -4,6 +4,7 @@ import {
   chooseContactIn,
   localDayIn,
   readContacts,
+  readDealActivities,
   readDeals,
   readPipelines,
   uniquelyNamedContact,
@@ -32,6 +33,12 @@ import { expect, test } from "./fixtures";
  * The won-stage create test covers the form's create path since P7-T62:
  * `create()` takes the status from the stage, so a new deal in Closed Won
  * comes back won, and the form must still apply an explicit Open afterwards.
+ *
+ * The lost-reason tests (P7-T63) check that the typed reason travels with the
+ * form's `create()`/`update()`: an edited reason on a lost deal is kept with
+ * no new timeline entry, and a create or stage move into a lost stage keeps
+ * the reason with exactly one `opportunity.lost` entry (a second `setStatus()`
+ * call would log a second one).
  */
 
 const ZONE = "Asia/Singapore";
@@ -514,8 +521,8 @@ test("New deal in a lost stage with Status Lost keeps its Lost reason", async ({
   await expect(dialog).toBeHidden();
   await expect(page.getByText("Deal created")).toBeVisible();
 
-  // create() already leaves the deal lost (P7-T62), so only the reason makes
-  // the form call setStatus(); without it the typed reason is dropped.
+  // create() leaves the deal lost (P7-T62) and saves the reason in the same
+  // write (P7-T63), so the form must not call setStatus() as well.
   await expect
     .poll(async () => {
       const stored = (await readDeals(page)).find((d) => d.name === name);
@@ -528,6 +535,118 @@ test("New deal in a lost stage with Status Lost keeps its Lost reason", async ({
       );
     })
     .toEqual({ stageId: LOST_STAGE.id, status: "lost", lostReason: reason });
+  // The record and its entries are written together, so once the reason is
+  // stored a second Lost entry would be stored too: count once.
+  const stored = (await readDeals(page)).find((d) => d.name === name)!;
+  const losses = (await readDealActivities(page, stored.id)).filter(
+    (a) => a.type === "opportunity.lost",
+  );
+  expect(losses).toHaveLength(1);
+});
+
+/** Opens the Edit deal sheet on the deal's page, once the form is filled. */
+async function openEditDeal(
+  page: Page,
+  gotoApp: (path: string) => Promise<void>,
+  deal: { id: string; name: string },
+) {
+  await gotoApp(`/opportunities/${deal.id}`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(deal.name);
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  const sheet = page.getByRole("dialog", { name: "Edit deal" });
+  await expect(sheet.getByLabel("Deal name", { exact: true })).toHaveValue(
+    deal.name,
+  );
+  return sheet;
+}
+
+test("Edit deal keeps a changed Lost reason on a lost deal with no new timeline entry", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/opportunities");
+  const deal = (await readDeals(page)).find(
+    (d) => d.status === "lost" && d.lostReason !== null,
+  );
+  if (!deal?.lostReason) throw new Error("No seeded lost deal with a reason");
+  const reason = `${deal.lostReason} (edited)`;
+  const before = await readDealActivities(page, deal.id);
+
+  const sheet = await openEditDeal(page, gotoApp, deal);
+  const input = sheet.getByLabel("Lost reason", { exact: true });
+  await expect(input).toHaveValue(deal.lostReason);
+  await input.fill(reason);
+  await sheet.getByRole("button", { name: "Save changes" }).click();
+  await expect(sheet).toBeHidden();
+  await expect(page.getByText("Deal updated")).toBeVisible();
+
+  await expect
+    .poll(async () => {
+      const stored = (await readDeals(page)).find((d) => d.id === deal.id);
+      return stored && { status: stored.status, lostReason: stored.lostReason };
+    })
+    .toEqual({ status: "lost", lostReason: reason });
+  expect(await readDealActivities(page, deal.id)).toEqual(before);
+});
+
+test("Edit deal moving into a lost stage with Status Lost keeps the reason and logs one Lost entry", async ({
+  page,
+  gotoApp,
+}) => {
+  await addLostStage(page, gotoApp);
+  await gotoApp("/opportunities");
+  const sales = (await readPipelines(page)).find(
+    (p) => p.name === "Sales Pipeline",
+  );
+  if (!sales?.stages.some((s) => s.id === LOST_STAGE.id)) {
+    throw new Error("The lost stage was not added to the Sales Pipeline");
+  }
+  const deal = (await readDeals(page)).find(
+    (d) =>
+      d.pipelineId === sales.id &&
+      d.status === "open" &&
+      d.stageId !== LOST_STAGE.id,
+  );
+  if (!deal) throw new Error("No open Sales Pipeline deal");
+  const reason = "Went with a competitor";
+  const lossesBefore = (await readDealActivities(page, deal.id)).filter(
+    (a) => a.type === "opportunity.lost",
+  ).length;
+
+  const sheet = await openEditDeal(page, gotoApp, deal);
+  await chooseOption(
+    page,
+    sheet.getByRole("combobox", { name: "Stage" }),
+    LOST_STAGE.name,
+  );
+  await chooseOption(
+    page,
+    sheet.getByRole("combobox", { name: "Status" }),
+    "Lost",
+  );
+  await sheet.getByLabel("Lost reason", { exact: true }).fill(reason);
+  await sheet.getByRole("button", { name: "Save changes" }).click();
+  await expect(sheet).toBeHidden();
+  await expect(page.getByText("Deal updated")).toBeVisible();
+
+  // update() stores the reason, then move() into the lost stage keeps it and
+  // logs the one loss.
+  await expect
+    .poll(async () => {
+      const stored = (await readDeals(page)).find((d) => d.id === deal.id);
+      return (
+        stored && {
+          stageId: stored.stageId,
+          status: stored.status,
+          lostReason: stored.lostReason,
+        }
+      );
+    })
+    .toEqual({ stageId: LOST_STAGE.id, status: "lost", lostReason: reason });
+  const losses = (await readDealActivities(page, deal.id)).filter(
+    (a) => a.type === "opportunity.lost",
+  );
+  expect(losses).toHaveLength(lossesBefore + 1);
 });
 
 test("Edit deal keeps a seeded deal's Expected close day through a save", async ({

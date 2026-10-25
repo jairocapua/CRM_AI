@@ -273,3 +273,7 @@
 - 2026-10-25 [P7-T62] create()'s 'created' and won/lost entries share the same `at`; assert with toContainEqual plus toHaveLength, not order.
 - 2026-10-25 [P7-T62] In e2e, wait for the New deal sheet's Pipeline combobox to show 'Sales Pipeline' before filling: the open effect resets the form.
 - 2026-10-25 [P7-T62] Memory-doc acceptance items (DECISIONS.md) are not edited by fix rounds; the implementer must touch docs/memory explicitly or the task blocks.
+- 2026-10-25 [P7-T63] Before writing a regression test for a "dropped field" bug, check whether the API already accepts the field; here update()/create() did and the form never sent it, so only a form-level (e2e) test goes red without the fix.
+- 2026-10-25 [P7-T63] enterStage() is shared by create(), move() and update(); changing it changes what create() saves, so grep tests for drafts that create into an open stage with that field set.
+- 2026-10-25 [P7-T63] `vi.spyOn(db, "setState")` on the zustand store (import @/lib/mock/db after world()) proves "one write".
+- 2026-10-25 [P7-T63] To count activities in e2e, poll until the stored record settles, then read readDealActivities() once: the record and its activities persist in the same flush.

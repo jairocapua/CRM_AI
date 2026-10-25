@@ -115,7 +115,15 @@ interface PersistedDb {
         tagIds: string[];
       }
     >;
-    activities: Record<string, { contactId?: string; summary: string }>;
+    activities: Record<
+      string,
+      {
+        contactId?: string;
+        opportunityId?: string;
+        type: string;
+        summary: string;
+      }
+    >;
     opportunities: Record<
       string,
       {
@@ -337,6 +345,17 @@ export async function readContactActivitySummaries(
   return Object.values(activities)
     .filter((activity) => activity.contactId === contactId)
     .map((activity) => activity.summary);
+}
+
+/** The type and summary of every activity persisted for one deal. */
+export async function readDealActivities(
+  page: Page,
+  opportunityId: string,
+): Promise<{ type: string; summary: string }[]> {
+  const { activities } = await readPersistedDb(page);
+  return Object.values(activities)
+    .filter((activity) => activity.opportunityId === opportunityId)
+    .map(({ type, summary }) => ({ type, summary }));
 }
 
 /** The "YYYY-MM-DD" day an instant falls on in `zone`. */
