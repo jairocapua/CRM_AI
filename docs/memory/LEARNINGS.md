@@ -292,3 +292,7 @@
 - 2026-10-25 [P8-T03] On the mock, any read that resolves keys from another table (workflows.list → users, tags) fails whenever that table's fault is on; e2e fault scenarios must account for it.
 - 2026-10-25 [P8-T03] An e2e mutation run leaves the mutated build in .next; rebuild (or rerun the spec after restoring) before screenshots or the final e2e run.
 - 2026-10-25 [P8-T03] For screenshots of a UI task, run `npx next start -H 127.0.0.1 -p 3101` on the current build plus a throwaway Playwright script in the scratch dir; kill it with `taskkill /PID <n> /F /T` (single-slash flags in git-bash).
+- 2026-10-25 [P8-T04] A new `page.tsx` typed `PageProps<"/route/[id]">` fails `tsc` until `npx next typegen` runs, because check's typecheck runs before its build; run typegen once after adding a dynamic route.
+- 2026-10-25 [P8-T04] React Compiler lint rejects `const Icon = pick(); <Icon />` (a component created during render); read a module-level map inside a small component (`StepIcon`, like `ChannelIcon`).
+- 2026-10-25 [P8-T04] `getByRole("main")` includes the app header's buttons; a "no editor controls" e2e must scope to the page's own regions.
+- 2026-10-25 [P8-T04] To fail a detail page's reads in e2e, load the list page, turn the fault on, then click through: useResource reads on mount, so the detail page reads while the fault is on.

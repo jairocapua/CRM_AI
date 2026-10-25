@@ -86,6 +86,17 @@ describe("api.workflows", () => {
     });
   });
 
+  it("carries each automation's registry key as its slug, for the source path", async () => {
+    const { listed } = await reseededWorld();
+    const { AUTOMATIONS } = await import("@/lib/automations");
+    for (const [slugKey, definition] of Object.entries(AUTOMATIONS)) {
+      expect(listed.find((w) => w.id === definition.id)?.slug).toBe(slugKey);
+    }
+    const workflows = await import("./workflows");
+    const speed = await settle(workflows.get("wf_speed_to_lead"));
+    expect(speed.slug).toBe("speed-to-lead");
+  });
+
   it("resolves every tag and user reference after two reseeds with different ids", async () => {
     const first = await reseededWorld();
     const second = await reseededWorld();

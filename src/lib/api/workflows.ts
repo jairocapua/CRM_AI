@@ -134,6 +134,7 @@ function resolve(slug: string, lookup: Lookups): Workflow {
   const ownerId = lookup.userId(definition.owner);
   return {
     id: definition.id,
+    slug,
     name: definition.name,
     description: definition.description,
     folder: definition.folder,

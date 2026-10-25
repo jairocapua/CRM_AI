@@ -134,6 +134,7 @@ function FolderSection({
           <li key={workflow.id} data-automation-id={workflow.id}>
             <AutomationCard
               name={workflow.name}
+              href={`/automation/${workflow.id}`}
               description={workflow.description}
               status={workflow.status}
               trigger={triggerSummary(workflow, tagNames)}

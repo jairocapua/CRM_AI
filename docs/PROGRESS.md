@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 71/90 tasks done (79%) · **Current phase:** P8 · **Next agent task:** P8-T04 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+**Overall:** 71/90 tasks done (79%) · **Current phase:** P8 · **Next agent task:** P8-T06 · **Awaiting review:** P8-T04 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -94,7 +94,7 @@ Status: active · Progress: 3/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/
 | P8-T01 | Authored types and the automation registry | agent | done | P7 | fa0ff5e | 2026-10-25 | Verifier pass (check green, 824 Vitest; smoke e2e 10/10); reviewer approve, no must-fix. Users gained slug; 2 backlog rows. |
 | P8-T02 | Deterministic layout | agent | done | P8-T01 | 11a7706 | 2026-10-25 | Verifier pass (check green, 858 Vitest; smoke e2e 10/10); reviewer approve, no must-fix. Branch-id uniqueness -> BACKLOG, fold into P8-T05. |
 | P8-T03 | Automation list page | agent | done | P8-T01 | 01dad51 | 2026-10-25 | Review round 1: 2 must-fixes (404 request link -> placeholder page; one-alert Retry re-reads users/tags), fixed with red-proved e2e. Re-verify: check green (884 Vitest), 41 e2e passed. |
-| P8-T04 | Detail page with the step list | agent | todo | P8-T02, P8-T03 |  |  |  |
+| P8-T04 | Detail page with the step list | agent | review | P8-T02, P8-T03 |  | 2026-10-25 | Review round 1: missing error-path e2e (added, red-proved) + unclamped summaries, nested-fork test, exhaustive stepSummary. Re-verify: check green (922 Vitest), 23 e2e passed. |
 | P8-T05 | Read-only diagram | agent | todo | P8-T04 |  |  |  |
 | P8-T06 | Run history data | agent | todo | P8-T01 |  |  |  |
 | P8-T07 | Run history UI | agent | todo | P8-T04, P8-T06 |  |  |  |

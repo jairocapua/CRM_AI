@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { WorkflowStatus } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,20 +14,42 @@ const STATUS_DOTS: Record<WorkflowStatus, string> = {
   paused: TAG_DOT_CLASSES.slate,
 };
 
+/** Lifecycle status as a badge ("Live", "In development"): never a toggle. */
+export function AutomationStatusBadge({
+  status,
+  className,
+}: {
+  status: WorkflowStatus;
+  className?: string;
+}) {
+  return (
+    <Badge variant="outline" className={cn("shrink-0", className)}>
+      <span
+        aria-hidden
+        className={cn("size-1.5 rounded-full", STATUS_DOTS[status])}
+      />
+      {STATUS_COPY[status].label}
+    </Badge>
+  );
+}
+
 /**
  * One automation on the list page: read-only, like the contact page's deal
  * cards. Status is lifecycle copy ("Live", "In development"), never a toggle:
  * automations are code, so there is nothing here for staff to switch. The
  * trigger and owner arrive as finished sentences from `automation-summary.ts`.
+ * The name links to the automation's detail page, `href`.
  */
 export function AutomationCard({
   name,
+  href,
   description,
   status,
   trigger,
   owner,
 }: {
   name: string;
+  href: string;
   description?: string;
   status: WorkflowStatus;
   trigger: string;
@@ -36,14 +60,15 @@ export function AutomationCard({
     <Card size="sm" className="h-full">
       <CardContent className="flex flex-1 flex-col gap-3">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sm leading-snug font-medium">{name}</h3>
-          <Badge variant="outline" className="shrink-0">
-            <span
-              aria-hidden
-              className={cn("size-1.5 rounded-full", STATUS_DOTS[status])}
-            />
-            {copy.label}
-          </Badge>
+          <h3 className="text-sm leading-snug font-medium">
+            <Link
+              href={href}
+              className="rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              {name}
+            </Link>
+          </h3>
+          <AutomationStatusBadge status={status} />
         </div>
         {description ? (
           <p className="text-muted-foreground">{description}</p>

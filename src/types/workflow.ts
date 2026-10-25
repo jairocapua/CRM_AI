@@ -104,11 +104,24 @@ export interface WorkflowEdge {
 export type WorkflowStatus = "draft" | "published" | "paused";
 
 /**
+ * How one step of a run went (design "Phase 8b": `WorkflowRunStep.status`).
+ * Declared ahead of run history (P8-T06) so the step list can take per-step
+ * statuses; P8-T06's `WorkflowRunStep` should use this type.
+ */
+export type RunStepStatus = "ok" | "skipped" | "failed";
+
+/**
  * What `api.workflows` returns: an `AutomationDefinition` with its stable keys
  * resolved to ids and its steps flattened into nodes and edges.
  */
 export interface Workflow extends Audited {
   id: ID;
+  /**
+   * The registry key (`"speed-to-lead"`), which is also the module's file
+   * name: the source is shown as `src/lib/automations/<slug>.ts`, derived
+   * rather than stored, so it cannot rot on a rename.
+   */
+  slug: string;
   name: string;
   description?: string;
   folder?: string;

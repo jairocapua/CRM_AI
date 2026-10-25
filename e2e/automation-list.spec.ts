@@ -16,7 +16,8 @@ import { expect, NAVIGATION, test } from "./fixtures";
  * in one section per folder, each card a read-only summary: trigger, owner
  * and lifecycle status. Automations are code, so staff get no switches, and
  * a new one is asked for through the "Request an automation" link, which
- * opens the requests page (a placeholder until P8-T08).
+ * opens the requests page (a placeholder until P8-T08). Each card's name
+ * links to the automation's detail page (e2e/automation-detail.spec.ts).
  *
  * A failed read shows one alert per fault (DECISIONS P7-T47). The
  * automations read also reads the users and tags tables, so a fault there
@@ -255,6 +256,41 @@ async function expectCards(
     await expect(detail(card, "Owner")).toHaveText(owner(expected));
   }
 }
+
+test("each card's name links to the automation's page", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/automation");
+  const cards = page
+    .getByRole("main")
+    .getByRole("region")
+    .getByRole("listitem");
+  await expect(cards).toHaveCount(CARDS.length, { timeout: 15_000 });
+
+  // Every card links by its name, to its own wf_* id, and nothing else on
+  // the card is a link.
+  for (const [i, expected] of CARDS.entries()) {
+    const card = cards.nth(i);
+    const id = await card.getAttribute("data-automation-id");
+    expect(id).toMatch(/^wf_/);
+    const link = card.getByRole("link");
+    await expect(link).toHaveCount(1);
+    await expect(link).toHaveAccessibleName(expected.name);
+    await expect(link).toHaveAttribute("href", `/automation/${id}`);
+  }
+
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: "Speed to Lead", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/automation\/wf_speed_to_lead$/, NAVIGATION);
+  await expect(
+    page
+      .getByRole("main")
+      .getByRole("heading", { level: 1, name: "Speed to Lead", exact: true }),
+  ).toBeVisible();
+});
 
 test("a failed first load shows one alert, and its Retry brings back every read", async ({
   page,
