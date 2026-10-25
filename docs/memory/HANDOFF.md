@@ -4,25 +4,25 @@
 > Since 2026-10-25 the build may also run from Hermes Agent, which has no `Workflow` tool: the orchestrator follows `.claude/workflows/build-phase.js` step by step with helper agents (implementer, then verifier + reviewer in parallel, up to 2 fix rounds) and does the recorder steps itself.
 
 ## Now
-- **Phase:** P7 Calendars — **gate passed** on 2026-10-25 (re-run after the 2026-10-24 failure); phase `done`.
-- **Branch:** `phase/p7-calendars`. GitHub `master` already holds it up to `6f04958` (PR #1); the commits after that (P7-T64 and this gate record) still need merging.
-- **Status:** owner human check passed 2026-10-25 (Asia/Singapore: zone label, local times, now line, side-by-side overlap all correct); waiting on the owner to merge. Next phase: P8 Automation (branch `phase/p8-automation`, cut from `master` after the merge).
+- **Phase:** P8 Automation — active (P7 merged to GitHub `master` via PR #2 on 2026-10-25; local `master` fast-forwarded to it).
+- **Branch:** `phase/p8-automation`, cut from `master` at `584f50e`.
+- **Status:** P8-T01 (authored types + automation registry) done under Autopilot.
 
 ## Last change
-- Gate verify: `npm run check` green (799 Vitest), `npm run e2e` 146 passed (no flakes), `@tanstack/react-table` 8.21.3, tracker OK. Exit criteria 1–4 proven by `calendars-booking.spec.ts:139`, `calendars.spec.ts:26`, `smoke.spec.ts` + the console-watching fixture.
-- Gate review: no must-fix; every earlier gate finding (P7-T57..T64) confirmed resolved in code. Four non-blocking suggestions went to `docs/BACKLOG.md`.
+- P8-T01: the 8 automations are hand-written modules in `src/lib/automations/` (`AUTOMATIONS` keyed by slug, ids `wf_*`, deep-frozen). `api.workflows` now exports only `list()`/`get()` and resolves tag names and user slugs to ids at read time. The `workflows` store table and `seedWorkflows` are gone; `SEED_VERSION` is 5. Users gained a required `slug`.
+- Integrity report: duplicate node ids, empty branches, and tag/user keys that no longer resolve. Demo Data counts show `automations: 8`.
+- Verify: `npm run check` green (824 Vitest), smoke e2e 10/10, react-table 8.21.3, tracker OK. Review: approve, no must-fix.
 
 ## Next up
-- After the merge: "Autopilot: continue the build per CLAUDE.md" starts P8 (`node scripts/progress.mjs next --phase P8`).
+- P8-T02 Deterministic layout (`src/lib/automations/layout.ts`): replaces the interim one-column node positions in `api.workflows` and emits `end` nodes.
 
 ## Waiting on you (owner)
-- Merge P7 into `master`. Locally: `git switch master && git pull && git merge --no-ff phase/p7-calendars`. Or, since you used GitHub before: push the branch and open a second PR.
+- Nothing blocking. Optional: the four automations whose old seed was random got fixed triggers and waits (see DECISIONS.md [P8-T01], "Fixed choices"); change them if you prefer others.
 
 ## Open suggestions (non-blocking)
-- P7-T63: partial save if `setStatus()` fails after `update()` wrote the reason (only a concurrent delete's 404 can cause it).
-- P7-T60: statusBadge() locator is fragile; pickOpenSalesDeal should exclude isLost stages.
-- P7-T59: test create() with a missing stageId; map a `pipelineId` 422 onto the Pipeline field.
-- Gate review items are in `docs/BACKLOG.md` (doc-comment tidy, creation wording, move() stage check, create-then-setStatus e2e).
+- P8-T01: unique user slugs / tag names in the API; `vi.doUnmock` in settings.test.ts; `nowIso()` fallback in `api.workflows` lookups(). Both in `docs/BACKLOG.md`.
+- Calendar ids, pipeline/stage ids and `templateId` are still id-typed in authored configs; they need stable keys before any definition uses them.
+- P7 leftovers remain in `docs/BACKLOG.md`.
 
 ## Blockers
 - None.

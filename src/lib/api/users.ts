@@ -30,6 +30,21 @@ export async function get(id: ID): Promise<User> {
   });
 }
 
+/**
+ * A new user's slug: their email's local part, lowercased to [a-z0-9], with a
+ * number appended when another user already has it. Automation definitions
+ * name users by slug, so it must be unique.
+ */
+function slugFor(email: string, users: User[]): string {
+  const base =
+    (email.split("@")[0] ?? "").toLowerCase().replace(/[^a-z0-9]/g, "") ||
+    "user";
+  const taken = new Set(users.map((u) => u.slug));
+  let slug = base;
+  for (let n = 2; taken.has(slug); n++) slug = `${base}${n}`;
+  return slug;
+}
+
 export async function invite(
   input: Pick<User, "firstName" | "lastName" | "email" | "role"> &
     Partial<Pick<User, "jobTitle">>,
@@ -39,6 +54,7 @@ export async function invite(
       const at = nowIso();
       const record: User = {
         id: newId("usr"),
+        slug: slugFor(input.email, Object.values(db.getState().users)),
         timezone: "America/Los_Angeles",
         isActive: true,
         createdAt: at,

@@ -1,4 +1,7 @@
 import type { ID, Location } from "@/types";
+import { AUTOMATIONS } from "@/lib/automations";
+import { definitionProblems } from "@/lib/automations/integrity";
+import { referencedKeys } from "@/lib/automations/keys";
 import { db } from "@/lib/mock/db";
 import { resumeDeliveries } from "@/lib/mock/delivery";
 import { seedDatabase, clearDatabase } from "@/lib/mock/seed";
@@ -100,7 +103,8 @@ export async function stats(): Promise<DbStats> {
         opportunities: Object.keys(state.opportunities).length,
         calendars: Object.keys(state.calendars).length,
         appointments: Object.keys(state.appointments).length,
-        workflows: Object.keys(state.workflows).length,
+        // A code constant, not a table: doubles as a check the registry loaded.
+        automations: Object.keys(AUTOMATIONS).length,
         activities: Object.keys(state.activities).length,
       };
 
@@ -231,13 +235,30 @@ export async function integrityReport(): Promise<string[]> {
           (a) => a.opportunityId && !s.opportunities[a.opportunityId],
         ).length,
       );
-      missing(
-        "workflow edges reference a missing node",
-        Object.values(s.workflows).filter((w) => {
-          const ids = new Set(w.nodes.map((n) => n.id));
-          return w.edges.some((e) => !ids.has(e.source) || !ids.has(e.target));
-        }).length,
-      );
+
+      // Automations are code: their structure can only break in a commit,
+      // but their tag and user keys break whenever staff rename or delete one.
+      const definitions = Object.values(AUTOMATIONS);
+      problems.push(...definitionProblems(definitions));
+      const tagNames = new Set(Object.values(s.tags).map((t) => t.name));
+      const userSlugs = new Set(Object.values(s.users).map((u) => u.slug));
+      for (const definition of definitions) {
+        const { tags, users } = referencedKeys(definition);
+        for (const tag of new Set(tags)) {
+          if (!tagNames.has(tag)) {
+            problems.push(
+              `${definition.name} references a missing tag "${tag}"`,
+            );
+          }
+        }
+        for (const user of new Set(users)) {
+          if (!userSlugs.has(user)) {
+            problems.push(
+              `${definition.name} references a missing user "${user}"`,
+            );
+          }
+        }
+      }
 
       return problems;
     },

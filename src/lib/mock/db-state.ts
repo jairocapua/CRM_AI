@@ -18,7 +18,6 @@ import type {
   Tag,
   Task,
   User,
-  Workflow,
 } from "@/types";
 
 /**
@@ -26,7 +25,7 @@ import type {
  * the stored version and reseeds rather than migrating — fixtures are demo
  * data, so a clean reseed is always preferable to a half-migrated store.
  */
-export const SEED_VERSION = 4;
+export const SEED_VERSION = 5;
 
 /** Collections are keyed by id so lookups and updates stay O(1). */
 export type Table<T> = Record<ID, T>;
@@ -57,7 +56,6 @@ export interface DbState {
   calendars: Table<Calendar>;
   appointments: Table<Appointment>;
 
-  workflows: Table<Workflow>;
   activities: Table<Activity>;
 }
 
@@ -80,6 +78,5 @@ export const EMPTY_DB: DbState = {
   opportunities: {},
   calendars: {},
   appointments: {},
-  workflows: {},
   activities: {},
 };

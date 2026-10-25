@@ -56,6 +56,8 @@ export function seedLocations(): Location[] {
 
 const TEAM: {
   id: string;
+  /** What automation definitions name the user by (`src/lib/automations`). */
+  slug: string;
   firstName: string;
   lastName: string;
   role: User["role"];
@@ -63,6 +65,7 @@ const TEAM: {
 }[] = [
   {
     id: "usr_jordan",
+    slug: "jordan",
     firstName: "Jordan",
     lastName: "Reyes",
     role: "agency_owner",
@@ -70,6 +73,7 @@ const TEAM: {
   },
   {
     id: "usr_priya",
+    slug: "priya",
     firstName: "Priya",
     lastName: "Nair",
     role: "admin",
@@ -77,6 +81,7 @@ const TEAM: {
   },
   {
     id: "usr_marcus",
+    slug: "marcus",
     firstName: "Marcus",
     lastName: "Bell",
     role: "user",
@@ -84,6 +89,7 @@ const TEAM: {
   },
   {
     id: "usr_lena",
+    slug: "lena",
     firstName: "Lena",
     lastName: "Okafor",
     role: "user",
@@ -91,6 +97,7 @@ const TEAM: {
   },
   {
     id: "usr_sam",
+    slug: "sam",
     firstName: "Sam",
     lastName: "Whitfield",
     role: "user",
@@ -98,6 +105,7 @@ const TEAM: {
   },
   {
     id: "usr_aiko",
+    slug: "aiko",
     firstName: "Aiko",
     lastName: "Tanaka",
     role: "admin",

@@ -14,7 +14,6 @@ import { seedContacts } from "./contacts";
 import { seedOpportunities, seedPipelines } from "./pipelines";
 import { seedConversations } from "./conversations";
 import { seedAppointments, seedCalendars } from "./calendars";
-import { seedWorkflows } from "./workflows";
 import {
   seedActivities,
   seedNotes,
@@ -82,11 +81,6 @@ export function buildDb(): DbState {
     SEED_VOLUME.appointments,
   );
 
-  const workflows = seedWorkflows(
-    tags,
-    users.map((u) => u.id),
-  );
-
   const tasks = seedTasks(contacts, opportunities, users, SEED_VOLUME.tasks);
   const notes = seedNotes(contacts, users, SEED_VOLUME.notes);
   const smartLists = seedSmartLists(users);
@@ -122,7 +116,6 @@ export function buildDb(): DbState {
     opportunities: table(opportunities),
     calendars: table(calendars),
     appointments: table(appointments),
-    workflows: table(workflows),
     activities: table(activities),
   };
 }

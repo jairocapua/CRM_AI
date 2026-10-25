@@ -280,3 +280,8 @@
 - 2026-10-25 [P7-T64] Rewriting a repo file with Python open().write() on Windows turns LF into CRLF; normalise back or use a patch tool, or format:check fails.
 - 2026-10-25 [P7-T64] The deal-form e2e lost-stage specs count opportunity.lost entries by type, not text, so changing the lost-entry wording leaves them green.
 - 2026-10-25 [P7-T64] No e2e spec drags a deal card on the board; same-column reorder is proven at the API level only (move() renumbering tests).
+- 2026-10-25 [P8-T01] Seeded user ids are hand-written (`usr_jordan`), so only tag ids change between reseeds; proving users resolve by slug needs a test that re-keys the users.
+- 2026-10-25 [P8-T01] A compile-time type rule (StepList: branch only last) is tested with `@ts-expect-error` in a .test.ts; loosening the type makes tsc fail with TS2578 (unused directive), which `npm run check` catches.
+- 2026-10-25 [P8-T01] `vi.doMock()` is not undone by `vi.resetModules()`; pair it with `vi.doUnmock` (finally/afterEach) or keep it in the file's last test.
+- 2026-10-25 [P8-T01] To check CRLF, use `git ls-files --eol <files>` or `grep -l $'\r'`; `$'\r'` inside `printf "$(...)"` gets lost and counts every line.
+- 2026-10-25 [P8-T01] In bash, a heredoc body with an apostrophe fails with "unexpected EOF" unless the delimiter is quoted (<<'EOF'); writing a file with a tool or a node script avoids it.

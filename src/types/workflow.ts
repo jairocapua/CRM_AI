@@ -103,12 +103,18 @@ export interface WorkflowEdge {
 
 export type WorkflowStatus = "draft" | "published" | "paused";
 
+/**
+ * What `api.workflows` returns: an `AutomationDefinition` with its stable keys
+ * resolved to ids and its steps flattened into nodes and edges.
+ */
 export interface Workflow extends Audited {
   id: ID;
   name: string;
   description?: string;
   folder?: string;
   status: WorkflowStatus;
+  /** The definition's `owner` slug, resolved; unset if no user has it. */
+  ownerId?: ID;
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
   viewport?: { x: number; y: number; zoom: number };
@@ -118,4 +124,104 @@ export interface Workflow extends Audited {
   };
   stats: { enrolled: number; active: number; completed: number };
   publishedAt?: ISODate;
+}
+
+// ---------------------------------------------------------------------------
+// The authored layer: what a developer writes in `src/lib/automations/`.
+//
+// Definitions are code, but tags and users are seeded rows whose ids change on
+// every reseed. So definitions never hold an id for either: they name tags by
+// `name` and users by `slug` (the `tags` / `users` / `owner` / `fromUser` /
+// `assignee` fields below), and `api.workflows` resolves them at read time
+// into the id-based `WorkflowNodeConfig` above.
+// ---------------------------------------------------------------------------
+
+/** Config kinds whose authored form names tags or users by stable key. */
+type KeyedKind =
+  | "tag_added"
+  | "add_tag"
+  | "remove_tag"
+  | "assign_user"
+  | "internal_notification"
+  | "send_email"
+  | "create_task";
+
+type Unkeyed<K extends WorkflowNodeKind> = Exclude<
+  Extract<WorkflowNodeConfig, { kind: K }>,
+  { kind: KeyedKind }
+>;
+
+export type AuthoredTriggerConfig =
+  Unkeyed<TriggerKind> | { kind: "tag_added"; tags: string[] };
+
+/** Every step kind except `if_else` (a `BranchStep`) and `end` (emitted, never authored). */
+export type AuthoredActionConfig =
+  | Unkeyed<Exclude<ActionKind, "if_else" | "end">>
+  | { kind: "add_tag"; tags: string[] }
+  | { kind: "remove_tag"; tags: string[] }
+  | {
+      kind: "assign_user";
+      strategy: "specific" | "round_robin";
+      users: string[];
+    }
+  | { kind: "internal_notification"; users: string[]; body: string }
+  | {
+      kind: "send_email";
+      subject: string;
+      body: string;
+      templateId?: ID;
+      fromUser?: string;
+    }
+  | {
+      kind: "create_task";
+      title: string;
+      dueInDays: number;
+      assignee?: string;
+    };
+
+/**
+ * Step ids are hand-written and unique within a definition (the trigger is
+ * always node `"trigger"`): run logs and the diagram refer to steps by them.
+ * No position or size — layout derives those.
+ */
+export interface LinearStep {
+  id: ID;
+  label: string;
+  config: AuthoredActionConfig;
+}
+
+export interface AuthoredBranch {
+  /** Becomes the edge's `sourceHandle`. */
+  id: ID;
+  label: string;
+  filter: FilterGroup;
+  /** Must hold at least one step; the integrity report checks. */
+  steps: StepList;
+}
+
+export interface BranchStep {
+  id: ID;
+  label: string;
+  config: { kind: "if_else"; branches: AuthoredBranch[] };
+}
+
+/**
+ * A branch is terminal: it can only be the last step, so paths never rejoin
+ * and the steps form a tree. A step after an `if_else` is a compile error
+ * rather than a silently unreachable node.
+ */
+export type StepList = [...LinearStep[], BranchStep] | LinearStep[];
+
+export interface AutomationDefinition {
+  /** Stable, hand-written: "wf_speed_to_lead". Never generated. */
+  id: ID;
+  name: string;
+  description: string;
+  folder: string;
+  status: WorkflowStatus;
+  /** User slug, resolved to a real user at read time. */
+  owner: string;
+  trigger: { label: string; config: AuthoredTriggerConfig };
+  steps: StepList;
+  settings: { allowMultipleEnrollment: boolean; stopOnReply: boolean };
 }

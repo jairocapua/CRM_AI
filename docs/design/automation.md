@@ -5,6 +5,9 @@
 > split into small tasks; the seed bumps are now `SEED_VERSION` 5 (Phase 7 takes 4);
 > and Vitest exists from P7-T01, so "keeping layout honest with no test runner"
 > below is extra protection, not the only one.
+> P8-T01 (2026-10-25) built §1, §2, §4 and §7 with recorded deviations:
+> `trigger.kind` dropped, users keyed by a new `User.slug`, seven keyed config
+> kinds plus `owner`. See `docs/memory/DECISIONS.md` lines tagged [P8-T01].
 
 ## Context
 
