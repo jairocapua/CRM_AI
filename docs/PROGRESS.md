@@ -102,7 +102,7 @@ Status: done · Progress: 9/9 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8
 | P8-T09 | Withdraw an automation request | agent | done | P8-T08 | 6c44c2e | 2026-10-26 | Withdraw own requested request: fifth status, api withdraw() + canWithdraw, confirm UI; one fix round (focus on failure, withdrawn is final). check green (1051), full e2e 184/184. |
 
 ## P9 — Settings
-Status: todo · Progress: 0/7 · Points: 4 · Branch: phase/p9-settings · File: docs/phases/P9-settings.md
+Status: active · Progress: 0/7 · Points: 4 · Branch: phase/p9-settings · File: docs/phases/P9-settings.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|

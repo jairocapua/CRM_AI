@@ -4,9 +4,9 @@
 > Since 2026-10-25 the build may also run from Hermes Agent, which has no `Workflow` tool: the orchestrator follows `.claude/workflows/build-phase.js` step by step with helper agents (implementer, then verifier + reviewer in parallel, up to 2 fix rounds) and does the recorder steps itself.
 
 ## Now
-- **Phase:** P8 Automation — **gate re-passed** after the owner's added task P8-T09; 9/9 tasks done. Ready to merge.
-- **Branch:** `phase/p8-automation`, cut from `master` at `584f50e`; pushed to GitHub.
-- **Status:** P8-T09 done (`6c44c2e`); P8 gate re-passed on 2026-10-26.
+- **Phase:** P9 Settings — active, 0/7 tasks done (P8 merged to GitHub `master` via PR #4 on 2026-10-26; local `master` fast-forwarded to it).
+- **Branch:** `phase/p9-settings`, cut from `master` at `4d72e89`. Nothing pushed.
+- **Status:** P9 started; P9-T01 Settings API fixes is next. Start it in a fresh session.
 
 ## Last change
 - P8-T09 (owner decision): staff can withdraw their own automation request while it is still "Requested". A fifth status "Withdrawn" keeps it in the list; a confirm dialog asks first; other people's requests and answered ones show no Withdraw button; the developer cannot change a withdrawn request. One fix round: keyboard focus stays on the button when a withdraw fails, and the button cannot be pressed twice.
@@ -16,7 +16,7 @@
 - After the merge: cut `phase/p9-settings` from `master` (name in `docs/phases/P9-settings.md`), set P9 active, and start P9-T01 in a fresh session: "Autopilot: continue the build per CLAUDE.md".
 
 ## Waiting on you (owner)
-- **Merge P8 (required):** open a PR from `phase/p8-automation` to `master` on GitHub (jairocapua/CRM_AI) and merge it, as for P7.
+- Nothing blocking.
 - **Optional click-through** (every item is already proven by tests): `npm run dev`, open http://localhost:3000, then Automation (8 cards, 5 folders) → Speed to Lead (diagram with "Replied" / "No reply" and End pills; narrow window shows only the step list) → Run history (click a Started time, see each step's status, click the contact) → "Request an automation" (send one, reload, see "Requested"; press Withdraw, confirm, see "Withdrawn") → `/settings/demo-data` (no integrity problems).
 - Optional: the fixed triggers/waits for four automations (DECISIONS [P8-T01]) and the list's status wording ([P8-T03]).
 
