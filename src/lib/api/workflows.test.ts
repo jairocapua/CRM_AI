@@ -51,7 +51,7 @@ async function reseededWorld() {
 describe("api.workflows", () => {
   it("exports reads only", async () => {
     const workflows = await import("./workflows");
-    expect(Object.keys(workflows).sort()).toEqual(["get", "list"]);
+    expect(Object.keys(workflows).sort()).toEqual(["get", "list", "listRuns"]);
   });
 
   it("lists every registry automation, by folder then name", async () => {
@@ -233,5 +233,93 @@ describe("api.workflows", () => {
     const nurture = await settle(workflows.get("wf_new_lead_nurture"));
     const addTag = nurture.nodes.find((n) => n.config.kind === "add_tag")!;
     expect(addTag.config).toMatchObject({ kind: "add_tag", tagIds: [] });
+  });
+
+  it("carries no run counters: run history is the only source of counts", async () => {
+    const { listed } = await reseededWorld();
+    for (const workflow of listed) {
+      expect(workflow, workflow.name).not.toHaveProperty("stats");
+      for (const node of workflow.nodes) {
+        expect(node, `${workflow.name} ${node.id}`).not.toHaveProperty("stats");
+      }
+    }
+  });
+});
+
+describe("api.workflows.listRuns()", () => {
+  async function runsWorld() {
+    const { db } = await seededWorld();
+    const workflows = await import("./workflows");
+    return { state: db.getState(), workflows };
+  }
+
+  it("returns only the given automation's runs, newest first", async () => {
+    const { state, workflows } = await runsWorld();
+    const all = Object.values(state.workflowRuns);
+    const own = all.filter((r) => r.workflowId === "wf_speed_to_lead");
+    // Not vacuous: other automations have runs too.
+    expect(own.length).toBeGreaterThan(1);
+    expect(all.length).toBeGreaterThan(own.length);
+
+    const page = await settle(workflows.listRuns("wf_speed_to_lead"));
+
+    expect(page.total).toBe(own.length);
+    expect(page.pageCount).toBe(1);
+    expect(page.rows.every((r) => r.workflowId === "wf_speed_to_lead")).toBe(
+      true,
+    );
+    expect(page.rows.map((r) => r.id).sort()).toEqual(
+      own.map((r) => r.id).sort(),
+    );
+    const starts = page.rows.map((r) => r.startedAt);
+    expect(starts).toEqual([...starts].sort().reverse());
+  });
+
+  it("pages through the runs", async () => {
+    const { workflows } = await runsWorld();
+    const everything = await settle(workflows.listRuns("wf_speed_to_lead"));
+    const second = await settle(
+      workflows.listRuns("wf_speed_to_lead", { page: 2, pageSize: 5 }),
+    );
+
+    expect(everything.total).toBeGreaterThan(5);
+    expect(second.total).toBe(everything.total);
+    expect(second.page).toBe(2);
+    expect(second.pageSize).toBe(5);
+    expect(second.pageCount).toBe(Math.ceil(everything.total / 5));
+    expect(second.rows.map((r) => r.id)).toEqual(
+      everything.rows.slice(5, 10).map((r) => r.id),
+    );
+  });
+
+  it("filters within the automation's runs", async () => {
+    const { workflows } = await runsWorld();
+    const failed = await settle(
+      workflows.listRuns("wf_speed_to_lead", {
+        filter: {
+          id: "fg",
+          combinator: "and",
+          conditions: [
+            { id: "fc", field: "status", operator: "eq", value: "failed" },
+          ],
+        },
+      }),
+    );
+    expect(failed.rows.every((r) => r.status === "failed")).toBe(true);
+    expect(failed.rows.every((r) => r.workflowId === "wf_speed_to_lead")).toBe(
+      true,
+    );
+  });
+
+  it("gives a draft automation an empty history and 404s an unknown id", async () => {
+    const { workflows } = await runsWorld();
+    const draft = await settle(workflows.listRuns("wf_birthday_greeting"));
+    expect(draft).toMatchObject({ rows: [], total: 0 });
+
+    await expect(settle(workflows.listRuns("wf_nope"))).rejects.toMatchObject({
+      name: "ApiError",
+      status: 404,
+      message: "Workflow wf_nope was not found.",
+    });
   });
 });

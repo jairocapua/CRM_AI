@@ -18,6 +18,7 @@ import type {
   Tag,
   Task,
   User,
+  WorkflowRun,
 } from "@/types";
 
 /**
@@ -25,7 +26,7 @@ import type {
  * the stored version and reseeds rather than migrating — fixtures are demo
  * data, so a clean reseed is always preferable to a half-migrated store.
  */
-export const SEED_VERSION = 5;
+export const SEED_VERSION = 6;
 
 /** Collections are keyed by id so lookups and updates stay O(1). */
 export type Table<T> = Record<ID, T>;
@@ -57,6 +58,12 @@ export interface DbState {
   appointments: Table<Appointment>;
 
   activities: Table<Activity>;
+
+  /**
+   * Automation run history. The automations themselves are code
+   * (`src/lib/automations/`); each run names one by `Workflow.id`.
+   */
+  workflowRuns: Table<WorkflowRun>;
 }
 
 export const EMPTY_DB: DbState = {
@@ -79,4 +86,5 @@ export const EMPTY_DB: DbState = {
   calendars: {},
   appointments: {},
   activities: {},
+  workflowRuns: {},
 };

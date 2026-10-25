@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Contact } from "@/types";
-import { freshModules, settle } from "@/lib/mock/testing";
+import { freshModules, seededWorld, settle } from "@/lib/mock/testing";
 
 /**
  * Contact search, as the contact picker, the contacts table and the CSV
@@ -118,5 +118,63 @@ describe("contacts.exportCsv({ q })", () => {
     expect(
       rows.map((line) => line.split(",").slice(0, 2).join(" ")).sort(),
     ).toEqual(["Ana Garcia", "Diana Garcia"]);
+  });
+});
+
+describe("contacts.remove() and automation runs", () => {
+  /** A seeded world, plus the contacts with run history, most runs first. */
+  async function runsWorld() {
+    const { db } = await seededWorld();
+    const contacts = await import("./contacts");
+    const settings = await import("./settings");
+    const cache = await import("./cache");
+    const runCount = new Map<string, number>();
+    for (const run of Object.values(db.getState().workflowRuns)) {
+      runCount.set(run.contactId, (runCount.get(run.contactId) ?? 0) + 1);
+    }
+    const withRuns = [...runCount.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([id]) => id);
+    const runsOf = (ids: string[]) =>
+      Object.values(db.getState().workflowRuns).filter((r) =>
+        ids.includes(r.contactId),
+      );
+    return { db, contacts, settings, cache, withRuns, runsOf };
+  }
+
+  it("deleting one contact deletes their runs and keeps the report clean", async () => {
+    const w = await runsWorld();
+    const id = w.withRuns[0]!;
+    const theirs = w.runsOf([id]).length;
+    expect(theirs).toBeGreaterThanOrEqual(1);
+    const before = Object.keys(w.db.getState().workflowRuns).length;
+    const revision = w.cache.revisionOf("workflowRuns");
+
+    await settle(w.contacts.remove([id]));
+
+    expect(w.runsOf([id])).toEqual([]);
+    // Only theirs: everyone else's history survives.
+    expect(Object.keys(w.db.getState().workflowRuns)).toHaveLength(
+      before - theirs,
+    );
+    expect(w.cache.revisionOf("workflowRuns")).toBe(revision + 1);
+    expect(await settle(w.settings.integrityReport())).toEqual([]);
+  });
+
+  it("bulk-deleting contacts deletes all their runs and keeps the report clean", async () => {
+    const w = await runsWorld();
+    const ids = w.withRuns.slice(0, 3);
+    expect(ids).toHaveLength(3);
+    const theirs = w.runsOf(ids).length;
+    expect(theirs).toBeGreaterThanOrEqual(3);
+    const before = Object.keys(w.db.getState().workflowRuns).length;
+
+    expect(await settle(w.contacts.remove(ids))).toEqual({ deleted: 3 });
+
+    expect(w.runsOf(ids)).toEqual([]);
+    expect(Object.keys(w.db.getState().workflowRuns)).toHaveLength(
+      before - theirs,
+    );
+    expect(await settle(w.settings.integrityReport())).toEqual([]);
   });
 });

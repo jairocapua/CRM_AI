@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { WorkflowRun } from "@/types";
 import { SEED_VERSION } from "@/lib/mock/db-state";
 import {
   freshModules,
@@ -43,17 +44,18 @@ async function boot(version: number) {
 }
 
 describe("bootstrap()", () => {
-  it("is on seed version 5", () => {
-    expect(SEED_VERSION).toBe(5);
+  it("is on seed version 6", () => {
+    expect(SEED_VERSION).toBe(6);
   });
 
-  it("reseeds a workspace saved at seed version 4", async () => {
-    // P8 deleted the workflows table (automations are code now).
-    const state = await boot(4);
+  it("reseeds a workspace saved at seed version 5", async () => {
+    // P8-T06 added the workflowRuns table (seeded run history).
+    const state = await boot(5);
 
     expect(state.contacts.marker).toBeUndefined();
     expect(Object.keys(state.contacts)).toHaveLength(240);
     expect(Object.keys(state.appointments)).toHaveLength(120);
+    expect(Object.keys(state.workflowRuns).length).toBeGreaterThan(0);
     expect(state.seededAt).toBe(ANCHOR);
   });
 
@@ -148,7 +150,10 @@ describe("automations on the Demo Data page", () => {
   });
 
   it("reports a malformed definition through definitionProblems()", async () => {
-    await seededWorld();
+    const { db } = await seededWorld();
+    // The stand-in registry below holds one automation, so every other
+    // automation's seeded runs would be reported as orphans.
+    db.setState({ workflowRuns: {} });
     const real = await import("@/lib/automations");
     const speed = real.AUTOMATIONS["speed-to-lead"]!;
     vi.doMock("@/lib/automations", () => ({
@@ -158,6 +163,7 @@ describe("automations on the Demo Data page", () => {
           steps: [speed.steps[0], { ...speed.steps[0] }],
         },
       },
+      LAYOUTS: { "speed-to-lead": real.LAYOUTS["speed-to-lead"] },
     }));
     try {
       const settings = await import("./settings");
@@ -201,5 +207,57 @@ describe("automations on the Demo Data page", () => {
     } finally {
       vi.doUnmock("@/lib/automations/layout");
     }
+  });
+});
+
+describe("automation runs on the Demo Data page", () => {
+  /** A seeded world whose run table is one real run plus `broken` copies. */
+  async function withRuns(broken: (run: WorkflowRun) => Partial<WorkflowRun>) {
+    const { db } = await seededWorld();
+    const settings = await import("./settings");
+    const real = Object.values(db.getState().workflowRuns).find(
+      (r) => r.workflowId === "wf_speed_to_lead",
+    )!;
+    const copy: WorkflowRun = { ...real, id: "run_broken", ...broken(real) };
+    db.setState({ workflowRuns: { [real.id]: real, [copy.id]: copy } });
+    return settle(settings.integrityReport());
+  }
+
+  it("counts the seeded runs", async () => {
+    const { db } = await seededWorld();
+    const settings = await import("./settings");
+    const { counts } = await settle(settings.stats());
+    const runs = Object.keys(db.getState().workflowRuns).length;
+    expect(runs).toBeGreaterThan(0);
+    expect(counts.automationRuns).toBe(runs);
+  });
+
+  it("reports a run whose contact is gone", async () => {
+    expect(await withRuns(() => ({ contactId: "con_gone" }))).toEqual([
+      "1 automation runs point at a missing contact",
+    ]);
+  });
+
+  it("reports a run whose automation is gone", async () => {
+    expect(await withRuns(() => ({ workflowId: "wf_gone" }))).toEqual([
+      "1 automation runs point at a missing automation",
+    ]);
+  });
+
+  it("reports a run that logs a step its automation does not have", async () => {
+    expect(
+      await withRuns((run) => ({
+        steps: [...run.steps, { ...run.steps[0]!, nodeId: "not_a_step" }],
+      })),
+    ).toEqual(["1 automation runs log a step their automation does not have"]);
+  });
+
+  it("checks a run's steps against its own automation, not any automation", async () => {
+    // Review Request has a "send_email" step; Speed to Lead does not.
+    expect(
+      await withRuns((run) => ({
+        steps: [...run.steps, { ...run.steps[0]!, nodeId: "send_email" }],
+      })),
+    ).toEqual(["1 automation runs log a step their automation does not have"]);
   });
 });

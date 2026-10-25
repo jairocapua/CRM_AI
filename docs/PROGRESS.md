@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 73/90 tasks done (81%) · **Current phase:** P8 · **Next agent task:** P8-T06 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+**Overall:** 73/90 tasks done (81%) · **Current phase:** P8 · **Next agent task:** P8-T08 · **Awaiting review:** P8-T06 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -96,7 +96,7 @@ Status: active · Progress: 5/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/
 | P8-T03 | Automation list page | agent | done | P8-T01 | 01dad51 | 2026-10-25 | Review round 1: 2 must-fixes (404 request link -> placeholder page; one-alert Retry re-reads users/tags), fixed with red-proved e2e. Re-verify: check green (884 Vitest), 41 e2e passed. |
 | P8-T04 | Detail page with the step list | agent | done | P8-T02, P8-T03 | 6456413 | 2026-10-25 | Review round 1: missing error-path e2e (added, red-proved) + unclamped summaries, nested-fork test, exhaustive stepSummary. Re-verify: check green (922 Vitest), 23 e2e passed. |
 | P8-T05 | Read-only diagram | agent | done | P8-T04 | 6d49c64 | 2026-10-25 | Deep review round 1: disableKeyboardA11y must-fix (red-proved e2e), memoised names, phone-never-downloads check, skeleton height. Re-verify: check green (937 Vitest), 29 e2e, diagram spec x3 stable. |
-| P8-T06 | Run history data | agent | todo | P8-T01 |  |  |  |
+| P8-T06 | Run history data | agent | review | P8-T01 |  | 2026-10-25 | Run history data: types, workflowRuns table + seeder (97 runs), cascade, cache key, 3 integrity lines, listRuns; fake stats deleted. check green (962), 38 e2e. |
 | P8-T07 | Run history UI | agent | todo | P8-T04, P8-T06 |  |  |  |
 | P8-T08 | Automation requests | agent | todo | P8-T03 |  |  |  |
 

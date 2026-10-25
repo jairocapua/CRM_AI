@@ -4,16 +4,25 @@ import type {
   Workflow,
   WorkflowNode,
   WorkflowNodeConfig,
+  WorkflowRun,
 } from "@/types";
 import { AUTOMATIONS, LAYOUTS } from "@/lib/automations";
 import type { LayoutConfig } from "@/lib/automations/layout";
 import { db } from "@/lib/mock/db";
-import { notFound, nowIso, simulate } from "./http";
+import {
+  applyQuery,
+  notFound,
+  nowIso,
+  simulate,
+  type ListQuery,
+  type Page,
+} from "./http";
 
 /**
  * Automations are developer-written code (`src/lib/automations/`), so this
  * module only reads. It still sits behind the seam: against a real backend
- * these become `fetch()` calls and no component changes.
+ * these become `fetch()` calls and no component changes. Their run history
+ * is seeded data in the store (`workflowRuns`), read here too.
  */
 
 export async function list(): Promise<Workflow[]> {
@@ -39,6 +48,31 @@ export async function get(id: ID): Promise<Workflow> {
         Object.keys(AUTOMATIONS).find((key) => AUTOMATIONS[key]!.id === id) ??
         notFound("Workflow", id);
       return resolve(slug, lookups());
+    },
+    { canFail: false },
+  );
+}
+
+/**
+ * One automation's run history, newest first by default. `workflowId` is
+ * `Workflow.id`; an id the registry does not have is a 404, as in `get()`,
+ * so a typo never reads as "no runs yet".
+ */
+export async function listRuns(
+  workflowId: ID,
+  query: ListQuery = {},
+): Promise<Page<WorkflowRun>> {
+  return simulate(
+    () => {
+      if (!Object.values(AUTOMATIONS).some((d) => d.id === workflowId)) {
+        notFound("Workflow", workflowId);
+      }
+      const runs = Object.values(db.getState().workflowRuns).filter(
+        (run) => run.workflowId === workflowId,
+      );
+      return applyQuery(runs, query, {
+        defaultSort: [{ field: "startedAt", desc: true }],
+      });
     },
     { canFail: false },
   );
@@ -143,8 +177,6 @@ function resolve(slug: string, lookup: Lookups): Workflow {
     nodes,
     edges,
     settings: { ...definition.settings },
-    // Real counts arrive with run history (P8-T06); never faked here.
-    stats: { enrolled: 0, active: 0, completed: 0 },
     createdAt: lookup.at,
     updatedAt: lookup.at,
   };

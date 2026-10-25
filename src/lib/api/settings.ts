@@ -1,5 +1,5 @@
 import type { ID, Location } from "@/types";
-import { AUTOMATIONS } from "@/lib/automations";
+import { AUTOMATIONS, LAYOUTS } from "@/lib/automations";
 import {
   definitionProblems,
   layoutProblems,
@@ -108,6 +108,7 @@ export async function stats(): Promise<DbStats> {
         appointments: Object.keys(state.appointments).length,
         // A code constant, not a table: doubles as a check the registry loaded.
         automations: Object.keys(AUTOMATIONS).length,
+        automationRuns: Object.keys(state.workflowRuns).length,
         activities: Object.keys(state.activities).length,
       };
 
@@ -237,6 +238,31 @@ export async function integrityReport(): Promise<string[]> {
         Object.values(s.activities).filter(
           (a) => a.opportunityId && !s.opportunities[a.opportunityId],
         ).length,
+      );
+
+      // Run history: each run names a contact (swept by the cascade), an
+      // automation by `Workflow.id`, and nodes of that automation's diagram.
+      const nodeIdsById = new Map(
+        Object.entries(AUTOMATIONS).map(([slug, d]) => [
+          d.id,
+          new Set(LAYOUTS[slug]!.nodes.map((n) => n.id)),
+        ]),
+      );
+      const runs = Object.values(s.workflowRuns);
+      missing(
+        "automation runs point at a missing contact",
+        runs.filter((r) => !s.contacts[r.contactId]).length,
+      );
+      missing(
+        "automation runs point at a missing automation",
+        runs.filter((r) => !nodeIdsById.has(r.workflowId)).length,
+      );
+      missing(
+        "automation runs log a step their automation does not have",
+        runs.filter((r) => {
+          const nodeIds = nodeIdsById.get(r.workflowId);
+          return nodeIds && r.steps.some((step) => !nodeIds.has(step.nodeId));
+        }).length,
       );
 
       // Automations are code: their structure and layout can only break in

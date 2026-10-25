@@ -303,3 +303,7 @@
 - 2026-10-25 [P8-T05] To prove a lazily loaded library was not downloaded, match a string literal from its code in script response bodies (chunk names are hashed), and pair it with a positive-control test where it is loaded.
 - 2026-10-25 [P8-T05] `next dev` rewrites AGENTS.md; restore it afterwards. A component-folder unit test cannot import `@/lib/mock/testing` (API-seam lint); build fixtures from `LAYOUTS`.
 - 2026-10-25 [P8-T05] A useMemo keyed on an object rebuilt every render never hits; memoise the inputs (Maps built from `useResource` data) above the component's early returns.
+- 2026-10-25 [P8-T06] A `vi.doMock("@/lib/automations")` factory must also return `LAYOUTS` now that integrityReport reads it (vitest throws on a missing export); a stand-in registry also needs `workflowRuns` cleared, or the real automations' runs report as orphans.
+- 2026-10-25 [P8-T06] `assertNothingAfterAnchor` checks only top-level string fields, so nested timestamps like `steps[].at` need their own test.
+- 2026-10-25 [P8-T06] To compare two seeded worlds across builds, blank ids matching `/^[a-z]+_[0-9a-z]{12}$/` (nanoids change every build; faker draws do not).
+- 2026-10-25 [P8-T06] `invalidateAll()` bumps already-read keys twice (loop plus literal list); a test expecting exactly +1 on such a key fails. Assert "greater than before" instead.

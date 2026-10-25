@@ -50,7 +50,7 @@ export type LayoutConfig =
   | AuthoredActionConfig
   | Extract<WorkflowNodeConfig, { kind: "if_else" | "end" }>;
 
-export interface LayoutNode extends Omit<WorkflowNode, "config" | "stats"> {
+export interface LayoutNode extends Omit<WorkflowNode, "config"> {
   config: LayoutConfig;
 }
 
