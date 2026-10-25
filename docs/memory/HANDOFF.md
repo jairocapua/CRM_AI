@@ -6,7 +6,7 @@
 ## Now
 - **Phase:** P7 Calendars — **gate passed** on 2026-10-25 (re-run after the 2026-10-24 failure); phase `done`.
 - **Branch:** `phase/p7-calendars`. GitHub `master` already holds it up to `6f04958` (PR #1); the commits after that (P7-T64 and this gate record) still need merging.
-- **Status:** waiting on the owner to do the human check and merge. Next phase: P8 Automation (branch `phase/p8-automation`, cut from `master` after the merge).
+- **Status:** owner human check passed 2026-10-25 (Asia/Singapore: zone label, local times, now line, side-by-side overlap all correct); waiting on the owner to merge. Next phase: P8 Automation (branch `phase/p8-automation`, cut from `master` after the merge).
 
 ## Last change
 - Gate verify: `npm run check` green (799 Vitest), `npm run e2e` 146 passed (no flakes), `@tanstack/react-table` 8.21.3, tracker OK. Exit criteria 1–4 proven by `calendars-booking.spec.ts:139`, `calendars.spec.ts:26`, `smoke.spec.ts` + the console-watching fixture.
@@ -16,7 +16,6 @@
 - After the merge: "Autopilot: continue the build per CLAUDE.md" starts P8 (`node scripts/progress.mjs next --phase P8`).
 
 ## Waiting on you (owner)
-- Human check: open `/calendars?view=week&date=2026-09-08` from your timezone — times in local time, zone label right, "now" line at the right time, overlapping appointments side by side (LA business hours land around midnight–08:00 in Asia; expected).
 - Merge P7 into `master`. Locally: `git switch master && git pull && git merge --no-ff phase/p7-calendars`. Or, since you used GitHub before: push the branch and open a second PR.
 
 ## Open suggestions (non-blocking)
