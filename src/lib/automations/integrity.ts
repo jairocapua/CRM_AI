@@ -1,5 +1,6 @@
-import type { AutomationDefinition } from "@/types";
+import type { AutomationDefinition, ID } from "@/types";
 
+import { layout, type Layout } from "./layout";
 import { TRIGGER_NODE_ID, allBranches, allSteps } from "./walk";
 
 /**
@@ -31,6 +32,64 @@ export function definitionProblems(
           `${definition.name} has an empty branch "${branch.label}"`,
         );
       }
+    }
+  }
+  return problems;
+}
+
+/** What the overlap check needs of a node: its box. */
+export interface NodeBox {
+  id: ID;
+  position: { x: number; y: number };
+  width: number;
+  height: number;
+}
+
+/**
+ * Every pair of nodes whose boxes overlap (AABB), in node order. Boxes that
+ * only touch do not count.
+ */
+export function overlappingNodes(nodes: readonly NodeBox[]): [ID, ID][] {
+  const pairs: [ID, ID][] = [];
+  nodes.forEach((a, i) => {
+    for (const b of nodes.slice(i + 1)) {
+      if (
+        a.position.x < b.position.x + b.width &&
+        b.position.x < a.position.x + a.width &&
+        a.position.y < b.position.y + b.height &&
+        b.position.y < a.position.y + a.height
+      ) {
+        pairs.push([a.id, b.id]);
+      }
+    }
+  });
+  return pairs;
+}
+
+/**
+ * Layout checks for the integrity report: a definition layout throws on, and
+ * nodes drawn over each other. A definition `definitionProblems()` already
+ * flags is skipped, so one mistake is reported once. `place` is the layout
+ * under test; tests pass a broken one.
+ */
+export function layoutProblems(
+  definitions: readonly AutomationDefinition[],
+  place: (definition: AutomationDefinition) => Layout = layout,
+): string[] {
+  const problems: string[] = [];
+  for (const definition of definitions) {
+    if (definitionProblems([definition]).length > 0) continue;
+    let nodes: readonly NodeBox[];
+    try {
+      nodes = place(definition).nodes;
+    } catch (error) {
+      problems.push(error instanceof Error ? error.message : String(error));
+      continue;
+    }
+    for (const [a, b] of overlappingNodes(nodes)) {
+      problems.push(
+        `${definition.name} has overlapping nodes "${a}" and "${b}"`,
+      );
     }
   }
   return problems;

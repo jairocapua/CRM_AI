@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Workflow, WorkflowNodeConfig } from "@/types";
+import type { Workflow, WorkflowNode, WorkflowNodeConfig } from "@/types";
 import { seededWorld, settle } from "@/lib/mock/testing";
 
 /**
@@ -152,6 +152,60 @@ describe("api.workflows", () => {
       userRefs += userIds.length;
     }
     expect(userRefs).toBeGreaterThan(0);
+  });
+
+  it("serves the registry's layout: positions, sizes, edges and end nodes", async () => {
+    const { listed } = await reseededWorld();
+    const { AUTOMATIONS } = await import("@/lib/automations");
+    const { layout } = await import("@/lib/automations/layout");
+
+    const geometry = (n: Omit<WorkflowNode, "config">) => [
+      n.id,
+      n.kind,
+      n.category,
+      n.label,
+      n.position,
+      n.width,
+      n.height,
+    ];
+    for (const definition of Object.values(AUTOMATIONS)) {
+      const workflow = listed.find((w) => w.id === definition.id)!;
+      const laidOut = layout(definition);
+      expect(workflow.nodes.map(geometry), definition.name).toEqual(
+        laidOut.nodes.map(geometry),
+      );
+      expect(workflow.edges, definition.name).toEqual(laidOut.edges);
+      expect(
+        workflow.nodes.filter((n) => n.kind === "end").length,
+        definition.name,
+      ).toBeGreaterThan(0);
+    }
+
+    // Speed to Lead's fork puts its two branches side by side.
+    const speed = listed.find((w) => w.id === "wf_speed_to_lead")!;
+    const at = (id: string) => speed.nodes.find((n) => n.id === id)!.position;
+    expect(at("assign_rep").y).toBe(at("send_audit_email").y);
+    expect(at("assign_rep").x).toBeLessThan(at("send_audit_email").x);
+    expect(speed.edges.find((e) => e.target === "assign_rep")).toMatchObject({
+      source: "replied",
+      sourceHandle: "b_replied",
+      label: "Replied",
+    });
+  });
+
+  it("returns copies the caller may change, never the frozen registry", async () => {
+    await seededWorld();
+    const workflows = await import("./workflows");
+    const first = await settle(workflows.get("wf_speed_to_lead"));
+    const node = first.nodes[0]!;
+    expect(Object.isFrozen(node)).toBe(false);
+    expect(Object.isFrozen(node.position)).toBe(false);
+    expect(Object.isFrozen(node.config)).toBe(false);
+    expect(Object.isFrozen(first.edges[0])).toBe(false);
+    node.position.x += 500;
+
+    const second = await settle(workflows.get("wf_speed_to_lead"));
+    expect(second.nodes[0]!.position.x).toBe(node.position.x - 500);
   });
 
   it("drops a reference whose tag no longer exists instead of inventing an id", async () => {

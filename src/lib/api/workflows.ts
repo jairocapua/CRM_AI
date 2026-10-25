@@ -1,16 +1,12 @@
 import type {
-  AuthoredActionConfig,
-  AuthoredTriggerConfig,
   AutomationDefinition,
   ID,
-  StepList,
   Workflow,
-  WorkflowEdge,
   WorkflowNode,
   WorkflowNodeConfig,
 } from "@/types";
-import { AUTOMATIONS } from "@/lib/automations";
-import { TRIGGER_NODE_ID, type Step } from "@/lib/automations/walk";
+import { AUTOMATIONS, LAYOUTS } from "@/lib/automations";
+import type { LayoutConfig } from "@/lib/automations/layout";
 import { db } from "@/lib/mock/db";
 import { notFound, nowIso, simulate } from "./http";
 
@@ -24,8 +20,8 @@ export async function list(): Promise<Workflow[]> {
   return simulate(
     () => {
       const lookup = lookups();
-      return Object.values(AUTOMATIONS)
-        .map((definition) => resolve(definition, lookup))
+      return Object.keys(AUTOMATIONS)
+        .map((slug) => resolve(slug, lookup))
         .sort(
           (a, b) =>
             (a.folder ?? "").localeCompare(b.folder ?? "") ||
@@ -39,17 +35,17 @@ export async function list(): Promise<Workflow[]> {
 export async function get(id: ID): Promise<Workflow> {
   return simulate(
     () => {
-      const definition =
-        Object.values(AUTOMATIONS).find((d) => d.id === id) ??
+      const slug =
+        Object.keys(AUTOMATIONS).find((key) => AUTOMATIONS[key]!.id === id) ??
         notFound("Workflow", id);
-      return resolve(definition, lookups());
+      return resolve(slug, lookups());
     },
     { canFail: false },
   );
 }
 
 // ---------------------------------------------------------------------------
-// Resolution: stable keys -> ids, authored steps -> nodes and edges.
+// Resolution: stable keys -> ids on the registry's laid-out nodes.
 // ---------------------------------------------------------------------------
 
 interface Lookups {
@@ -87,21 +83,10 @@ function lookups(): Lookups {
   };
 }
 
-function triggerConfig(
-  c: AuthoredTriggerConfig,
-  lookup: Lookups,
-): WorkflowNodeConfig {
-  if (c.kind === "tag_added") {
-    return { kind: "tag_added", tagIds: lookup.tagIds(c.tags) };
-  }
-  return structuredClone(c);
-}
-
-function actionConfig(
-  c: AuthoredActionConfig,
-  lookup: Lookups,
-): WorkflowNodeConfig {
+/** A laid-out node's config with its tag and user keys resolved to ids. */
+function nodeConfig(c: LayoutConfig, lookup: Lookups): WorkflowNodeConfig {
   switch (c.kind) {
+    case "tag_added":
     case "add_tag":
     case "remove_tag":
       return { kind: c.kind, tagIds: lookup.tagIds(c.tags) };
@@ -132,101 +117,20 @@ function actionConfig(
   }
 }
 
-// Interim geometry: one column, one row per node. P8-T02's layout.ts replaces
-// this with a real tree layout and emits `end` nodes at every terminal.
-const NODE_WIDTH = 260;
-const NODE_HEIGHT = 78;
-const Y_STEP = 130;
-
-interface BranchRef {
-  id: ID;
-  label: string;
-}
-
-function graph(
-  definition: AutomationDefinition,
-  lookup: Lookups,
-): { nodes: WorkflowNode[]; edges: WorkflowEdge[] } {
-  const nodes: WorkflowNode[] = [];
-  const edges: WorkflowEdge[] = [];
-
-  const place = (
-    id: ID,
-    label: string,
-    config: WorkflowNodeConfig,
-    category: WorkflowNode["category"],
-  ) => {
-    nodes.push({
-      id,
-      kind: config.kind,
-      category,
-      label,
-      position: { x: 0, y: nodes.length * Y_STEP },
-      width: NODE_WIDTH,
-      height: NODE_HEIGHT,
-      config,
-    });
-  };
-
-  const connect = (source: ID, target: ID, branch?: BranchRef) => {
-    edges.push({
-      id: `${source}->${target}`,
-      source,
-      target,
-      ...(branch ? { sourceHandle: branch.id, label: branch.label } : {}),
-    });
-  };
-
-  /** Places a step list after `from`; the first edge of a branch carries it. */
-  const walk = (steps: StepList, from: ID, branch?: BranchRef) => {
-    let previous = from;
-    let via = branch;
-    for (const step of steps as Step[]) {
-      if (step.config.kind === "if_else") {
-        place(
-          step.id,
-          step.label,
-          {
-            kind: "if_else",
-            branches: step.config.branches.map((b) => ({
-              id: b.id,
-              label: b.label,
-              filter: structuredClone(b.filter),
-            })),
-          },
-          "logic",
-        );
-        connect(previous, step.id, via);
-        for (const b of step.config.branches) {
-          walk(b.steps, step.id, { id: b.id, label: b.label });
-        }
-        return;
-      }
-      const config = actionConfig(step.config, lookup);
-      place(
-        step.id,
-        step.label,
-        config,
-        config.kind === "wait" ? "logic" : "action",
-      );
-      connect(previous, step.id, via);
-      previous = step.id;
-      via = undefined;
-    }
-  };
-
-  place(
-    TRIGGER_NODE_ID,
-    definition.trigger.label,
-    triggerConfig(definition.trigger.config, lookup),
-    "trigger",
-  );
-  walk(definition.steps, TRIGGER_NODE_ID);
-  return { nodes, edges };
-}
-
-function resolve(definition: AutomationDefinition, lookup: Lookups): Workflow {
-  const { nodes, edges } = graph(definition, lookup);
+/**
+ * The registry's automation `slug` as a `Workflow`. Geometry (positions,
+ * sizes, the emitted `end` nodes) comes from `LAYOUTS`, laid out once at
+ * import; this copies it out of the frozen registry and resolves the keys.
+ */
+function resolve(slug: string, lookup: Lookups): Workflow {
+  const definition: AutomationDefinition = AUTOMATIONS[slug]!;
+  const { nodes: laidOut, edges: laidOutEdges } = LAYOUTS[slug]!;
+  const nodes = laidOut.map((n): WorkflowNode => ({
+    ...n,
+    position: { ...n.position },
+    config: nodeConfig(n.config, lookup),
+  }));
+  const edges = laidOutEdges.map((e) => ({ ...e }));
   const ownerId = lookup.userId(definition.owner);
   return {
     id: definition.id,

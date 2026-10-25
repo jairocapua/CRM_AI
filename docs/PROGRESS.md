@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 69/90 tasks done (77%) · **Current phase:** P8 · **Next agent task:** P8-T02 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+**Overall:** 69/90 tasks done (77%) · **Current phase:** P8 · **Next agent task:** P8-T03 · **Awaiting review:** P8-T02 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -92,7 +92,7 @@ Status: active · Progress: 1/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
 | P8-T01 | Authored types and the automation registry | agent | done | P7 | fa0ff5e | 2026-10-25 | Verifier pass (check green, 824 Vitest; smoke e2e 10/10); reviewer approve, no must-fix. Users gained slug; 2 backlog rows. |
-| P8-T02 | Deterministic layout | agent | todo | P8-T01 |  |  |  |
+| P8-T02 | Deterministic layout | agent | review | P8-T01 |  | 2026-10-25 | Verifier pass (check green, 858 Vitest; smoke e2e 10/10); reviewer approve, no must-fix. Branch-id uniqueness -> BACKLOG, fold into P8-T05. |
 | P8-T03 | Automation list page | agent | todo | P8-T01 |  |  |  |
 | P8-T04 | Detail page with the step list | agent | todo | P8-T02, P8-T03 |  |  |  |
 | P8-T05 | Read-only diagram | agent | todo | P8-T04 |  |  |  |

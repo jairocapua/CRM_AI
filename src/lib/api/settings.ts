@@ -1,6 +1,9 @@
 import type { ID, Location } from "@/types";
 import { AUTOMATIONS } from "@/lib/automations";
-import { definitionProblems } from "@/lib/automations/integrity";
+import {
+  definitionProblems,
+  layoutProblems,
+} from "@/lib/automations/integrity";
 import { referencedKeys } from "@/lib/automations/keys";
 import { db } from "@/lib/mock/db";
 import { resumeDeliveries } from "@/lib/mock/delivery";
@@ -236,10 +239,12 @@ export async function integrityReport(): Promise<string[]> {
         ).length,
       );
 
-      // Automations are code: their structure can only break in a commit,
-      // but their tag and user keys break whenever staff rename or delete one.
+      // Automations are code: their structure and layout can only break in
+      // a commit, but their tag and user keys break whenever staff rename or
+      // delete one.
       const definitions = Object.values(AUTOMATIONS);
       problems.push(...definitionProblems(definitions));
+      problems.push(...layoutProblems(definitions));
       const tagNames = new Set(Object.values(s.tags).map((t) => t.name));
       const userSlugs = new Set(Object.values(s.users).map((u) => u.slug));
       for (const definition of definitions) {

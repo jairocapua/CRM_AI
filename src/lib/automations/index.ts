@@ -3,6 +3,7 @@ import type { AutomationDefinition } from "@/types";
 import { appointmentReminders } from "./appointment-reminders";
 import { birthdayGreeting } from "./birthday-greeting";
 import { churnRiskAlert } from "./churn-risk-alert";
+import { layout, type Layout } from "./layout";
 import { newLeadNurture } from "./new-lead-nurture";
 import { noShowRecovery } from "./no-show-recovery";
 import { proposalFollowUp } from "./proposal-follow-up";
@@ -29,6 +30,18 @@ export const AUTOMATIONS: Readonly<Record<string, AutomationDefinition>> =
     "churn-risk-alert": churnRiskAlert,
     "birthday-greeting": birthdayGreeting,
   });
+
+/**
+ * Every automation's diagram, keyed like `AUTOMATIONS`. Laid out here, at
+ * import, on purpose: anything that reads the registry (`api.workflows`, the
+ * integrity report) evaluates this, so a malformed definition throws when
+ * the module loads and fails `next build` instead of a page at runtime.
+ */
+export const LAYOUTS: Readonly<Record<string, Layout>> = deepFreeze(
+  Object.fromEntries(
+    Object.entries(AUTOMATIONS).map(([slug, d]) => [slug, layout(d)]),
+  ),
+);
 
 /** Freezes a plain object tree, so nothing can edit a definition at runtime. */
 function deepFreeze<T>(value: T): T {

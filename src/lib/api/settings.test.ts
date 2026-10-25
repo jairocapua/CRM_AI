@@ -159,10 +159,47 @@ describe("automations on the Demo Data page", () => {
         },
       },
     }));
-    const settings = await import("./settings");
+    try {
+      const settings = await import("./settings");
+      expect(await settle(settings.integrityReport())).toEqual([
+        `Speed to Lead repeats node id "${speed.steps[0]!.id}"`,
+      ]);
+    } finally {
+      vi.doUnmock("@/lib/automations");
+    }
+  });
 
-    expect(await settle(settings.integrityReport())).toEqual([
-      `Speed to Lead repeats node id "${speed.steps[0]!.id}"`,
-    ]);
+  it("reports nodes a layout draws over each other", async () => {
+    await seededWorld();
+    // A layout that piles every node onto one spot.
+    vi.doMock("@/lib/automations/layout", async (importOriginal) => {
+      const real =
+        await importOriginal<typeof import("@/lib/automations/layout")>();
+      return {
+        ...real,
+        layout: (d: Parameters<typeof real.layout>[0]) => {
+          const { nodes, edges } = real.layout(d);
+          return {
+            edges,
+            nodes: nodes.map((n) => ({ ...n, position: { x: 0, y: 0 } })),
+          };
+        },
+      };
+    });
+    try {
+      const settings = await import("./settings");
+      const report = await settle(settings.integrityReport());
+      expect(report).toContain(
+        'Review Request has overlapping nodes "trigger" and "wait_2_days"',
+      );
+      expect(new Set(report.map((line) => line.split(" has ")[0])).size).toBe(
+        8,
+      );
+      expect(report.every((line) => line.includes("overlapping nodes"))).toBe(
+        true,
+      );
+    } finally {
+      vi.doUnmock("@/lib/automations/layout");
+    }
   });
 });

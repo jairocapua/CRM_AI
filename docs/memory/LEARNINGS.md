@@ -285,3 +285,6 @@
 - 2026-10-25 [P8-T01] `vi.doMock()` is not undone by `vi.resetModules()`; pair it with `vi.doUnmock` (finally/afterEach) or keep it in the file's last test.
 - 2026-10-25 [P8-T01] To check CRLF, use `git ls-files --eol <files>` or `grep -l $'\r'`; `$'\r'` inside `printf "$(...)"` gets lost and counts every line.
 - 2026-10-25 [P8-T01] In bash, a heredoc body with an apostrophe fails with "unexpected EOF" unless the delimiter is quoted (<<'EOF'); writing a file with a tool or a node script avoids it.
+- 2026-10-25 [P8-T02] The automation registry is evaluated during `next build` (app-sidebar imports @/lib/api, whose barrel imports workflows → LAYOUTS), so a throw at module scope fails the build while prerendering any page.
+- 2026-10-25 [P8-T02] In git-bash, `$TMPDIR` may resolve to /tmp (C:\tmp), not the Hermes scratch dir; use the full scratch path for node scripts.
+- 2026-10-25 [P8-T02] A mutation that stays green (e.g. an overlap check ignoring height) usually means a missing case; add the case (reversed-order touching boxes) until the mutant goes red.

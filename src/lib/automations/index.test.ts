@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type {
   AuthoredActionConfig,
@@ -7,7 +7,7 @@ import type {
   StepList,
 } from "@/types";
 
-import { AUTOMATIONS } from ".";
+import { AUTOMATIONS, LAYOUTS } from ".";
 import { referencedKeys } from "./keys";
 
 type WaitConfig = Extract<AuthoredActionConfig, { kind: "wait" }>;
@@ -106,5 +106,44 @@ describe("StepList", () => {
     // @ts-expect-error a step after a branch would rejoin the tree
     const rejoin: StepList = [fork, sms];
     expect([linear, forked, rejoin]).toHaveLength(3);
+  });
+});
+
+describe("LAYOUTS", () => {
+  it("holds a frozen layout for every automation", () => {
+    expect(Object.keys(LAYOUTS)).toEqual(Object.keys(AUTOMATIONS));
+    const speed = LAYOUTS["speed-to-lead"]!;
+    expect(Object.isFrozen(LAYOUTS)).toBe(true);
+    expect(Object.isFrozen(speed.nodes)).toBe(true);
+    expect(Object.isFrozen(speed.nodes[0]!.position)).toBe(true);
+  });
+
+  it("lays out at import, so a malformed definition fails as the registry loads", async () => {
+    // What `next build` relies on: a broken module throws on import.
+    vi.resetModules();
+    vi.doMock("@/lib/automations/review-request", async (importOriginal) => {
+      const { reviewRequest } =
+        await importOriginal<typeof import("./review-request")>();
+      return {
+        reviewRequest: {
+          ...reviewRequest,
+          steps: [
+            {
+              id: "fork",
+              label: "Replied?",
+              config: { kind: "if_else", branches: [] },
+            },
+          ],
+        },
+      };
+    });
+    try {
+      await expect(import("@/lib/automations")).rejects.toThrow(
+        'Cannot lay out "Review Request": "fork" has no branches',
+      );
+    } finally {
+      vi.doUnmock("@/lib/automations/review-request");
+      vi.resetModules();
+    }
   });
 });
