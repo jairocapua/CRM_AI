@@ -60,6 +60,15 @@ management notes).
 - **Scope:** team list with roles; invite (`users.invite`) showing a pending
   member; role change (`users.update`); remove with a confirm that names what
   will be reassigned.
+  - From the P9-T01 review: every seeded teammate but the current user is
+    named in an automation, so `users.remove` refuses them (409
+    `NAMED_IN_AUTOMATION`); the reassign e2e invites a member, gives them a
+    contact (contact form Owner select), removes them, and checks the owner
+    and the Demo Data report. Add an e2e for the refusal message on a seeded
+    teammate. Pass `reassignTo` as `undefined`, never `""`. Define "pending"
+    (no field yet). `users.update` ignores `id` and `slug` (role change only
+    from the UI), with a test. `REASSIGN_TARGET_NOT_FOUND` text names no raw
+    id. The confirm says follows are dropped and history keeps the name.
 - **Acceptance:**
   - [ ] e2e: invite a member, then see them listed as pending.
   - [ ] e2e: removing a member who owns contacts reassigns them and the
@@ -76,6 +85,10 @@ management notes).
   definitions (`validation/custom-fields.ts`, `CustomFieldsSection`), so a
   change must show up there with no other edits. Currency fields stay in
   cents (the Phase 4 bug).
+  - From the P9-T01 review: `customFields.create` refuses a duplicate key
+    for the same object type (409), and `update` ignores `key` and
+    `objectType` (either change orphans stored values and turns the
+    integrity report red), each with a test.
 - **Acceptance:**
   - [ ] e2e: add a contact field, and the contact form shows it and saves a
         value; remove it, and the value is gone.
@@ -89,6 +102,14 @@ management notes).
 - **Scope:** create and rename pipelines; add, rename, reorder (drag with
   `@dnd-kit`, as on the board) and remove stages; delete a pipeline with a
   confirm stating how many deals go with it. Uses `pipelines.*` only.
+  - From the P9-T01 review: `reorderStages` returns 422 unless the ids are
+    exactly the pipeline's stages (a stale list drops a stage and orphans
+    its deals); `addStage`/`updateStage`/`reorderStages` each become one
+    `simulate()` write, and `update()` stops accepting `stages`. Moved deals
+    from `removeStage` get `stageEnteredAt`/`updatedAt` reset from one
+    `nowIso()` (days-in-stage), with a test. The board copes with its
+    selected pipeline being deleted. The remove-stage confirm says won
+    deals stay won.
 - **Acceptance:**
   - [ ] e2e (the phase exit check): add a stage, open the board, and the new
         column is there.

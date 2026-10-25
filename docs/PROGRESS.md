@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 77/91 tasks done (85%) · **Current phase:** P9 · **Next agent task:** P9-T01 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+**Overall:** 77/91 tasks done (85%) · **Current phase:** P9 · **Next agent task:** P9-T02 · **Awaiting review:** P9-T01 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -106,7 +106,7 @@ Status: active · Progress: 0/7 · Points: 4 · Branch: phase/p9-settings · Fil
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
-| P9-T01 | Settings API fixes (step 0) | agent | todo | P8 |  |  |  |
+| P9-T01 | Settings API fixes (step 0) | agent | review | P8 |  | 2026-10-26 | Four settings API fixes + 10 integrity lines; reviewer approve, no fix round |
 | P9-T02 | Settings shell, profile and business | agent | todo | P8 |  |  |  |
 | P9-T03 | Team and invites | agent | todo | P9-T01, P9-T02 |  |  |  |
 | P9-T04 | Custom fields manager | agent | todo | P9-T01, P9-T02 |  |  |  |

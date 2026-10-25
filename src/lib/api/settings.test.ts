@@ -138,9 +138,13 @@ describe("automations on the Demo Data page", () => {
       tags: Object.fromEntries(
         Object.entries(s.tags).filter(([, t]) => t.name !== "Newsletter"),
       ),
-      users: Object.fromEntries(
-        Object.entries(s.users).filter(([, u]) => u.slug !== "priya"),
-      ),
+      // Priya's slug changes: her records still resolve by id, so the only
+      // line is the automation's. (Deleting her outright would also orphan
+      // every record she owns.)
+      users: {
+        ...s.users,
+        usr_priya: { ...s.users["usr_priya"]!, slug: "priya-renamed" },
+      },
     }));
 
     const report = await settle(settings.integrityReport());
@@ -302,5 +306,134 @@ describe("automation requests on the Demo Data page", () => {
     expect(await settle(settings.integrityReport())).toEqual([
       "1 automation requests point at a missing automation",
     ]);
+  });
+});
+
+/**
+ * What the settings removals keep consistent (P9-T01): every person a record
+ * names, and every custom value's field. Each case breaks one seeded record.
+ */
+describe("teammates and custom fields on the Demo Data page", () => {
+  type State = Awaited<ReturnType<typeof seededWorld>>["db"] extends {
+    getState: () => infer S;
+  }
+    ? S
+    : never;
+  type TableName =
+    | "contacts"
+    | "opportunities"
+    | "tasks"
+    | "conversations"
+    | "appointments"
+    | "calendars"
+    | "smartLists";
+
+  /** The report after `patch` is applied to the table's first record. */
+  async function reportWith<K extends TableName>(
+    table: K,
+    patch: (row: State[K][string]) => Partial<State[K][string]>,
+  ) {
+    const { db } = await seededWorld();
+    const settings = await import("./settings");
+    expect(await settle(settings.integrityReport())).toEqual([]);
+    db.setState((s) => {
+      const rows = s[table] as Record<string, State[K][string]>;
+      const first = Object.values(rows)[0]!;
+      return {
+        [table]: { ...rows, [first.id]: { ...first, ...patch(first) } },
+      } as Partial<State>;
+    });
+    return settle(settings.integrityReport());
+  }
+
+  it("finds nothing wrong with a fresh seed that names people and custom values", async () => {
+    const { db } = await seededWorld();
+    const settings = await import("./settings");
+    const s = db.getState();
+    // Not vacuous: the seed fills every field the checks below read.
+    const contacts = Object.values(s.contacts);
+    expect(contacts.filter((c) => c.ownerId).length).toBeGreaterThan(0);
+    expect(contacts.filter((c) => c.followers.length).length).toBeGreaterThan(
+      0,
+    );
+    expect(
+      contacts.filter((c) => Object.keys(c.customFields).length).length,
+    ).toBeGreaterThan(0);
+    expect(
+      Object.values(s.opportunities).filter(
+        (o) => Object.keys(o.customFields).length,
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      Object.values(s.smartLists).filter((l) => l.ownerId).length,
+    ).toBeGreaterThan(0);
+    expect(await settle(settings.integrityReport())).toEqual([]);
+  });
+
+  it.each([
+    {
+      line: "1 contacts are owned by a missing user",
+      run: () => reportWith("contacts", () => ({ ownerId: "usr_gone" })),
+    },
+    {
+      line: "1 contacts are followed by a missing user",
+      run: () =>
+        reportWith("contacts", () => ({
+          followers: ["usr_priya", "usr_gone"],
+        })),
+    },
+    {
+      line: "1 opportunities are owned by a missing user",
+      run: () => reportWith("opportunities", () => ({ ownerId: "usr_gone" })),
+    },
+    {
+      line: "1 tasks are assigned to a missing user",
+      run: () => reportWith("tasks", () => ({ assigneeId: "usr_gone" })),
+    },
+    {
+      line: "1 conversations are assigned to a missing user",
+      run: () =>
+        reportWith("conversations", () => ({ assigneeId: "usr_gone" })),
+    },
+    {
+      line: "1 appointments are assigned to a missing user",
+      run: () =>
+        reportWith("appointments", () => ({ assignedUserId: "usr_gone" })),
+    },
+    {
+      line: "1 calendars list a missing team member",
+      run: () =>
+        reportWith("calendars", (c) => ({
+          teamMemberIds: [...c.teamMemberIds, "usr_gone"],
+        })),
+    },
+    {
+      line: "1 smart lists are owned by a missing user",
+      run: () => reportWith("smartLists", () => ({ ownerId: "usr_gone" })),
+    },
+    {
+      line: "1 contacts hold a value for a missing custom field",
+      run: () =>
+        reportWith("contacts", (c) => ({
+          customFields: { ...c.customFields, gone_field: "x" },
+        })),
+    },
+    {
+      // A deal field's key is not a contact field.
+      line: "1 contacts hold a value for a missing custom field",
+      run: () =>
+        reportWith("contacts", (c) => ({
+          customFields: { ...c.customFields, competitor: "Keap" },
+        })),
+    },
+    {
+      line: "1 opportunities hold a value for a missing custom field",
+      run: () =>
+        reportWith("opportunities", (o) => ({
+          customFields: { ...o.customFields, budget_range: "10k" },
+        })),
+    },
+  ])("reports: $line", async ({ line, run }) => {
+    expect(await run()).toEqual([line]);
   });
 });

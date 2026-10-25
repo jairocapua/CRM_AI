@@ -1,8 +1,11 @@
 import type { ID, User } from "@/types";
 import { db } from "@/lib/mock/db";
+import { AUTOMATIONS } from "@/lib/automations";
+import { referencedKeys } from "@/lib/automations/keys";
+import { reassignUserReferences } from "@/lib/mock/cascade";
 import { newId } from "@/lib/mock/ids";
 import { invalidate } from "./cache";
-import { notFound, nowIso, simulate } from "./http";
+import { ApiError, notFound, nowIso, simulate } from "./http";
 
 export async function list(): Promise<User[]> {
   return simulate(
@@ -86,13 +89,88 @@ export async function update(id: ID, patch: Partial<User>): Promise<User> {
   return user;
 }
 
-export async function remove(id: ID): Promise<void> {
+/** "A", "A and B", "A, B and C". */
+function listNames(names: string[]): string {
+  return names.length <= 1
+    ? (names[0] ?? "")
+    : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+/**
+ * Removes a teammate and hands what they hold to `reassignTo` (by default the
+ * current user): see `reassignUserReferences` for the list. History keeps
+ * its author. Refusals write nothing:
+ *
+ * - 404 `NOT_FOUND` for an unknown teammate;
+ * - 409 `CANNOT_REMOVE_YOURSELF` for the current user;
+ * - 400 `REASSIGN_TO_SELF` when `reassignTo` is the teammate being removed;
+ * - 404 `REASSIGN_TARGET_NOT_FOUND` for an unknown `reassignTo`;
+ * - 409 `NAMED_IN_AUTOMATION` while an automation names the teammate's slug:
+ *   automations are code staff cannot edit, so a developer changes them
+ *   first. The message names them.
+ */
+export async function remove(
+  id: ID,
+  options: { reassignTo?: ID } = {},
+): Promise<void> {
   await simulate(() => {
+    const state = db.getState();
+    const user = state.users[id] ?? notFound("User", id);
+    const name = `${user.firstName} ${user.lastName}`;
+    if (id === state.currentUserId) {
+      throw new ApiError(
+        "You can't remove yourself from the team.",
+        409,
+        "CANNOT_REMOVE_YOURSELF",
+      );
+    }
+    const toId = options.reassignTo ?? state.currentUserId;
+    if (toId === id) {
+      throw new ApiError(
+        `Pick another teammate to take over ${name}'s records.`,
+        400,
+        "REASSIGN_TO_SELF",
+        "reassignTo",
+      );
+    }
+    if (!state.users[toId]) {
+      throw new ApiError(
+        `Teammate ${toId} was not found, so ${name}'s records have nobody to go to.`,
+        404,
+        "REASSIGN_TARGET_NOT_FOUND",
+        "reassignTo",
+      );
+    }
+    const naming = Object.values(AUTOMATIONS)
+      .filter((d) => referencedKeys(d).users.includes(user.slug))
+      .map((d) => d.name)
+      .sort((a, b) => a.localeCompare(b));
+    if (naming.length > 0) {
+      throw new ApiError(
+        `${name} is named in the ${listNames(naming)} ${
+          naming.length === 1 ? "automation" : "automations"
+        }. Ask your developer to change ${
+          naming.length === 1 ? "it" : "them"
+        } before removing ${user.firstName}.`,
+        409,
+        "NAMED_IN_AUTOMATION",
+      );
+    }
+
     db.setState((s) => {
       const users = { ...s.users };
       delete users[id];
-      return { users };
+      return { users, ...reassignUserReferences(s, id, toId) };
     });
   });
-  invalidate("users");
+  invalidate(
+    "users",
+    "contacts",
+    "opportunities",
+    "tasks",
+    "conversations",
+    "appointments",
+    "calendars",
+    "smartLists",
+  );
 }

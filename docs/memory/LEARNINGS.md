@@ -320,3 +320,7 @@
 - 2026-10-26 [P8-T09] A terminal call with `timeout` over 600s runs as a background job, where node does nothing; keep e2e mutation runs to about 2 mutants (~70s `next build` each) per foreground call.
 - 2026-10-26 [P8-T09] A Button that turns natively disabled on confirm loses the focus Base UI returns to it when the dialog closes (focus lands on <body>); use `focusableWhenDisabled` + `data-disabled:opacity-50` as in load-error.tsx ([P7-T07]).
 - 2026-10-26 [P8-T09] To prove a state that lasts a few hundred ms in e2e (a pending button, a focus drop), install an in-page recorder with `page.evaluate` (MutationObserver + focusout) before the action and assert its log; retrying assertions miss short states (`recordWithdraw` in automation-requests.spec.ts).
+- 2026-10-26 [P9-T01] Every seeded user's slug is named in an automation, so the seed has no teammate `users.remove` accepts; a removal test has to invite one and hand them records.
+- 2026-10-26 [P9-T01] `expect(db.getState()).toBe(before)` proves "nothing was written": every zustand `setState` produces a new state object.
+- 2026-10-26 [P9-T01] Deleting a user with `setState` in a test now also orphans their records in the integrity report; change their slug to test only the automation-key line.
+- 2026-10-26 [P9-T01] In a git-bash Playwright run, a spec path that matches no file (`e2e/calendar.spec.ts` vs `calendars.spec.ts`) is silently ignored, not an error; check the test count.

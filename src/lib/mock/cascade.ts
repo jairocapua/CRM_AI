@@ -103,3 +103,167 @@ export function cascadeOpportunityDelete(
 
   return { opportunities, activities, tasks };
 }
+
+/**
+ * Deleting a pipeline deletes its deals through `cascadeOpportunityDelete`,
+ * renumbers the pipelines left 0..n-1 and, when the default went, makes the
+ * first of them the default. The caller refuses to delete the last one.
+ */
+export function cascadePipelineDelete(
+  state: DbState,
+  id: ID,
+): Partial<DbState> {
+  const left = Object.values(state.pipelines)
+    .filter((p) => p.id !== id)
+    .sort((a, b) => a.position - b.position);
+  const needsDefault = !left.some((p) => p.isDefault);
+  const pipelines: DbState["pipelines"] = {};
+  left.forEach((p, position) => {
+    pipelines[p.id] = {
+      ...p,
+      position,
+      isDefault: p.isDefault || (needsDefault && position === 0),
+    };
+  });
+
+  const deals = Object.values(state.opportunities)
+    .filter((o) => o.pipelineId === id)
+    .map((o) => o.id);
+  return { pipelines, ...cascadeOpportunityDelete(state, deals) };
+}
+
+/**
+ * Removing a stage keeps its deals: they join the end of the neighbouring
+ * column (`fallbackId`), in their old order, and that column is renumbered
+ * 0..n-1. The stages left are renumbered too. The caller checks that both
+ * stages exist and that they differ.
+ */
+export function cascadeStageDelete(
+  state: DbState,
+  pipelineId: ID,
+  stageId: ID,
+  fallbackId: ID,
+): Partial<DbState> {
+  const pipeline = state.pipelines[pipelineId]!;
+  const stages = [...pipeline.stages]
+    .sort((a, b) => a.position - b.position)
+    .filter((s) => s.id !== stageId)
+    .map((s, position) => ({ ...s, position }));
+
+  const inColumn = (id: ID) =>
+    Object.values(state.opportunities)
+      .filter((o) => o.pipelineId === pipelineId && o.stageId === id)
+      .sort((a, b) => a.position - b.position);
+  const opportunities = { ...state.opportunities };
+  [...inColumn(fallbackId), ...inColumn(stageId)].forEach((o, position) => {
+    opportunities[o.id] = { ...o, stageId: fallbackId, position };
+  });
+
+  return {
+    pipelines: { ...state.pipelines, [pipelineId]: { ...pipeline, stages } },
+    opportunities,
+  };
+}
+
+/** Maps every `from` in a table's field to `to`, keeping untouched rows. */
+function reassign<T, K extends keyof T>(
+  table: Record<ID, T>,
+  field: K,
+  from: ID,
+  to: ID,
+): Record<ID, T> {
+  const out: Record<ID, T> = {};
+  for (const [id, row] of Object.entries(table)) {
+    out[id] = row[field] === from ? { ...row, [field]: to } : row;
+  }
+  return out;
+}
+
+/**
+ * Removing a teammate hands what they hold to `toId`: the contacts and deals
+ * they own, the tasks, conversations and appointments assigned to them, their
+ * calendar seats (replaced in place, nobody listed twice) and their private
+ * smart lists. Following is personal, so their follows are dropped and nobody
+ * is added. History keeps its author: `createdBy`, notes' `authorId`,
+ * messages' `authorId` and activities' `actorId` are left as they are, and the
+ * pages show "Unknown teammate" (or nothing) for someone who is gone.
+ */
+export function reassignUserReferences(
+  state: DbState,
+  fromId: ID,
+  toId: ID,
+): Partial<DbState> {
+  const contacts: DbState["contacts"] = {};
+  for (const [id, contact] of Object.entries(state.contacts)) {
+    const owned = contact.ownerId === fromId;
+    const follows = contact.followers.includes(fromId);
+    contacts[id] =
+      owned || follows
+        ? {
+            ...contact,
+            ...(owned ? { ownerId: toId } : {}),
+            ...(follows
+              ? { followers: contact.followers.filter((f) => f !== fromId) }
+              : {}),
+          }
+        : contact;
+  }
+
+  const calendars: DbState["calendars"] = {};
+  for (const [id, calendar] of Object.entries(state.calendars)) {
+    calendars[id] = calendar.teamMemberIds.includes(fromId)
+      ? {
+          ...calendar,
+          teamMemberIds: [
+            ...new Set(
+              calendar.teamMemberIds.map((m) => (m === fromId ? toId : m)),
+            ),
+          ],
+        }
+      : calendar;
+  }
+
+  return {
+    contacts,
+    opportunities: reassign(state.opportunities, "ownerId", fromId, toId),
+    tasks: reassign(state.tasks, "assigneeId", fromId, toId),
+    conversations: reassign(state.conversations, "assigneeId", fromId, toId),
+    appointments: reassign(state.appointments, "assignedUserId", fromId, toId),
+    calendars,
+    smartLists: reassign(state.smartLists, "ownerId", fromId, toId),
+  };
+}
+
+/**
+ * Deleting a custom field deletes the values stored under its key, on the
+ * records of its own object type only: a contact field and a deal field may
+ * share a key.
+ */
+export function cascadeCustomFieldDelete(
+  state: DbState,
+  id: ID,
+): Partial<DbState> {
+  const field = state.customFields[id];
+  const customFields = omitBy(state.customFields, (_, key) => key === id);
+  if (!field) return { customFields };
+
+  const strip = <T extends { customFields: Record<string, unknown> }>(
+    table: Record<ID, T>,
+  ): Record<ID, T> => {
+    const out: Record<ID, T> = {};
+    for (const [key, row] of Object.entries(table)) {
+      if (field.key in row.customFields) {
+        const values = { ...row.customFields };
+        delete values[field.key];
+        out[key] = { ...row, customFields: values };
+      } else {
+        out[key] = row;
+      }
+    }
+    return out;
+  };
+
+  return field.objectType === "contact"
+    ? { customFields, contacts: strip(state.contacts) }
+    : { customFields, opportunities: strip(state.opportunities) };
+}

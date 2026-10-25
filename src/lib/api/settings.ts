@@ -241,6 +241,71 @@ export async function integrityReport(): Promise<string[]> {
         ).length,
       );
 
+      // Every person a record hands work to, as `users.remove()` reassigns
+      // them (`reassignUserReferences` in @/lib/mock/cascade). Users are
+      // looked up by key, never listed. History is not checked: `createdBy`,
+      // notes' and messages' `authorId` and activities' `actorId` keep a
+      // teammate who is gone, and the pages show them as unknown.
+      const gone = (userId: ID | undefined) =>
+        userId !== undefined && !s.users[userId];
+      const contacts = Object.values(s.contacts);
+      missing(
+        "contacts are owned by a missing user",
+        contacts.filter((c) => gone(c.ownerId)).length,
+      );
+      missing(
+        "contacts are followed by a missing user",
+        contacts.filter((c) => c.followers.some(gone)).length,
+      );
+      missing(
+        "opportunities are owned by a missing user",
+        Object.values(s.opportunities).filter((o) => gone(o.ownerId)).length,
+      );
+      missing(
+        "tasks are assigned to a missing user",
+        Object.values(s.tasks).filter((t) => gone(t.assigneeId)).length,
+      );
+      missing(
+        "conversations are assigned to a missing user",
+        Object.values(s.conversations).filter((c) => gone(c.assigneeId)).length,
+      );
+      missing(
+        "appointments are assigned to a missing user",
+        Object.values(s.appointments).filter((a) => gone(a.assignedUserId))
+          .length,
+      );
+      missing(
+        "calendars list a missing team member",
+        Object.values(s.calendars).filter((c) => c.teamMemberIds.some(gone))
+          .length,
+      );
+      missing(
+        "smart lists are owned by a missing user",
+        Object.values(s.smartLists).filter((l) => gone(l.ownerId)).length,
+      );
+
+      // Custom values are keyed by their field's `key`, per object type, and
+      // `customFields.remove()` sweeps them (`cascadeCustomFieldDelete`).
+      const fieldKeys = new Set(
+        Object.values(s.customFields).map((f) => `${f.objectType}:${f.key}`),
+      );
+      const undefinedValue = (
+        objectType: string,
+        values: Record<string, unknown>,
+      ) =>
+        Object.keys(values).some((k) => !fieldKeys.has(`${objectType}:${k}`));
+      missing(
+        "contacts hold a value for a missing custom field",
+        contacts.filter((c) => undefinedValue("contact", c.customFields))
+          .length,
+      );
+      missing(
+        "opportunities hold a value for a missing custom field",
+        Object.values(s.opportunities).filter((o) =>
+          undefinedValue("opportunity", o.customFields),
+        ).length,
+      );
+
       // Run history: each run names a contact (swept by the cascade), an
       // automation by `Workflow.id`, and nodes of that automation's diagram.
       const nodeIdsById = new Map(

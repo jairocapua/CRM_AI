@@ -677,8 +677,9 @@ interface ReadFaultWindow {
  * analytics.ts reads appointments) and the settings integrity check
  * (`integrityReport()` in settings.ts reads appointments). For contacts it
  * catches every read of the whole table: the contacts list, the tag counts
- * (`list()` in tags.ts), the dashboard's analytics (analytics.ts) and the
- * contacts CSV export (contacts.ts). Contact writes and `contacts.get` read
+ * (`list()` in tags.ts), the dashboard's analytics (analytics.ts), the
+ * contacts CSV export (contacts.ts) and the integrity check (settings.ts).
+ * Contact writes and `contacts.get` read
  * by key and are unaffected. For tags it catches `list()` in tags.ts
  * (`Object.values(tags)`, after its loop over the contacts, which passes),
  * the automations' `list()` and `get()` in workflows.ts, which read every
