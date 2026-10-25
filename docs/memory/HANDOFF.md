@@ -7,7 +7,7 @@
 
 - **Phase:** P9 Settings — active, 2/7 tasks done.
 - **Branch:** `phase/p9-settings`, cut from `master` at `4d72e89`. Nothing pushed.
-- **Status:** P9-T02 approved (pending sha); P9-T03 Team and invites is next.
+- **Status:** P9-T02 approved (`5c8a9f9`); P9-T03 Team and invites is next.
 
 ## Last change
 
