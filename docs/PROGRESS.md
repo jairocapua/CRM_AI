@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 67/90 tasks done (74%) · **Current phase:** P7 · **Next agent task:** P7-T64 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+**Overall:** 67/90 tasks done (74%) · **Current phase:** P7 · **Next agent task:** — · **Awaiting review:** P7-T64 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -84,7 +84,7 @@ Status: active · Progress: 67/68 · Points: 7 (5 for Calendars + 2 for the test
 | P7-T61 | Gate fix: update() pipeline move into a won/lost stage derives status | agent | done | P7-T58 | 81ab530 | 2026-10-25 | update() pipeline move derives status/closedAt/activity from target stage via helpers shared with move() |
 | P7-T62 | Gate fix: create() into a won/lost stage derives status | agent | done | P7-T61 | ff13a39 | 2026-10-25 | Autopilot: committed by reviewer after workflow blocked on DECISIONS.md line |
 | P7-T63 | Deal form keeps a changed lost reason | agent | done | — | e28a474 | 2026-10-25 | Form sends lostReason in its one create()/update(); moveDropsReason gone; enterStage drops reason outside lost stages |
-| P7-T64 | Lost entry text and same-stage move status | agent | todo | — |  |  |  |
+| P7-T64 | Lost entry text and same-stage move status | agent | review | — |  | 2026-10-25 | Same-stage move() is a pure reorder (keeps status/closedAt/lostReason); lost-stage entry appends the reason |
 
 ## P8 — Automation
 Status: todo · Progress: 0/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md

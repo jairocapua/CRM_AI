@@ -1626,3 +1626,219 @@ describe("the lost reason through update() and move()", () => {
     }
   });
 });
+
+/**
+ * A move that leaves the deal in its own stage is a pure reorder (P7-T64):
+ * seeded lost and won deals sit in open stages, so re-deriving the status
+ * from the stage would reopen them on every same-column drag.
+ */
+describe("move() within the same stage", () => {
+  /** pipelineWorld() with a deal of `status` in an open stage of 2+ deals. */
+  async function sameStageWorld(status: OpportunityStatus) {
+    const w = await pipelineWorld();
+    const state = w.db.getState();
+    const deals = Object.values(state.opportunities);
+    const stage = Object.values(state.pipelines)
+      .flatMap((p) => p.stages)
+      .find(
+        (s) =>
+          !s.isWon &&
+          !s.isLost &&
+          deals.filter((d) => d.stageId === s.id).length >= 3,
+      )!;
+    expect(stage).toBeDefined();
+    const column = deals
+      .filter((d) => d.stageId === stage.id)
+      .sort((a, b) => a.position - b.position);
+    const target: Opportunity = {
+      ...column[0]!,
+      status,
+      closedAt: column[0]!.updatedAt,
+      ...(status === "lost" ? { lostReason: "Went with a competitor" } : {}),
+    };
+    if (status !== "lost") delete target.lostReason;
+    w.db.setState((s) => ({
+      opportunities: { ...s.opportunities, [target.id]: target },
+    }));
+    const activities = await import("./activities");
+    const allEntries = () => settle(activities.listRecent(100000));
+    return { ...w, stage, column, target, allEntries };
+  }
+
+  it.each<OpportunityStatus>(["lost", "won", "abandoned"])(
+    "a %s deal reordered in its open stage keeps its status, closedAt and lostReason and logs nothing",
+    async (status) => {
+      const w = await sameStageWorld(status);
+      const before = await w.allEntries();
+      const last = w.column.length - 1;
+
+      const saved = await settle(
+        w.api.move(w.target.id, { stageId: w.stage.id, position: last }),
+      );
+
+      const stored = await settle(w.api.get(w.target.id));
+      expect(stored).toEqual(saved);
+      expect(stored).toStrictEqual({
+        ...w.target,
+        position: last,
+        updatedAt: stored.updatedAt,
+      });
+      expect(await w.allEntries()).toEqual(before);
+      // The column is still renumbered densely, the moved deal last.
+      const column = Object.values(w.db.getState().opportunities)
+        .filter((d) => d.stageId === w.stage.id)
+        .sort((a, b) => a.position - b.position);
+      expect(column.map((d) => d.position)).toEqual(w.column.map((_, i) => i));
+      expect(column.map((d) => d.id)).toEqual([
+        ...w.column.slice(1).map((d) => d.id),
+        w.target.id,
+      ]);
+    },
+  );
+});
+
+/**
+ * The entry for entering a lost stage carries the deal's lost reason the way
+ * setStatus()'s "Lost <deal> - <reason>" does (P7-T64), for move(), update()'s
+ * pipeline move and create() alike.
+ */
+describe("the lost-stage entry text", () => {
+  function markLost(
+    w: Awaited<ReturnType<typeof pipelineWorld>>,
+    pipeline: Pipeline,
+    stageId: string,
+  ) {
+    w.db.setState((s) => ({
+      pipelines: {
+        ...s.pipelines,
+        [pipeline.id]: {
+          ...pipeline,
+          stages: pipeline.stages.map((stage) =>
+            stage.id === stageId ? { ...stage, isLost: true } : stage,
+          ),
+        },
+      },
+    }));
+  }
+
+  /** The seeded deal in an open stage of its pipeline, lost or open. */
+  function placeDeal(
+    w: Awaited<ReturnType<typeof pipelineWorld>>,
+    lostReason: string | undefined,
+  ) {
+    const pipeline = w.db.getState().pipelines[w.deal.pipelineId]!;
+    const [from, to] = pipeline.stages.filter((s) => !s.isWon && !s.isLost);
+    expect(to).toBeDefined();
+    const placed: Opportunity = lostReason
+      ? {
+          ...w.deal,
+          stageId: from!.id,
+          status: "lost",
+          closedAt: w.deal.updatedAt,
+          lostReason,
+        }
+      : { ...w.deal, stageId: from!.id, status: "open" };
+    if (!lostReason) {
+      delete placed.closedAt;
+      delete placed.lostReason;
+    }
+    w.db.setState((s) => ({
+      opportunities: { ...s.opportunities, [placed.id]: placed },
+    }));
+    markLost(w, pipeline, to!.id);
+    return { placed, lost: to! };
+  }
+
+  async function newEntries(
+    w: Awaited<ReturnType<typeof pipelineWorld>>,
+    seen: Set<string>,
+    id: string,
+  ) {
+    return (await w.timeline()).filter(
+      (a) => !seen.has(a.id) && a.opportunityId === id,
+    );
+  }
+
+  it("move() of a deal with a lost reason into a lost stage includes the reason", async () => {
+    const w = await pipelineWorld();
+    const { placed, lost } = placeDeal(w, "Budget cut");
+    const seen = new Set((await w.timeline()).map((a) => a.id));
+
+    const saved = await settle(
+      w.api.move(placed.id, { stageId: lost.id, position: 0 }),
+    );
+
+    expect(saved).toMatchObject({ status: "lost", lostReason: "Budget cut" });
+    const entries = await newEntries(w, seen, placed.id);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      type: "opportunity.lost",
+      summary: `Moved "${placed.name}" to ${lost.name} - Budget cut`,
+      meta: { to: lost.name },
+    });
+  });
+
+  it("move() of a deal with no lost reason into a lost stage keeps the plain text", async () => {
+    const w = await pipelineWorld();
+    const { placed, lost } = placeDeal(w, undefined);
+    const seen = new Set((await w.timeline()).map((a) => a.id));
+
+    await settle(w.api.move(placed.id, { stageId: lost.id, position: 0 }));
+
+    const entries = await newEntries(w, seen, placed.id);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      type: "opportunity.lost",
+      summary: `Moved "${placed.name}" to ${lost.name}`,
+    });
+  });
+
+  it("update() into another pipeline's lost stage with a lostReason includes it", async () => {
+    const w = await pipelineWorld();
+    const lost = w.other.stages.find((s) => !s.isWon)!;
+    markLost(w, w.other, lost.id);
+    const seen = new Set((await w.timeline()).map((a) => a.id));
+
+    await settle(
+      w.api.update(w.deal.id, {
+        pipelineId: w.other.id,
+        stageId: lost.id,
+        lostReason: "Budget cut",
+      }),
+    );
+
+    const entries = await newEntries(w, seen, w.deal.id);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      type: "opportunity.lost",
+      summary: `Moved "${w.deal.name}" to ${lost.name} - Budget cut`,
+    });
+  });
+
+  it("create() into a lost stage with a lostReason includes it", async () => {
+    const w = await pipelineWorld();
+    const lost = w.other.stages.find((s) => !s.isWon)!;
+    markLost(w, w.other, lost.id);
+    const name = "Born-lost deal with a reason";
+
+    const saved = await settle(
+      w.api.create({
+        name,
+        contactId: w.deal.contactId,
+        pipelineId: w.other.id,
+        stageId: lost.id,
+        lostReason: "Budget cut",
+      }),
+    );
+
+    const entries = await newEntries(w, new Set(), saved.id);
+    expect(entries).toHaveLength(2);
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        type: "opportunity.lost",
+        at: saved.createdAt,
+        summary: `Moved "${name}" to ${lost.name} - Budget cut`,
+      }),
+    );
+  });
+});
