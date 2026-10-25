@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { MessageSquarePlusIcon } from "lucide-react";
 
-import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
+import { AutomationRequestForm } from "@/components/modules/automation/automation-request-form";
+import { AutomationRequestList } from "@/components/modules/automation/automation-request-list";
 
 /**
- * Placeholder for the automation list's "Request an automation" link
- * (P8-T03), so neither the link's prefetch nor a click lands on a 404, as for
- * Team settings (DECISIONS P7-T42). P8-T08 replaces it in place with the real
- * request list and form.
+ * `/automation/requests`, linked from the automation list's "Request an
+ * automation". Staff ask the developer for an automation here and follow
+ * each request's status and reply. The developer owns status: nothing on
+ * this page changes it.
  */
 export const metadata: Metadata = { title: "Automation requests" };
 
@@ -17,13 +17,12 @@ export default function AutomationRequestsPage() {
     <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
       <PageHeader
         title="Automation requests"
-        description="Ask your developer for a new automation."
+        description="Ask your developer for a new automation, and see where each request stands."
       />
-      <EmptyState
-        icon={MessageSquarePlusIcon}
-        title="Automation requests are coming soon"
-        description="You cannot send a request from here yet."
-      />
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
+        <AutomationRequestForm />
+        <AutomationRequestList />
+      </div>
     </div>
   );
 }

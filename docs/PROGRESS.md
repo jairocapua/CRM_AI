@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 73/90 tasks done (81%) · **Current phase:** P8 · **Next agent task:** P8-T06 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+**Overall:** 77/91 tasks done (85%) · **Current phase:** P9 · **Next agent task:** P9-T01 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -87,7 +87,7 @@ Status: done · Progress: 68/68 · Points: 7 (5 for Calendars + 2 for the test h
 | P7-T64 | Lost entry text and same-stage move status | agent | done | — | 6933a1b | 2026-10-25 | Same-stage move() is a pure reorder (keeps status/closedAt/lostReason); lost-stage entry appends the reason |
 
 ## P8 — Automation
-Status: active · Progress: 5/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md
+Status: done · Progress: 9/9 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -96,9 +96,10 @@ Status: active · Progress: 5/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/
 | P8-T03 | Automation list page | agent | done | P8-T01 | 01dad51 | 2026-10-25 | Review round 1: 2 must-fixes (404 request link -> placeholder page; one-alert Retry re-reads users/tags), fixed with red-proved e2e. Re-verify: check green (884 Vitest), 41 e2e passed. |
 | P8-T04 | Detail page with the step list | agent | done | P8-T02, P8-T03 | 6456413 | 2026-10-25 | Review round 1: missing error-path e2e (added, red-proved) + unclamped summaries, nested-fork test, exhaustive stepSummary. Re-verify: check green (922 Vitest), 23 e2e passed. |
 | P8-T05 | Read-only diagram | agent | done | P8-T04 | 6d49c64 | 2026-10-25 | Deep review round 1: disableKeyboardA11y must-fix (red-proved e2e), memoised names, phone-never-downloads check, skeleton height. Re-verify: check green (937 Vitest), 29 e2e, diagram spec x3 stable. |
-| P8-T06 | Run history data | agent | todo | P8-T01 |  |  |  |
-| P8-T07 | Run history UI | agent | todo | P8-T04, P8-T06 |  |  |  |
-| P8-T08 | Automation requests | agent | todo | P8-T03 |  |  |  |
+| P8-T06 | Run history data | agent | done | P8-T01 | 97e70cd | 2026-10-25 | Run history data: types, workflowRuns table + seeder (97 runs), cascade, cache key, 3 integrity lines, listRuns; fake stats deleted. check green (962), 38 e2e. |
+| P8-T07 | Run history UI | agent | done | P8-T04, P8-T06 | e8b8c0e | 2026-10-25 | Run history table + run sheet on /automation/[id]; contactName joined at read; one fix round (sort flip tested). check green (987), 46 e2e. |
+| P8-T08 | Automation requests | agent | done | P8-T03 | f5bfd5f | 2026-10-25 | Automation requests: type, table, seeder (6), api.automationRequests, integrity line, /automation/requests list + form. check green (1030), 48 e2e. |
+| P8-T09 | Withdraw an automation request | agent | done | P8-T08 | 6c44c2e | 2026-10-26 | Withdraw own requested request: fifth status, api withdraw() + canWithdraw, confirm UI; one fix round (focus on failure, withdrawn is final). check green (1051), full e2e 184/184. |
 
 ## P9 — Settings
 Status: todo · Progress: 0/7 · Points: 4 · Branch: phase/p9-settings · File: docs/phases/P9-settings.md

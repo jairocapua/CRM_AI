@@ -14,6 +14,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 import { AutomationStatusBadge } from "./automation-card";
 import { canvasHeight } from "./automation-flow";
+import { RunHistory, useRunHistory } from "./automation-run-history";
 import { AutomationStepList } from "./automation-step-list";
 import { behaviourCopy, sourcePath } from "./automation-steps";
 import {
@@ -50,6 +51,10 @@ const AutomationGraph = dynamic(() => import("./automation-graph"), {
  * - The users or tags read failing alone shows a `LoadError` above the page,
  *   which still draws: the owner reads "Unknown owner" and steps leave out
  *   the names they cannot resolve until a Retry (`invalidate`) succeeds.
+ * - Its run history (`RunHistory`) is read beside it, a secondary read: while
+ *   the automation's alert shows, the runs section is not drawn, and that
+ *   alert's Retry re-reads the runs too when they failed. The runs failing
+ *   alone show their own alert in the section; the rest of the page draws.
  * - On screens 768px and wider a read-only diagram sits above the steps.
  *   Below that it is not mounted at all: the step list, which renders at
  *   every width, is the whole picture (and the accessible one).
@@ -58,6 +63,7 @@ export function AutomationDetail({ id }: { id: string }) {
   const workflow = useResource("workflows", () => api.workflows.get(id), id);
   const users = useResource("users", () => api.users.list());
   const tags = useResource("tags", () => api.tags.list());
+  const runHistory = useRunHistory(id);
   const stepsHeadingId = useId();
   const diagramHeadingId = useId();
   const isMobile = useIsMobile();
@@ -96,6 +102,7 @@ export function AutomationDetail({ id }: { id: string }) {
 
   const usersError = loadErrorOf(users);
   const tagsError = loadErrorOf(tags);
+  const runsError = loadErrorOf(runHistory.runs);
 
   if (workflow.error?.status === 404) {
     return (
@@ -122,6 +129,7 @@ export function AutomationDetail({ id }: { id: string }) {
             workflow.refetch();
             if (usersError) invalidate("users");
             if (tagsError) invalidate("tags");
+            if (runsError) invalidate("workflowRuns");
           }}
           retrying={workflow.isRefreshing}
         />
@@ -227,6 +235,8 @@ export function AutomationDetail({ id }: { id: string }) {
           </AsideSection>
         </aside>
       </div>
+
+      <RunHistory state={runHistory} workflow={record} names={names} />
     </div>
   );
 }

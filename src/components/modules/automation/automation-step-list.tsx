@@ -34,18 +34,22 @@ const STATUS_BADGE: Record<
  * the diagram cannot give it. Built from the `Workflow`'s nodes and edges,
  * so it works behind any backend.
  *
- * `statuses` decorates steps by node id with how a run went (run logs,
- * P8-T07); without it the list is the plain definition.
+ * `statuses` decorates steps by node id with how a run went (the run
+ * sheet); without it the list is the plain definition. `notes` adds a line
+ * under a step, by node id (the run sheet's "SMS sent · 9:02 AM"). Both are
+ * read-only marks: a step with neither reads as in the definition.
  */
 export function AutomationStepList({
   workflow,
   names,
   statuses,
+  notes,
   labelledBy,
 }: {
   workflow: Pick<Workflow, "nodes" | "edges">;
   names: StepNames;
   statuses?: ReadonlyMap<ID, RunStepStatus>;
+  notes?: ReadonlyMap<ID, string>;
   /** Id of the heading that names the list. */
   labelledBy?: string;
 }) {
@@ -53,21 +57,27 @@ export function AutomationStepList({
     <Steps
       items={stepTree(workflow)}
       names={names}
-      statuses={statuses}
+      marks={{ statuses, notes }}
       labelledBy={labelledBy}
     />
   );
 }
 
+/** A run's marks on the list, by node id. */
+interface Marks {
+  statuses?: ReadonlyMap<ID, RunStepStatus>;
+  notes?: ReadonlyMap<ID, string>;
+}
+
 function Steps({
   items,
   names,
-  statuses,
+  marks,
   labelledBy,
 }: {
   items: StepItem[];
   names: StepNames;
-  statuses?: ReadonlyMap<ID, RunStepStatus>;
+  marks: Marks;
   labelledBy?: string;
 }) {
   return (
@@ -81,7 +91,8 @@ function Steps({
           <StepRow
             item={item}
             names={names}
-            status={statuses?.get(item.node.id)}
+            status={marks.statuses?.get(item.node.id)}
+            note={marks.notes?.get(item.node.id)}
           />
           {item.branches.length > 0 ? (
             <div className="grid gap-3 border-l-2 border-dashed pl-3 sm:grid-cols-2 sm:border-l-0 sm:pl-0">
@@ -90,7 +101,7 @@ function Steps({
                   key={branch.id}
                   branch={branch}
                   names={names}
-                  statuses={statuses}
+                  marks={marks}
                 />
               ))}
             </div>
@@ -105,10 +116,12 @@ function StepRow({
   item: { node },
   names,
   status,
+  note,
 }: {
   item: StepItem;
   names: StepNames;
   status?: RunStepStatus;
+  note?: string;
 }) {
   const summary = stepSummary(node, names);
 
@@ -122,6 +135,7 @@ function StepRow({
         <span className="font-medium">{node.label}</span>
         <span className="sr-only">: {summary}</span>
         {status ? <StatusBadge status={status} /> : null}
+        {note ? <span>{note}</span> : null}
       </div>
     );
   }
@@ -149,6 +163,11 @@ function StepRow({
           {status ? <StatusBadge status={status} /> : null}
         </div>
         <p className="text-muted-foreground wrap-break-word">{summary}</p>
+        {note ? (
+          <p className="text-xs text-muted-foreground wrap-break-word">
+            {note}
+          </p>
+        ) : null}
       </div>
     </div>
   );
@@ -157,11 +176,11 @@ function StepRow({
 function Branch({
   branch,
   names,
-  statuses,
+  marks,
 }: {
   branch: BranchItem;
   names: StepNames;
-  statuses?: ReadonlyMap<ID, RunStepStatus>;
+  marks: Marks;
 }) {
   const labelId = useId();
   return (
@@ -173,7 +192,7 @@ function Branch({
         <Steps
           items={branch.steps}
           names={names}
-          statuses={statuses}
+          marks={marks}
           labelledBy={labelId}
         />
       ) : (

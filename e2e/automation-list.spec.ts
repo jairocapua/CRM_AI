@@ -16,7 +16,7 @@ import { expect, NAVIGATION, test } from "./fixtures";
  * in one section per folder, each card a read-only summary: trigger, owner
  * and lifecycle status. Automations are code, so staff get no switches, and
  * a new one is asked for through the "Request an automation" link, which
- * opens the requests page (a placeholder until P8-T08). Each card's name
+ * opens the requests page (e2e/automation-requests.spec.ts). Each card's name
  * links to the automation's detail page (e2e/automation-detail.spec.ts).
  *
  * A failed read shows one alert per fault (DECISIONS P7-T47). The
@@ -210,6 +210,10 @@ test("Request an automation is a link to the requests page", async ({
       name: "Automation requests",
       exact: true,
     }),
+  ).toBeVisible();
+  // The real page, with its request form, not a placeholder.
+  await expect(
+    page.getByRole("form", { name: "New request", exact: true }),
   ).toBeVisible();
 });
 

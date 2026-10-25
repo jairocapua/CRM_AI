@@ -1,6 +1,7 @@
 import type {
   Activity,
   Appointment,
+  AutomationRequest,
   Calendar,
   Contact,
   Conversation,
@@ -18,6 +19,7 @@ import type {
   Tag,
   Task,
   User,
+  WorkflowRun,
 } from "@/types";
 
 /**
@@ -25,7 +27,7 @@ import type {
  * the stored version and reseeds rather than migrating — fixtures are demo
  * data, so a clean reseed is always preferable to a half-migrated store.
  */
-export const SEED_VERSION = 5;
+export const SEED_VERSION = 7;
 
 /** Collections are keyed by id so lookups and updates stay O(1). */
 export type Table<T> = Record<ID, T>;
@@ -57,6 +59,18 @@ export interface DbState {
   appointments: Table<Appointment>;
 
   activities: Table<Activity>;
+
+  /**
+   * Automation run history. The automations themselves are code
+   * (`src/lib/automations/`); each run names one by `Workflow.id`.
+   */
+  workflowRuns: Table<WorkflowRun>;
+
+  /**
+   * Staff asking the developer for an automation. A shipped one names the
+   * automation by `Workflow.id`.
+   */
+  automationRequests: Table<AutomationRequest>;
 }
 
 export const EMPTY_DB: DbState = {
@@ -79,4 +93,6 @@ export const EMPTY_DB: DbState = {
   calendars: {},
   appointments: {},
   activities: {},
+  workflowRuns: {},
+  automationRequests: {},
 };

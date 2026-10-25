@@ -133,6 +133,7 @@ export async function remove(ids: ID[]): Promise<{ deleted: number }> {
     "tasks",
     "appointments",
     "activities",
+    "workflowRuns",
     "analytics",
   );
   return result;

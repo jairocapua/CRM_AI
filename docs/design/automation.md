@@ -11,6 +11,17 @@
 > P8-T05 deviations: no edge-to-edge canvas (§8; the detail page keeps its
 > padding), invisible handles (§6), `maxZoom: 1` and `minZoom: 0.2` (§5), and
 > `disableKeyboardA11y`. See [P8-T05] in DECISIONS.md.
+> P8-T06/T07: `Workflow.stats` and `WorkflowNode.stats` are deleted (§9), and
+> `listRuns` returns `Page<WorkflowRunRow>` (run plus read-time `contactName`).
+> See [P8-T06] and [P8-T07] in DECISIONS.md.
+> P8-T02: layouts are computed once at import as a frozen `LAYOUTS`, not per
+> read (§4). P8-T08: `setStatus` takes a third `{ notes, shippedWorkflowId }`
+> argument, `list` returns `Page<AutomationRequestRow>`, and requests are
+> seeded last. `SEED_VERSION` ended the phase at 7 (P8-T01 → 5, T06 → 6,
+> T08 → 7). See [P8-T02] and [P8-T08] in DECISIONS.md.
+> P8-T09 (owner decision): a fifth request status, `withdrawn`, which only
+> the asker can set while a request is still `requested`, so the "Four
+> statuses, not five" note below no longer holds. See [P8-T09] in DECISIONS.md.
 
 ## Context
 

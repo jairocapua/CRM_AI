@@ -87,8 +87,6 @@ export interface WorkflowNode {
   width: number;
   height: number;
   config: WorkflowNodeConfig;
-  /** Fake run counters, for realism on the canvas. */
-  stats?: { entered: number; completed: number };
 }
 
 export interface WorkflowEdge {
@@ -105,10 +103,44 @@ export type WorkflowStatus = "draft" | "published" | "paused";
 
 /**
  * How one step of a run went (design "Phase 8b": `WorkflowRunStep.status`).
- * Declared ahead of run history (P8-T06) so the step list can take per-step
- * statuses; P8-T06's `WorkflowRunStep` should use this type.
+ * `skipped` is the step a dropped run stopped at instead of running.
  */
 export type RunStepStatus = "ok" | "skipped" | "failed";
+
+/**
+ * - `completed`: reached an End node.
+ * - `failed`: a step failed; the run stopped there and carries `error`.
+ * - `active`: still in flight (sitting in a wait); no `endedAt`.
+ * - `dropped`: stopped early without failing, e.g. the contact replied; its
+ *   last step is `skipped` and its `detail` gives the reason.
+ */
+export type RunStatus = "completed" | "failed" | "active" | "dropped";
+
+/** One node a run reached, in the order it reached them. */
+export interface WorkflowRunStep {
+  /** A node id of the run's automation: a step id, "trigger" or "end:<id>". */
+  nodeId: ID;
+  at: ISODate;
+  status: RunStepStatus;
+  /** Short, shown as it is: "SMS sent", "Branch: Replied". */
+  detail?: string;
+}
+
+/** One contact's trip through one automation. */
+export interface WorkflowRun {
+  id: ID;
+  /** The automation's `Workflow.id` (`wf_*`). */
+  workflowId: ID;
+  contactId: ID;
+  status: RunStatus;
+  startedAt: ISODate;
+  /** Unset while the run is `active`. */
+  endedAt?: ISODate;
+  /** The trigger first; never empty. */
+  steps: WorkflowRunStep[];
+  /** Why a `failed` run failed, as a sentence. */
+  error?: string;
+}
 
 /**
  * What `api.workflows` returns: an `AutomationDefinition` with its stable keys
@@ -135,7 +167,6 @@ export interface Workflow extends Audited {
     allowMultipleEnrollment: boolean;
     stopOnReply: boolean;
   };
-  stats: { enrolled: number; active: number; completed: number };
   publishedAt?: ISODate;
 }
 
@@ -237,4 +268,37 @@ export interface AutomationDefinition {
   trigger: { label: string; config: AuthoredTriggerConfig };
   steps: StepList;
   settings: { allowMultipleEnrollment: boolean; stopOnReply: boolean };
+}
+
+/**
+ * Where a request for a new automation stands (design "Phase 8b"). The
+ * developer moves it between the first four (no separate "building":
+ * `in_review` covers it, with no distinct UI). "withdrawn" is the asker's
+ * own move (`api.automationRequests.withdraw`), only from "requested"; the
+ * request stays listed, so its history is kept.
+ */
+export type AutomationRequestStatus =
+  "requested" | "in_review" | "shipped" | "declined" | "withdrawn";
+
+export type AutomationRequestPriority = "low" | "normal" | "high";
+
+/**
+ * A team member asking the developer for an automation. Who asked and when
+ * are `Audited.createdBy` / `createdAt`: no separate `requestedBy`.
+ */
+export interface AutomationRequest extends Audited {
+  id: ID;
+  title: string;
+  /** Free text: what goes wrong today. */
+  problem: string;
+  /** Free text: what should start it. */
+  trigger: string;
+  /** Free text: what should happen. */
+  outcome: string;
+  status: AutomationRequestStatus;
+  priority: AutomationRequestPriority;
+  /** The developer's reply, shown as it is. */
+  notes?: string;
+  /** The automation's `Workflow.id`, set only when `shipped`. */
+  shippedWorkflowId?: ID;
 }

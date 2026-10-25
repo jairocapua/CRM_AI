@@ -303,3 +303,20 @@
 - 2026-10-25 [P8-T05] To prove a lazily loaded library was not downloaded, match a string literal from its code in script response bodies (chunk names are hashed), and pair it with a positive-control test where it is loaded.
 - 2026-10-25 [P8-T05] `next dev` rewrites AGENTS.md; restore it afterwards. A component-folder unit test cannot import `@/lib/mock/testing` (API-seam lint); build fixtures from `LAYOUTS`.
 - 2026-10-25 [P8-T05] A useMemo keyed on an object rebuilt every render never hits; memoise the inputs (Maps built from `useResource` data) above the component's early returns.
+- 2026-10-25 [P8-T06] A `vi.doMock("@/lib/automations")` factory must also return `LAYOUTS` now that integrityReport reads it (vitest throws on a missing export); a stand-in registry also needs `workflowRuns` cleared, or the real automations' runs report as orphans.
+- 2026-10-25 [P8-T06] `assertNothingAfterAnchor` checks only top-level string fields, so nested timestamps like `steps[].at` need their own test.
+- 2026-10-25 [P8-T06] To compare two seeded worlds across builds, blank ids matching `/^[a-z]+_[0-9a-z]{12}$/` (nanoids change every build; faker draws do not).
+- 2026-10-25 [P8-T06] `invalidateAll()` bumps already-read keys twice (loop plus literal list); a test expecting exactly +1 on such a key fails. Assert "greater than before" instead.
+- 2026-10-25 [P8-T07] Bare `node` in a background terminal job prints "stdin is not a tty" and does nothing, even with `< /dev/null`; run mutation scripts in the foreground.
+- 2026-10-25 [P8-T07] A Sheet's bounding box is mid-slide right after it opens; poll it until it settles before asserting width or position.
+- 2026-10-25 [P8-T07] TanStack sorts an ISO string column ascending first, so a column that starts descending gets its sort cleared on the next click; map the empty sort to a flip (`keepSortMarked`) so the header icon matches the API order.
+- 2026-10-25 [P8-T07] Seeded active runs store their current wait as `ok` with "Waiting"; the UI treats a running run's last step as having no status.
+- 2026-10-25 [P8-T07] `e2e/fixture.spec.ts` "boot wait › waits while the boot skeleton is up" failed once in a 44-test run on 16 workers and passed 3/3 alone; treat it as a load-timing flake before suspecting the change.
+- 2026-10-25 [P8-T08] `simulate({ ms })` still sleeps `ms` in unit tests with latency 0, so `nowIso()` lands `ms` after `setDemoNow`; assert a range or derived values, not an exact time.
+- 2026-10-25 [P8-T08] Playwright `filter({ has })` resolves the inner locator relative to the outer match; an inner locator rooted elsewhere (`form.getByLabel`) matches nothing.
+- 2026-10-25 [P8-T08] A seeder with no faker draws passes the call-order test wherever it sits; red-proof the order test by adding a draw inside the seeder and moving its call (a draw in `index.ts` lands in both builds).
+- 2026-10-25 [P8-T08] e2e can force mutation failures with the Demo Data failure-rate slider (the second slider; focus it, press End for 100%). The rate lives in memory, so reach the page under test by links, not a reload; each test's fresh context resets it.
+- 2026-10-26 [P8-T09] A test helper with a default parameter cannot model "no asker" with `undefined`: passing `undefined` explicitly yields the default; use `null`.
+- 2026-10-26 [P8-T09] A terminal call with `timeout` over 600s runs as a background job, where node does nothing; keep e2e mutation runs to about 2 mutants (~70s `next build` each) per foreground call.
+- 2026-10-26 [P8-T09] A Button that turns natively disabled on confirm loses the focus Base UI returns to it when the dialog closes (focus lands on <body>); use `focusableWhenDisabled` + `data-disabled:opacity-50` as in load-error.tsx ([P7-T07]).
+- 2026-10-26 [P8-T09] To prove a state that lasts a few hundred ms in e2e (a pending button, a focus drop), install an in-page recorder with `page.evaluate` (MutationObserver + focusout) before the action and assert its log; retrying assertions miss short states (`recordWithdraw` in automation-requests.spec.ts).

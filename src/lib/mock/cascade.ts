@@ -28,9 +28,10 @@ function omitBy<T>(
 
 /**
  * Deleting a contact deletes everything that only exists because of them:
- * their deals, threads and messages, plus their notes, tasks, appointments and
- * timeline entries. Every contact has at least a `contact.created` activity, so
- * skipping the activity sweep orphans a record on every single delete.
+ * their deals, threads and messages, plus their notes, tasks, appointments,
+ * timeline entries and automation runs. Every contact has at least a
+ * `contact.created` activity, so skipping the activity sweep orphans a record
+ * on every single delete.
  */
 export function cascadeContactDelete(
   state: DbState,
@@ -60,6 +61,7 @@ export function cascadeContactDelete(
     state.activities,
     (a) => !!a.contactId && gone.has(a.contactId),
   );
+  const workflowRuns = omitBy(state.workflowRuns, (r) => gone.has(r.contactId));
 
   return {
     contacts,
@@ -70,6 +72,7 @@ export function cascadeContactDelete(
     tasks,
     appointments,
     activities,
+    workflowRuns,
   };
 }
 
