@@ -235,6 +235,43 @@ export function reassignUserReferences(
 }
 
 /**
+ * How much `reassignUserReferences(state, id, …)` would move, by kind: the
+ * contacts and deals `id` owns, the tasks, conversations and appointments
+ * assigned to them, the calendars they are a team member of, their private
+ * smart lists, and the contacts they follow (dropped, not moved). Each count
+ * uses the same test the reassignment does, so a preview never disagrees
+ * with the removal.
+ */
+export interface UserReferenceCounts {
+  contacts: number;
+  opportunities: number;
+  tasks: number;
+  conversations: number;
+  appointments: number;
+  calendars: number;
+  smartLists: number;
+  follows: number;
+}
+
+export function countUserReferences(
+  state: DbState,
+  id: ID,
+): UserReferenceCounts {
+  const count = <T>(table: Record<ID, T>, holds: (row: T) => boolean) =>
+    Object.values(table).filter(holds).length;
+  return {
+    contacts: count(state.contacts, (c) => c.ownerId === id),
+    opportunities: count(state.opportunities, (o) => o.ownerId === id),
+    tasks: count(state.tasks, (t) => t.assigneeId === id),
+    conversations: count(state.conversations, (c) => c.assigneeId === id),
+    appointments: count(state.appointments, (a) => a.assignedUserId === id),
+    calendars: count(state.calendars, (c) => c.teamMemberIds.includes(id)),
+    smartLists: count(state.smartLists, (l) => l.ownerId === id),
+    follows: count(state.contacts, (c) => c.followers.includes(id)),
+  };
+}
+
+/**
  * Deleting a custom field deletes the values stored under its key, on the
  * records of its own object type only: a contact field and a deal field may
  * share a key.

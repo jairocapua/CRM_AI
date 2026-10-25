@@ -89,6 +89,11 @@ management notes).
   definitions (`validation/custom-fields.ts`, `CustomFieldsSection`), so a
   change must show up there with no other edits. Currency fields stay in
   cents (the Phase 4 bug).
+  - From the P9-T03 review: the duplicate-key 409 carries `field: "key"` (or
+    the label field it derives from) and is marked with `serverErrorField`;
+    hide a removed field with a done flag before the refetch, proven by
+    failing the list read after confirming; block dialog close while a
+    mutation is pending.
   - From the P9-T01 review: `customFields.create` refuses a duplicate key
     for the same object type (409), and `update` ignores `key` and
     `objectType` (either change orphans stored values and turns the
@@ -106,6 +111,13 @@ management notes).
 - **Scope:** create and rename pipelines; add, rename, reorder (drag with
   `@dnd-kit`, as on the board) and remove stages; delete a pipeline with a
   confirm stating how many deals go with it. Uses `pipelines.*` only.
+  - From the P9-T03 review: the delete-pipeline confirm copies the Team
+    remove pattern: one `pipelineRemovalRefusal()` thrown by `remove()` and
+    returned by a preview read whose deal count uses `cascadePipelineDelete`'s
+    predicate, with a unit test comparing preview and actual deletion; done
+    flag for removed stages/pipelines proven by failing the refetch; block
+    dialog close while pending; `failReads(page, "opportunities")` fails a
+    count preview in e2e.
   - From the P9-T01 review: `reorderStages` returns 422 unless the ids are
     exactly the pipeline's stages (a stale list drops a stage and orphans
     its deals); `addStage`/`updateStage`/`reorderStages` each become one

@@ -329,3 +329,8 @@
 - 2026-10-26 [P9-T02] On /settings the header breadcrumb is also a list inside `main`, so a bare `getByRole("list")` is ambiguous; name the list.
 - 2026-10-26 [P9-T02] `beforeunload` does not fire on client-side navigation: any plain `<Link>` inside a form with unsaved edits drops them silently unless it passes `onNavigate={guardLeave(href)}`.
 - 2026-10-26 [P9-T02] Writing a Playwright regex like `/\/settings\/profile$/` through a JS template literal in a .mjs eats the backslashes; patch such lines with the patch tool.
+- 2026-10-26 [P9-T03] Asserting a Base UI Select's value with `toHaveText` on the trigger also reads the chevron; assert on `[data-slot="select-value"]`.
+- 2026-10-26 [P9-T03] To prove a done flag hides a removed row before the refetch, turn on a list-read fault (`failUserList`) after the dialog loads and before confirming: the mutation reads by key and succeeds, the refetch fails, so only the flag can hide the row.
+- 2026-10-26 [P9-T03] One e2e build can red-proof several UI tests at once when each broken line targets a different test.
+- 2026-10-26 [P9-T03] `failReads(page, "contacts")` fails a count-based preview (removalPreview) in e2e.
+- 2026-10-26 [P9-T03] On Windows a 16-worker Playwright run can fail once with `net::ERR_NO_BUFFER_SPACE`; rerun the spec alone before suspecting the change.

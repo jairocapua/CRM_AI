@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import type { User, UserRole } from "@/types";
+import type { User } from "@/types";
 import * as api from "@/lib/api";
 import {
   ApiError,
@@ -41,13 +41,17 @@ import {
   TextField,
   TimeZoneField,
 } from "./settings-form-parts";
+import { ROLE_LABELS, serverErrorField } from "./team-copy";
 
-/** How each role reads on screen. */
-export const ROLE_LABELS: Record<UserRole, string> = {
-  agency_owner: "Agency owner",
-  admin: "Admin",
-  user: "User",
-};
+/** The fields a refusal can be about (`ApiError.field`), marked in place. */
+const PROFILE_FIELDS = [
+  "firstName",
+  "lastName",
+  "email",
+  "phone",
+  "jobTitle",
+  "timezone",
+] as const satisfies readonly (keyof ProfileFormValues)[];
 
 /**
  * The profile page body: the current user (`api.users.me()`) in a form.
@@ -104,12 +108,15 @@ function ProfileForm({ user }: { user: User }) {
       toast.success("Profile saved");
       form.reset(toProfileForm(saved));
     } catch (error) {
-      form.setError(SERVER_ERROR, {
-        message:
-          error instanceof ApiError
-            ? error.message
-            : "Could not save your profile.",
-      });
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "Could not save your profile.";
+      // A refusal about one field (an email a teammate has) marks that
+      // field; anything else shows above Save.
+      const field = serverErrorField(error, PROFILE_FIELDS);
+      if (field) form.setError(field, { message }, { shouldFocus: true });
+      else form.setError(SERVER_ERROR, { message });
     }
   }
 

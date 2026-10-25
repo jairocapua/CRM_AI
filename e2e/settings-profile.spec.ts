@@ -146,6 +146,24 @@ test("a refused save shows the API's sentence, keeps what was typed and keeps fo
   await expect(userButton(page, "Jordan Reyes")).toBeVisible();
 });
 
+test("an email a teammate already has is refused on the email field", async ({
+  page,
+  gotoApp,
+}) => {
+  await gotoApp("/settings/profile");
+  await expect(firstName(page)).toHaveValue("Jordan");
+  await input(page, "Email").fill("Priya@northwind.studio");
+  await saveButton(form(page)).click();
+
+  await expect(input(page, "Email")).toHaveAttribute("aria-invalid", "true");
+  await expect(input(page, "Email")).toHaveAccessibleDescription(
+    "That email address already belongs to Priya Nair.",
+  );
+  await expect(input(page, "Email")).toBeFocused();
+  await expect(input(page, "Email")).toHaveValue("Priya@northwind.studio");
+  await expect(toastNamed(page, "Profile saved")).toHaveCount(0);
+});
+
 test("unsaved edits ask before the section nav leaves the page", async ({
   page,
   gotoApp,

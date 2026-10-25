@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 79/91 tasks done (87%) · **Current phase:** P9 · **Next agent task:** P9-T03 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+**Overall:** 79/91 tasks done (87%) · **Current phase:** P9 · **Next agent task:** P9-T04 · **Awaiting review:** P9-T03 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -108,7 +108,7 @@ Status: active · Progress: 2/7 · Points: 4 · Branch: phase/p9-settings · Fil
 |---|---|---|---|---|---|---|---|
 | P9-T01 | Settings API fixes (step 0) | agent | done | P8 | 7baaca8 | 2026-10-26 | Four settings API fixes + 10 integrity lines; reviewer approve, no fix round |
 | P9-T02 | Settings shell, profile and business | agent | done | P8 | 5c8a9f9 | 2026-10-26 | Settings shell, profile, business; one fix round (Team link leave guard, copy) |
-| P9-T03 | Team and invites | agent | todo | P9-T01, P9-T02 |  |  |  |
+| P9-T03 | Team and invites | agent | review | P9-T01, P9-T02 |  | 2026-10-26 | Team list, invite, role change, remove with reassign preview; one fix round (done-flag e2e + 6 small fixes) |
 | P9-T04 | Custom fields manager | agent | todo | P9-T01, P9-T02 |  |  |  |
 | P9-T05 | Pipelines and stages manager | agent | todo | P9-T01, P9-T02 |  |  |  |
 | P9-T06 | Tags manager with merge | agent | todo | P9-T02 |  |  |  |
