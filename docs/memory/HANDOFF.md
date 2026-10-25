@@ -6,7 +6,7 @@
 ## Now
 - **Phase:** P8 Automation — active, 8/8 tasks done; phase gate next (P7 merged to GitHub `master` via PR #2 on 2026-10-25; local `master` fast-forwarded to it).
 - **Branch:** `phase/p8-automation`, cut from `master` at `584f50e`. Nothing pushed.
-- **Status:** P8-T08 in review (Autopilot approves next).
+- **Status:** P8-T08 done (`f5bfd5f`) under Autopilot; all P8 tasks done, phase gate next.
 
 ## Last change
 - P8-T08: `/automation/requests` replaced its placeholder with a "New request" form (title, problem, trigger, outcome, priority; RHF + zod) beside a list of requests showing a read-only status badge, priority, who asked and when, the developer's reply and, for shipped ones, a link to the automation. New `AutomationRequest` type, `automationRequests` table (six seeded requests, seeded last), `api.automationRequests` (list/get/create/setStatus/remove), an integrity line for a request pointing at a missing automation, `SEED_VERSION` 7. Staff cannot change status or delete; the developer owns status.
