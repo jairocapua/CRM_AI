@@ -215,6 +215,21 @@ function inFlightStart(
 
 const iso = (ms: number) => new Date(ms).toISOString();
 
+/**
+ * Why a run stopped in a wait, before `skipped` ran. A reply stops an
+ * automation that stops on reply, except at a fork: a fork is the step that
+ * checks for a reply ("Replied?"), so "the contact replied" there reads as a
+ * contradiction. No draw: the faker stream is the same either way.
+ */
+function stopReason(
+  definition: AutomationDefinition,
+  skipped: LayoutNode,
+): string {
+  return definition.settings.stopOnReply && skipped.kind !== "if_else"
+    ? "Stopped: the contact replied"
+    : "Stopped: the contact unsubscribed";
+}
+
 function okStep(
   timed: Timed[],
   i: number,
@@ -323,6 +338,7 @@ function seedRun(
       const from = timed[i]!.at;
       const span = timed[i + 1]!.at - from;
       const at = from + int(0, Math.floor(span / MINUTE)) * MINUTE;
+      const skipped = timed[i + 1]!.node;
       return {
         ...base,
         status: "dropped",
@@ -330,12 +346,10 @@ function seedRun(
         steps: [
           ...ok(i + 1, false),
           {
-            nodeId: timed[i + 1]!.node.id,
+            nodeId: skipped.id,
             at: iso(at),
             status: "skipped",
-            detail: definition.settings.stopOnReply
-              ? "Stopped: the contact replied"
-              : "Stopped: the contact unsubscribed",
+            detail: stopReason(definition, skipped),
           },
         ],
       };

@@ -35,6 +35,7 @@ export type {
   WinRate,
 } from "./analytics";
 export type { ActivityRow } from "./activities";
+export type { WorkflowRunRow } from "./workflows";
 export type { AppointmentRow, CalendarPatch } from "./calendars";
 export type {
   OpportunityDraft,

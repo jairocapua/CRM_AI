@@ -307,3 +307,8 @@
 - 2026-10-25 [P8-T06] `assertNothingAfterAnchor` checks only top-level string fields, so nested timestamps like `steps[].at` need their own test.
 - 2026-10-25 [P8-T06] To compare two seeded worlds across builds, blank ids matching `/^[a-z]+_[0-9a-z]{12}$/` (nanoids change every build; faker draws do not).
 - 2026-10-25 [P8-T06] `invalidateAll()` bumps already-read keys twice (loop plus literal list); a test expecting exactly +1 on such a key fails. Assert "greater than before" instead.
+- 2026-10-25 [P8-T07] Bare `node` in a background terminal job prints "stdin is not a tty" and does nothing, even with `< /dev/null`; run mutation scripts in the foreground.
+- 2026-10-25 [P8-T07] A Sheet's bounding box is mid-slide right after it opens; poll it until it settles before asserting width or position.
+- 2026-10-25 [P8-T07] TanStack sorts an ISO string column ascending first, so a column that starts descending gets its sort cleared on the next click; map the empty sort to a flip (`keepSortMarked`) so the header icon matches the API order.
+- 2026-10-25 [P8-T07] Seeded active runs store their current wait as `ok` with "Waiting"; the UI treats a running run's last step as having no status.
+- 2026-10-25 [P8-T07] `e2e/fixture.spec.ts` "boot wait › waits while the boot skeleton is up" failed once in a 44-test run on 16 workers and passed 3/3 alone; treat it as a load-timing flake before suspecting the change.

@@ -8,6 +8,7 @@ import type {
 } from "@/types";
 import { AUTOMATIONS, LAYOUTS } from "@/lib/automations";
 import type { LayoutConfig } from "@/lib/automations/layout";
+import { fullName } from "@/lib/format";
 import { db } from "@/lib/mock/db";
 import {
   applyQuery,
@@ -54,25 +55,44 @@ export async function get(id: ID): Promise<Workflow> {
 }
 
 /**
+ * A run as the run history lists it: the stored run plus its contact's name,
+ * joined at read time so a renamed contact reads with the new name and the
+ * store never holds a copy. `contactName` is unset when the contact is gone;
+ * the UI then shows plain text, never the id.
+ */
+export interface WorkflowRunRow extends WorkflowRun {
+  contactName?: string;
+}
+
+/**
  * One automation's run history, newest first by default. `workflowId` is
  * `Workflow.id`; an id the registry does not have is a 404, as in `get()`,
- * so a typo never reads as "no runs yet".
+ * so a typo never reads as "no runs yet". Contacts are looked up by key for
+ * the page's rows only, so this reads no whole table but the runs.
  */
 export async function listRuns(
   workflowId: ID,
   query: ListQuery = {},
-): Promise<Page<WorkflowRun>> {
+): Promise<Page<WorkflowRunRow>> {
   return simulate(
     () => {
       if (!Object.values(AUTOMATIONS).some((d) => d.id === workflowId)) {
         notFound("Workflow", workflowId);
       }
-      const runs = Object.values(db.getState().workflowRuns).filter(
+      const { workflowRuns, contacts } = db.getState();
+      const runs = Object.values(workflowRuns).filter(
         (run) => run.workflowId === workflowId,
       );
-      return applyQuery(runs, query, {
+      const page = applyQuery(runs, query, {
         defaultSort: [{ field: "startedAt", desc: true }],
       });
+      return {
+        ...page,
+        rows: page.rows.map((run): WorkflowRunRow => {
+          const contact = contacts[run.contactId];
+          return contact ? { ...run, contactName: fullName(contact) } : run;
+        }),
+      };
     },
     { canFail: false },
   );

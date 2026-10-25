@@ -11,6 +11,9 @@
 > P8-T05 deviations: no edge-to-edge canvas (§8; the detail page keeps its
 > padding), invisible handles (§6), `maxZoom: 1` and `minZoom: 0.2` (§5), and
 > `disableKeyboardA11y`. See [P8-T05] in DECISIONS.md.
+> P8-T06/T07: `Workflow.stats` and `WorkflowNode.stats` are deleted (§9), and
+> `listRuns` returns `Page<WorkflowRunRow>` (run plus read-time `contactName`).
+> See [P8-T06] and [P8-T07] in DECISIONS.md.
 
 ## Context
 

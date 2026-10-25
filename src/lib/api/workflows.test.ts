@@ -311,6 +311,60 @@ describe("api.workflows.listRuns()", () => {
     );
   });
 
+  it("names each run's contact at read time, never on the stored run", async () => {
+    const { db } = await seededWorld();
+    const workflows = await import("./workflows");
+    const page = await settle(workflows.listRuns("wf_speed_to_lead"));
+    expect(page.rows.length).toBeGreaterThan(1);
+
+    const { contacts, workflowRuns } = db.getState();
+    for (const row of page.rows) {
+      const contact = contacts[row.contactId]!;
+      expect(row.contactName, row.id).toBe(
+        `${contact.firstName} ${contact.lastName}`,
+      );
+      // Joined on the way out: the store keeps only the id.
+      expect(workflowRuns[row.id], row.id).not.toHaveProperty("contactName");
+    }
+
+    // A renamed contact reads with the new name on the next read.
+    const first = page.rows[0]!;
+    db.setState((s) => ({
+      contacts: {
+        ...s.contacts,
+        [first.contactId]: {
+          ...s.contacts[first.contactId]!,
+          firstName: "Renamed",
+          lastName: "Person",
+        },
+      },
+    }));
+    const again = await settle(workflows.listRuns("wf_speed_to_lead"));
+    expect(again.rows.find((r) => r.id === first.id)?.contactName).toBe(
+      "Renamed Person",
+    );
+  });
+
+  it("leaves the contact name out when the contact is gone, never an id", async () => {
+    const { db } = await seededWorld();
+    const workflows = await import("./workflows");
+    const before = await settle(workflows.listRuns("wf_speed_to_lead"));
+    const orphan = before.rows[0]!;
+    db.setState((s) => {
+      const contacts = { ...s.contacts };
+      delete contacts[orphan.contactId];
+      return { contacts };
+    });
+
+    const after = await settle(workflows.listRuns("wf_speed_to_lead"));
+    const row = after.rows.find((r) => r.id === orphan.id)!;
+    expect(row.contactId).toBe(orphan.contactId);
+    expect(row.contactName).toBeUndefined();
+    expect(after.rows.filter((r) => r.contactName !== undefined).length).toBe(
+      after.rows.length - 1,
+    );
+  });
+
   it("gives a draft automation an empty history and 404s an unknown id", async () => {
     const { workflows } = await runsWorld();
     const draft = await settle(workflows.listRuns("wf_birthday_greeting"));

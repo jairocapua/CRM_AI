@@ -121,6 +121,24 @@ describe("seeded automation runs", () => {
     }
   });
 
+  it("never say the contact replied when they stopped at a fork, which would have checked that", async () => {
+    const { runs, LAYOUTS, slugById } = await world();
+    let forkStops = 0;
+    for (const run of runs) {
+      if (run.status !== "dropped") continue;
+      const layout = LAYOUTS[slugById.get(run.workflowId)!]!;
+      const last = run.steps.at(-1)!;
+      const node = layout.nodes.find((n) => n.id === last.nodeId)!;
+      if (node.kind !== "if_else") continue;
+      forkStops += 1;
+      expect(last.detail, `${run.id} at ${node.id}`).not.toMatch(/replied/i);
+      expect(last.detail, `${run.id} at ${node.id}`).toMatch(/^Stopped: /);
+    }
+    // Not vacuous: Speed to Lead's only wait sits right before its
+    // "Replied?" fork, so every run it drops stops there.
+    expect(forkStops).toBeGreaterThan(0);
+  });
+
   it("are dated in order, after their contact joined and never after the anchor", async () => {
     const { runs, state } = await world();
     for (const run of runs) {
