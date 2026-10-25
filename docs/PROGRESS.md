@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 75/90 tasks done (83%) · **Current phase:** P8 · **Next agent task:** P8-T08 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+**Overall:** 75/90 tasks done (83%) · **Current phase:** P8 · **Next agent task:** — · **Awaiting review:** P8-T08 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -98,7 +98,7 @@ Status: active · Progress: 7/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/
 | P8-T05 | Read-only diagram | agent | done | P8-T04 | 6d49c64 | 2026-10-25 | Deep review round 1: disableKeyboardA11y must-fix (red-proved e2e), memoised names, phone-never-downloads check, skeleton height. Re-verify: check green (937 Vitest), 29 e2e, diagram spec x3 stable. |
 | P8-T06 | Run history data | agent | done | P8-T01 | 97e70cd | 2026-10-25 | Run history data: types, workflowRuns table + seeder (97 runs), cascade, cache key, 3 integrity lines, listRuns; fake stats deleted. check green (962), 38 e2e. |
 | P8-T07 | Run history UI | agent | done | P8-T04, P8-T06 | e8b8c0e | 2026-10-25 | Run history table + run sheet on /automation/[id]; contactName joined at read; one fix round (sort flip tested). check green (987), 46 e2e. |
-| P8-T08 | Automation requests | agent | todo | P8-T03 |  |  |  |
+| P8-T08 | Automation requests | agent | review | P8-T03 |  | 2026-10-25 | Automation requests: type, table, seeder (6), api.automationRequests, integrity line, /automation/requests list + form. check green (1030), 48 e2e. |
 
 ## P9 — Settings
 Status: todo · Progress: 0/7 · Points: 4 · Branch: phase/p9-settings · File: docs/phases/P9-settings.md

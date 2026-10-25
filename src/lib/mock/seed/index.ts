@@ -21,6 +21,7 @@ import {
   seedTasks,
 } from "./engagement";
 import { seedWorkflowRuns } from "./runs";
+import { seedAutomationRequests } from "./requests";
 
 function table<T extends { id: ID }>(rows: T[]): Table<T> {
   const out: Table<T> = {};
@@ -101,6 +102,10 @@ export function buildDb(): DbState {
   // would change every table seeded after it (seed/runs.test.ts checks).
   const workflowRuns = seedWorkflowRuns(contacts);
 
+  // After the runs, for the same reason (seed/runs.test.ts checks). It makes
+  // no faker draws today; keeping it last means it never has to care.
+  const automationRequests = seedAutomationRequests(users);
+
   return {
     seededAt: REF_DATE.toISOString(),
     locationId: locations[0]!.id,
@@ -123,6 +128,7 @@ export function buildDb(): DbState {
     appointments: table(appointments),
     activities: table(activities),
     workflowRuns: table(workflowRuns),
+    automationRequests: table(automationRequests),
   };
 }
 

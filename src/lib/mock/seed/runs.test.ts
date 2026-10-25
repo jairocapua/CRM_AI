@@ -265,14 +265,22 @@ describe("seeded automation runs", () => {
 
 describe("buildDb() call order", () => {
   /**
-   * Every table except the runs, with nanoid ids (which differ on every
-   * build) blanked out, so two builds compare by content.
+   * Every table seeded before `last` (the tables in `LATER` from `last` on
+   * are left out), with nanoid ids (which differ on every build) blanked out,
+   * so two builds compare by content.
    */
   const ID = /^[a-z]+_[0-9a-z]{12}$/;
-  const content = (state: DbState) =>
+  /** The tables seeded at the end of `buildDb()`, in call order. */
+  const LATER = ["workflowRuns", "automationRequests"] as const;
+  const content = (state: DbState, last: (typeof LATER)[number]) =>
     JSON.stringify(
       Object.entries(state)
-        .filter(([name]) => name !== "workflowRuns")
+        .filter(
+          ([name]) =>
+            !LATER.slice(LATER.indexOf(last)).includes(
+              name as (typeof LATER)[number],
+            ),
+        )
         .map(([name, value]) => [
           name,
           value && typeof value === "object" ? Object.values(value) : value,
@@ -291,9 +299,35 @@ describe("buildDb() call order", () => {
       const withoutRuns = (await import("./index")).buildDb();
       expect(Object.keys(withRuns.workflowRuns).length).toBeGreaterThan(0);
       expect(withoutRuns.workflowRuns).toEqual({});
-      expect(content(withoutRuns)).toBe(content(withRuns));
+      expect(content(withoutRuns, "workflowRuns")).toBe(
+        content(withRuns, "workflowRuns"),
+      );
     } finally {
       vi.doUnmock("./runs");
+    }
+  });
+
+  it("seeds automation requests after the runs, so no earlier table changes with or without them", async () => {
+    await freshModules();
+    const withRequests = (await import("./index")).buildDb();
+
+    await freshModules();
+    vi.doMock("./requests", () => ({ seedAutomationRequests: () => [] }));
+    try {
+      const withoutRequests = (await import("./index")).buildDb();
+      expect(
+        Object.keys(withRequests.automationRequests).length,
+      ).toBeGreaterThan(0);
+      expect(withoutRequests.automationRequests).toEqual({});
+      // The runs are among the earlier tables here.
+      expect(Object.keys(withoutRequests.workflowRuns).length).toBe(
+        Object.keys(withRequests.workflowRuns).length,
+      );
+      expect(content(withoutRequests, "automationRequests")).toBe(
+        content(withRequests, "automationRequests"),
+      );
+    } finally {
+      vi.doUnmock("./requests");
     }
   });
 });

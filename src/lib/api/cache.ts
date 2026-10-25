@@ -14,6 +14,7 @@ export type ResourceKey =
   | "calendars"
   | "workflows"
   | "workflowRuns"
+  | "automationRequests"
   | "tasks"
   | "notes"
   | "activities"
@@ -55,6 +56,7 @@ export function invalidateAll() {
     "calendars",
     "workflows",
     "workflowRuns",
+    "automationRequests",
     "tasks",
     "notes",
     "activities",

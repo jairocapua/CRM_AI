@@ -590,7 +590,13 @@ export const timeRadio = (dialog: Locator, label: string) =>
 
 /** A store table whose reads `failReads` can make fail. */
 export type FaultTable =
-  "appointments" | "calendars" | "contacts" | "tags" | "users" | "workflowRuns";
+  | "appointments"
+  | "automationRequests"
+  | "calendars"
+  | "contacts"
+  | "tags"
+  | "users"
+  | "workflowRuns";
 
 /**
  * How `failReads` tells a table's records apart: every record of the table
@@ -603,7 +609,8 @@ export type FaultTable =
  * another record type gains `name`, `slug` and `color` without a `timezone`,
  * the tags fault catches it too. Only users have a `role`, and contacts, the
  * other records with a `firstName`, have no `slug`. Only automation runs have
- * a `workflowId` and `steps`.
+ * a `workflowId` and `steps`. Only automation requests have a `problem`
+ * and an `outcome`.
  */
 const TABLE_SHAPES: Record<
   FaultTable,
@@ -615,6 +622,7 @@ const TABLE_SHAPES: Record<
   tags: { has: ["name", "slug", "color"], lacks: ["timezone"] },
   users: { has: ["slug", "firstName", "role", "isActive"] },
   workflowRuns: { has: ["workflowId", "contactId", "steps", "startedAt"] },
+  automationRequests: { has: ["problem", "trigger", "outcome", "priority"] },
 };
 
 /** One table's fault, as `failReads` hands it to the page. */
@@ -682,7 +690,9 @@ interface ReadFaultWindow {
  * `users.me` and `users.get` read by key and keep working. For workflowRuns
  * it catches the automations' `listRuns()` (run history) and the integrity
  * check; `listRuns` names contacts by key, so a contacts fault leaves it
- * alone. Restore reads
+ * alone. For automationRequests it catches `automationRequests.list()` and
+ * the integrity check; `create()` writes without reading the table, so it
+ * keeps working. Restore reads
  * before a step that reaches them. `readFaultThrows` counts the reads the
  * fault has failed.
  */

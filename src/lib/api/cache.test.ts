@@ -16,6 +16,7 @@ const EVERY_KEY: Record<ResourceKey, true> = {
   calendars: true,
   workflows: true,
   workflowRuns: true,
+  automationRequests: true,
   tasks: true,
   notes: true,
   activities: true,

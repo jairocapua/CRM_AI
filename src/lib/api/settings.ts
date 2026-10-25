@@ -109,6 +109,7 @@ export async function stats(): Promise<DbStats> {
         // A code constant, not a table: doubles as a check the registry loaded.
         automations: Object.keys(AUTOMATIONS).length,
         automationRuns: Object.keys(state.workflowRuns).length,
+        automationRequests: Object.keys(state.automationRequests).length,
         activities: Object.keys(state.activities).length,
       };
 
@@ -263,6 +264,17 @@ export async function integrityReport(): Promise<string[]> {
           const nodeIds = nodeIdsById.get(r.workflowId);
           return nodeIds && r.steps.some((step) => !nodeIds.has(step.nodeId));
         }).length,
+      );
+      // A shipped request names its automation by `Workflow.id`. Who asked
+      // (`createdBy`) is not checked, as no other `createdBy` is: the page
+      // shows "Unknown teammate" for a user who is gone.
+      missing(
+        "automation requests point at a missing automation",
+        Object.values(s.automationRequests).filter(
+          (r) =>
+            r.shippedWorkflowId !== undefined &&
+            !nodeIdsById.has(r.shippedWorkflowId),
+        ).length,
       );
 
       // Automations are code: their structure and layout can only break in

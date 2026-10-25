@@ -312,3 +312,7 @@
 - 2026-10-25 [P8-T07] TanStack sorts an ISO string column ascending first, so a column that starts descending gets its sort cleared on the next click; map the empty sort to a flip (`keepSortMarked`) so the header icon matches the API order.
 - 2026-10-25 [P8-T07] Seeded active runs store their current wait as `ok` with "Waiting"; the UI treats a running run's last step as having no status.
 - 2026-10-25 [P8-T07] `e2e/fixture.spec.ts` "boot wait › waits while the boot skeleton is up" failed once in a 44-test run on 16 workers and passed 3/3 alone; treat it as a load-timing flake before suspecting the change.
+- 2026-10-25 [P8-T08] `simulate({ ms })` still sleeps `ms` in unit tests with latency 0, so `nowIso()` lands `ms` after `setDemoNow`; assert a range or derived values, not an exact time.
+- 2026-10-25 [P8-T08] Playwright `filter({ has })` resolves the inner locator relative to the outer match; an inner locator rooted elsewhere (`form.getByLabel`) matches nothing.
+- 2026-10-25 [P8-T08] A seeder with no faker draws passes the call-order test wherever it sits; red-proof the order test by adding a draw inside the seeder and moving its call (a draw in `index.ts` lands in both builds).
+- 2026-10-25 [P8-T08] e2e can force mutation failures with the Demo Data failure-rate slider (the second slider; focus it, press End for 100%). The rate lives in memory, so reach the page under test by links, not a reload; each test's fresh context resets it.

@@ -269,3 +269,34 @@ export interface AutomationDefinition {
   steps: StepList;
   settings: { allowMultipleEnrollment: boolean; stopOnReply: boolean };
 }
+
+/**
+ * Where a request for a new automation stands (design "Phase 8b"). The
+ * developer moves it; staff only read it. Four statuses, not five:
+ * `in_review` and "building" would have no distinct UI.
+ */
+export type AutomationRequestStatus =
+  "requested" | "in_review" | "shipped" | "declined";
+
+export type AutomationRequestPriority = "low" | "normal" | "high";
+
+/**
+ * A team member asking the developer for an automation. Who asked and when
+ * are `Audited.createdBy` / `createdAt`: no separate `requestedBy`.
+ */
+export interface AutomationRequest extends Audited {
+  id: ID;
+  title: string;
+  /** Free text: what goes wrong today. */
+  problem: string;
+  /** Free text: what should start it. */
+  trigger: string;
+  /** Free text: what should happen. */
+  outcome: string;
+  status: AutomationRequestStatus;
+  priority: AutomationRequestPriority;
+  /** The developer's reply, shown as it is. */
+  notes?: string;
+  /** The automation's `Workflow.id`, set only when `shipped`. */
+  shippedWorkflowId?: ID;
+}

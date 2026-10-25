@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { WorkflowRun } from "@/types";
+import type { AutomationRequest, WorkflowRun } from "@/types";
 import { SEED_VERSION } from "@/lib/mock/db-state";
 import {
   freshModules,
@@ -44,18 +44,19 @@ async function boot(version: number) {
 }
 
 describe("bootstrap()", () => {
-  it("is on seed version 6", () => {
-    expect(SEED_VERSION).toBe(6);
+  it("is on seed version 7", () => {
+    expect(SEED_VERSION).toBe(7);
   });
 
-  it("reseeds a workspace saved at seed version 5", async () => {
-    // P8-T06 added the workflowRuns table (seeded run history).
-    const state = await boot(5);
+  it("reseeds a workspace saved at seed version 6", async () => {
+    // P8-T08 added the automationRequests table (seeded requests).
+    const state = await boot(6);
 
     expect(state.contacts.marker).toBeUndefined();
     expect(Object.keys(state.contacts)).toHaveLength(240);
     expect(Object.keys(state.appointments)).toHaveLength(120);
     expect(Object.keys(state.workflowRuns).length).toBeGreaterThan(0);
+    expect(Object.keys(state.automationRequests).length).toBeGreaterThan(0);
     expect(state.seededAt).toBe(ANCHOR);
   });
 
@@ -152,8 +153,9 @@ describe("automations on the Demo Data page", () => {
   it("reports a malformed definition through definitionProblems()", async () => {
     const { db } = await seededWorld();
     // The stand-in registry below holds one automation, so every other
-    // automation's seeded runs would be reported as orphans.
-    db.setState({ workflowRuns: {} });
+    // automation's seeded runs, and the requests shipped as them, would be
+    // reported as orphans.
+    db.setState({ workflowRuns: {}, automationRequests: {} });
     const real = await import("@/lib/automations");
     const speed = real.AUTOMATIONS["speed-to-lead"]!;
     vi.doMock("@/lib/automations", () => ({
@@ -259,5 +261,46 @@ describe("automation runs on the Demo Data page", () => {
         steps: [...run.steps, { ...run.steps[0]!, nodeId: "send_email" }],
       })),
     ).toEqual(["1 automation runs log a step their automation does not have"]);
+  });
+});
+
+describe("automation requests on the Demo Data page", () => {
+  it("counts the seeded requests", async () => {
+    const { db } = await seededWorld();
+    const settings = await import("./settings");
+    const { counts } = await settle(settings.stats());
+    const requests = Object.keys(db.getState().automationRequests).length;
+    expect(requests).toBeGreaterThan(0);
+    expect(counts.automationRequests).toBe(requests);
+  });
+
+  it("finds nothing wrong with the seeded requests", async () => {
+    const { db } = await seededWorld();
+    const settings = await import("./settings");
+    const shipped = Object.values(db.getState().automationRequests).filter(
+      (r) => r.status === "shipped",
+    );
+    // Not vacuous: the seed ships some requests to real automations.
+    expect(shipped.length).toBeGreaterThan(0);
+    expect(await settle(settings.integrityReport())).toEqual([]);
+  });
+
+  it("reports a shipped request whose automation is gone", async () => {
+    const { db } = await seededWorld();
+    const settings = await import("./settings");
+    const shipped = Object.values(db.getState().automationRequests).find(
+      (r) => r.status === "shipped",
+    )!;
+    const broken: AutomationRequest = {
+      ...shipped,
+      shippedWorkflowId: "wf_gone",
+    };
+    db.setState((s) => ({
+      automationRequests: { ...s.automationRequests, [broken.id]: broken },
+    }));
+
+    expect(await settle(settings.integrityReport())).toEqual([
+      "1 automation requests point at a missing automation",
+    ]);
   });
 });

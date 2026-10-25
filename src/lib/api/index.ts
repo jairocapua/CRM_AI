@@ -12,6 +12,7 @@
  */
 export * as activities from "./activities";
 export * as analytics from "./analytics";
+export * as automationRequests from "./automation-requests";
 export * as calendars from "./calendars";
 export * as contacts from "./contacts";
 export * as conversations from "./conversations";
@@ -36,6 +37,11 @@ export type {
 } from "./analytics";
 export type { ActivityRow } from "./activities";
 export type { WorkflowRunRow } from "./workflows";
+export type {
+  AutomationRequestDraft,
+  AutomationRequestReply,
+  AutomationRequestRow,
+} from "./automation-requests";
 export type { AppointmentRow, CalendarPatch } from "./calendars";
 export type {
   OpportunityDraft,
