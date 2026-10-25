@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 76/90 tasks done (84%) · **Current phase:** P8 · **Next agent task:** — · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+**Overall:** 76/90 tasks done (84%) · **Current phase:** P9 · **Next agent task:** P9-T01 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -87,7 +87,7 @@ Status: done · Progress: 68/68 · Points: 7 (5 for Calendars + 2 for the test h
 | P7-T64 | Lost entry text and same-stage move status | agent | done | — | 6933a1b | 2026-10-25 | Same-stage move() is a pure reorder (keeps status/closedAt/lostReason); lost-stage entry appends the reason |
 
 ## P8 — Automation
-Status: active · Progress: 8/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md
+Status: done · Progress: 8/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|

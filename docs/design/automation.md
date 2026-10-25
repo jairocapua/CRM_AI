@@ -14,6 +14,11 @@
 > P8-T06/T07: `Workflow.stats` and `WorkflowNode.stats` are deleted (§9), and
 > `listRuns` returns `Page<WorkflowRunRow>` (run plus read-time `contactName`).
 > See [P8-T06] and [P8-T07] in DECISIONS.md.
+> P8-T02: layouts are computed once at import as a frozen `LAYOUTS`, not per
+> read (§4). P8-T08: `setStatus` takes a third `{ notes, shippedWorkflowId }`
+> argument, `list` returns `Page<AutomationRequestRow>`, and requests are
+> seeded last. `SEED_VERSION` ended the phase at 7 (P8-T01 → 5, T06 → 6,
+> T08 → 7). See [P8-T02] and [P8-T08] in DECISIONS.md.
 
 ## Context
 

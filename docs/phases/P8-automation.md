@@ -15,7 +15,7 @@ CLAUDE.md "The one rule: the API seam" (automations bullet).
 
 **Decided:** the 8a/8b split was about size; small tasks handle that, so this
 is one phase. If scope hurts, cut run history (T06–T07), not the request flow
-(T08). `SEED_VERSION` goes to 5 here (P7 took 4).
+(T08). `SEED_VERSION` goes to 5 here (P7 took 4; the phase ended at 7: T06 → 6, T08 → 7).
 
 ## Tasks
 
