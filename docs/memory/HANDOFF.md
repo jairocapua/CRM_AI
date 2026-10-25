@@ -7,7 +7,7 @@
 
 - **Phase:** P9 Settings — active, 1/7 tasks done.
 - **Branch:** `phase/p9-settings`, cut from `master` at `4d72e89`. Nothing pushed.
-- **Status:** P9-T01 approved (pending sha); P9-T02 Settings shell, profile and business is next.
+- **Status:** P9-T01 approved (`7baaca8`); P9-T02 Settings shell, profile and business is next.
 
 ## Last change
 
