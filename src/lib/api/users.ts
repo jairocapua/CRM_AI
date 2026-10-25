@@ -4,8 +4,10 @@ import { AUTOMATIONS } from "@/lib/automations";
 import { referencedKeys } from "@/lib/automations/keys";
 import { reassignUserReferences } from "@/lib/mock/cascade";
 import { newId } from "@/lib/mock/ids";
+import { profileSchema } from "@/lib/validation/profile";
 import { invalidate } from "./cache";
 import { ApiError, notFound, nowIso, simulate } from "./http";
+import { parsePatch, withoutEmpty, withoutUndefined } from "./patch";
 
 export async function list(): Promise<User[]> {
   return simulate(
@@ -73,15 +75,40 @@ export async function invite(
   return user;
 }
 
+/** The profile keys `update()` checks: any of them may be sent alone. */
+const profilePatchSchema = profileSchema.partial();
+
+/**
+ * Applies `patch` to a user and returns the saved record.
+ *
+ * The profile keys (first and last name, email, phone, job title, time
+ * zone) must pass the profile form's own rules (`profileSchema`), so the
+ * API is never looser than the form: otherwise the call is a 422
+ * `INVALID_PROFILE` whose `message` is the form's sentence for the first bad
+ * field ("Enter a first name.") and whose `field` is that key, and nothing
+ * is saved. They are saved trimmed, and an emptied phone or job title
+ * removes the stored value. Other keys pass through unchecked, as before
+ * (P9-T03 narrows them); `id` is always the stored one.
+ */
 export async function update(id: ID, patch: Partial<User>): Promise<User> {
   const user = await simulate(() => {
     const prev = db.getState().users[id] ?? notFound("User", id);
-    const next: User = {
-      ...prev,
-      ...patch,
-      id,
-      updatedAt: nowIso(),
-    };
+    const profile = parsePatch(
+      profilePatchSchema,
+      patch,
+      "INVALID_PROFILE",
+      "Those profile details are not valid.",
+    );
+    const next: User = withoutEmpty(
+      {
+        ...prev,
+        ...withoutUndefined(patch),
+        ...withoutUndefined(profile),
+        id,
+        updatedAt: nowIso(),
+      },
+      ["phone", "jobTitle"],
+    );
     db.setState((s) => ({ users: { ...s.users, [id]: next } }));
     return next;
   });

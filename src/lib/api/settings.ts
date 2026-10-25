@@ -8,8 +8,10 @@ import { referencedKeys } from "@/lib/automations/keys";
 import { db } from "@/lib/mock/db";
 import { resumeDeliveries } from "@/lib/mock/delivery";
 import { seedDatabase, clearDatabase } from "@/lib/mock/seed";
+import { businessSchema } from "@/lib/validation/business";
 import { invalidate, invalidateAll } from "./cache";
 import { deliveryOptions } from "./delivery";
+import { parsePatch, withoutEmpty, withoutUndefined } from "./patch";
 import {
   getTuning,
   notFound,
@@ -58,18 +60,46 @@ export async function switchLocation(id: ID): Promise<void> {
   invalidateAll();
 }
 
+/** The keys `updateLocation()` saves: any of them may be sent alone. */
+const locationPatchSchema = businessSchema.partial();
+
+/**
+ * Applies `patch` to a location and returns the saved record.
+ *
+ * - Only the keys the business form edits can change (`businessSchema`:
+ *   name, email, phone, website, industry, time zone). Every other key is
+ *   ignored: `id`, the timestamps, the address and logo (no form edits them
+ *   yet), and the currency, which would change what every stored amount
+ *   means.
+ * - Each must pass the form's own rules, so the API is never looser than the
+ *   form: otherwise the call is a 422 `INVALID_LOCATION` whose `message` is
+ *   the form's sentence for the first bad field ("Enter the business name.")
+ *   and whose `field` is that key, and nothing is saved.
+ * - Values are saved trimmed; an emptied email, phone, website or industry
+ *   removes the stored value; an `undefined` value is ignored.
+ * - An unknown id is a 404.
+ */
 export async function updateLocation(
   id: ID,
   patch: Partial<Location>,
 ): Promise<Location> {
   const location = await simulate(() => {
     const prev = db.getState().locations[id] ?? notFound("Location", id);
-    const next: Location = {
-      ...prev,
-      ...patch,
-      id,
-      updatedAt: nowIso(),
-    };
+    const details = parsePatch(
+      locationPatchSchema,
+      patch,
+      "INVALID_LOCATION",
+      "Those business details are not valid.",
+    );
+    const next: Location = withoutEmpty(
+      {
+        ...prev,
+        ...withoutUndefined(details),
+        id,
+        updatedAt: nowIso(),
+      },
+      ["email", "phone", "website", "industry"],
+    );
     db.setState((s) => ({ locations: { ...s.locations, [id]: next } }));
     return next;
   });

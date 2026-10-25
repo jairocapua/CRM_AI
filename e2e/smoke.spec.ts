@@ -12,9 +12,9 @@ import { expect, NAVIGATION, test, userMenu } from "./fixtures";
  * heading, leaves no skeleton behind and stays quiet in the console (the shared
  * fixture fails the test on any console error, page error or hydration
  * message). Built from `NAV_ITEMS`, so a new nav entry is covered without
- * touching this file. Two routes sit outside `NAV_ITEMS` and have tests of
- * their own: the user menu's Team settings link, and `/settings/demo-data`,
- * which is reachable only by URL.
+ * touching this file. The settings section pages sit outside `NAV_ITEMS`
+ * (they are reached from `/settings` and its section nav) and are listed by
+ * hand below, as is the user menu's Team settings link.
  */
 
 /**
@@ -85,25 +85,40 @@ test("Team settings in the user menu opens its page cleanly", async ({
   ).toBeVisible();
 });
 
-// /settings/demo-data is reachable only by URL: it is in neither NAV_ITEMS nor
-// the user menu, so it is listed by hand. Its metadata title ("Demo Data") and
-// its page heading ("Demo data") differ in case, so each is hardcoded rather
-// than derived from one value.
-test("Demo data (/settings/demo-data) boots and renders cleanly", async ({
-  page,
-  gotoApp,
-}) => {
-  await gotoApp("/settings/demo-data");
+// The settings section pages are in neither NAV_ITEMS nor the user menu, so
+// they are listed by hand (Team settings has its user-menu test above). Demo
+// data's metadata title ("Demo Data") and page heading ("Demo data") differ
+// in case, so each title and heading is spelled out rather than derived.
+const SETTINGS_PAGES = [
+  { path: "/settings/profile", title: "Profile", heading: "Profile" },
+  { path: "/settings/business", title: "Business", heading: "Business" },
+  {
+    path: "/settings/custom-fields",
+    title: "Custom fields",
+    heading: "Custom fields",
+  },
+  { path: "/settings/pipelines", title: "Pipelines", heading: "Pipelines" },
+  { path: "/settings/tags", title: "Tags", heading: "Tags" },
+  { path: "/settings/demo-data", title: "Demo Data", heading: "Demo data" },
+] as const;
 
-  await expect(page).toHaveTitle(`Demo Data · ${APP_NAME}`);
+for (const { path, title, heading } of SETTINGS_PAGES) {
+  test(`${heading} (${path}) boots and renders cleanly`, async ({
+    page,
+    gotoApp,
+  }) => {
+    await gotoApp(path);
 
-  // The panel shows skeletons while its stats and integrity reads load.
-  await expect(page.locator('[data-slot="skeleton"]')).toHaveCount(0, {
-    timeout: 15_000,
+    await expect(page).toHaveTitle(`${title} · ${APP_NAME}`);
+
+    // Profile, Business and Demo data show skeletons while their reads load.
+    await expect(page.locator('[data-slot="skeleton"]')).toHaveCount(0, {
+      timeout: 15_000,
+    });
+
+    await expect(
+      routeHeading(page, heading),
+      `${path} rendered no "${heading}" heading`,
+    ).toBeVisible();
   });
-
-  await expect(
-    routeHeading(page, "Demo data"),
-    '/settings/demo-data rendered no "Demo data" heading',
-  ).toBeVisible();
-});
+}

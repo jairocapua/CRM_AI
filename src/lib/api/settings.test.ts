@@ -437,3 +437,107 @@ describe("teammates and custom fields on the Demo Data page", () => {
     expect(await run()).toEqual([line]);
   });
 });
+
+/**
+ * The business page saves through `updateLocation` (P9-T02): only the keys
+ * the form edits, checked with the form's own rules.
+ */
+describe("updateLocation()", () => {
+  async function world() {
+    const { db } = await seededWorld();
+    const settings = await import("./settings");
+    const id = db.getState().locationId;
+    return { db, settings, id };
+  }
+
+  it.each([
+    ["name", { name: "   " }, "Enter the business name."],
+    [
+      "email",
+      { email: "hello@" },
+      "Enter a valid email address, like name@example.com.",
+    ],
+    [
+      "website",
+      { website: "northwind.studio" },
+      "Enter a web address that starts with https://.",
+    ],
+    [
+      "timezone",
+      { timezone: "Mars/Olympus" },
+      "Choose a time zone from the list.",
+    ],
+    ["timezone", { timezone: "" }, "Choose a time zone."],
+  ] as const)(
+    "refuses a bad %s with a 422 naming it, and writes nothing",
+    async (field, patch, message) => {
+      const { db, settings, id } = await world();
+      const before = db.getState();
+      await expect(
+        settle(settings.updateLocation(id, patch)),
+      ).rejects.toMatchObject({
+        status: 422,
+        code: "INVALID_LOCATION",
+        field,
+        message,
+      });
+      expect(db.getState()).toBe(before);
+    },
+  );
+
+  it("saves the business details trimmed and removes emptied optional values", async () => {
+    const { db, settings, id } = await world();
+    const saved = await settle(
+      settings.updateLocation(id, {
+        name: " Northwind Creative ",
+        email: "",
+        phone: " +1 555 0142 ",
+        website: "",
+        industry: " Design ",
+        timezone: "Asia/Singapore",
+      }),
+    );
+    expect(saved).toMatchObject({
+      id,
+      name: "Northwind Creative",
+      phone: "+1 555 0142",
+      industry: "Design",
+      timezone: "Asia/Singapore",
+      currency: "USD",
+    });
+    expect(saved).not.toHaveProperty("email");
+    expect(saved).not.toHaveProperty("website");
+    expect(db.getState().locations[id]).toEqual(saved);
+    expect((await settle(settings.activeLocation())).name).toBe(
+      "Northwind Creative",
+    );
+  });
+
+  it("ignores every key the business form does not edit", async () => {
+    const { db, settings, id } = await world();
+    const prev = db.getState().locations[id]!;
+    const saved = await settle(
+      settings.updateLocation(id, {
+        name: "Renamed",
+        currency: "EUR",
+        address: { city: "Oslo" },
+        createdAt: "2020-01-01T00:00:00.000Z",
+        id: "loc_other",
+      }),
+    );
+    expect(saved).toMatchObject({
+      id,
+      name: "Renamed",
+      currency: prev.currency,
+      address: prev.address,
+      createdAt: prev.createdAt,
+    });
+  });
+
+  it("is a 404 for an unknown location", async () => {
+    const { settings } = await world();
+    await expect(
+      settle(settings.updateLocation("loc_nope", { name: "X" })),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+});

@@ -324,3 +324,8 @@
 - 2026-10-26 [P9-T01] `expect(db.getState()).toBe(before)` proves "nothing was written": every zustand `setState` produces a new state object.
 - 2026-10-26 [P9-T01] Deleting a user with `setState` in a test now also orphans their records in the integrity report; change their slug to test only the automation-key line.
 - 2026-10-26 [P9-T01] In a git-bash Playwright run, a spec path that matches no file (`e2e/calendar.spec.ts` vs `calendars.spec.ts`) is silently ignored, not an error; check the test count.
+- 2026-10-26 [P9-T02] `failReads` cannot reach reads by id (`users.me`, `activeLocation`); use `armRecordFault`, then open Demo Data by a link so its counts arm the table.
+- 2026-10-26 [P9-T02] A screenshot .mjs in the scratch dir must load Playwright with `createRequire("C:/Dev-Projects/Full Stack CRM/package.json")("@playwright/test")`; running node from the repo dir does not help (ESM resolves from the script folder).
+- 2026-10-26 [P9-T02] On /settings the header breadcrumb is also a list inside `main`, so a bare `getByRole("list")` is ambiguous; name the list.
+- 2026-10-26 [P9-T02] `beforeunload` does not fire on client-side navigation: any plain `<Link>` inside a form with unsaved edits drops them silently unless it passes `onNavigate={guardLeave(href)}`.
+- 2026-10-26 [P9-T02] Writing a Playwright regex like `/\/settings\/profile$/` through a JS template literal in a .mjs eats the backslashes; patch such lines with the patch tool.

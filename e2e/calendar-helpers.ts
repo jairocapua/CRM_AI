@@ -821,111 +821,131 @@ export async function restoreUserList(page: Page): Promise<void> {
 }
 
 interface ContactFaultWindow {
-  /** The contact whose read can be made to fail, or null when none. */
+  /** The record whose read can be made to fail, or null when none. */
   __e2eContactFault?: {
     id: string;
     /** While true, reading the record by key throws. */
     failing: boolean;
-    /** The store's contacts object and the record, once armed. */
+    /** The store table holding the record, and the record, once armed. */
     armed: { table: object; record: object } | null;
     /** True while `Object.values` reads the armed table. */
     listing: boolean;
   } | null;
-  /** Set once `Object.values` has been wrapped for this fault. */
+  /** Set once `Object.values` and `Object.keys` are wrapped for this fault. */
   __e2eContactFaultInstalled?: boolean;
 }
 
 /**
- * Prepares one contact's read to fail, so a spec can drive the contact page's
- * load error. `failContactRead` turns it on; `restoreContactRead` ends it.
+ * Prepares one record's read by key to fail, so a spec can drive a load
+ * error that `failReads` cannot reach: the contact page (`contacts.get`
+ * reads `db.getState().contacts[id]`), the profile page (`users.me` reads
+ * the current user by key, `"usr_jordan"`) and the business page
+ * (`settings.activeLocation` reads the active location by key,
+ * `"loc_northwind"`). `failRecordRead` turns it on; `restoreRecordRead` ends
+ * it. The `*Contact*` names are the same functions.
  *
- * Why: `contacts.get` reads the record by key
- * (`db.getState().contacts[id]`), not through `Object.values`, so
- * `failReads` cannot reach it.
+ * How: it wraps the page's built-in `Object.values` and `Object.keys`,
+ * layered over whatever is there, as `failReads` does. The first read of the
+ * record's store table after this call runs as normal, then swaps that one
+ * record's plain property for a getter. The getter returns the record until
+ * `failRecordRead`, and throws after it, so the by-key read rejects with a
+ * plain Error, which `useResource` reports as "Something went wrong.". Reads
+ * of the whole table through `Object.values` never throw, so lists keep
+ * working.
  *
- * How: it wraps the page's built-in `Object.values`, layered over whatever
- * is there, as `failReads` does. The first read of the store's contacts
- * object after this call (the contacts list, or the tag counts) runs as
- * normal, then swaps that one record's plain property for a getter. The
- * getter returns the record until `failContactRead`, and throws after it,
- * so `contacts.get` rejects with a plain Error, which `useResource` reports
- * as "Something went wrong.". Reads of the whole table through
- * `Object.values` never throw, so the contacts list keeps working.
- *
- * Arming: it needs one such read after the call, for example the contact
+ * Arming: it needs one such read after the call: for a contact, the contact
  * page's tag counts or opening the contacts list again by a client-side
- * link. `failContactRead` waits for it.
+ * link; for a user or a location, opening the Demo Data page by a link (its
+ * counts read every table's keys). `failRecordRead` waits for it.
  *
  * Limits: the wrapper lives in the current document only, like `failReads`.
- * Any contact write copies the contacts object (`{ ...s.contacts }`), which
- * drops the fault, so the test then fails loudly, never quietly. While the
- * fault is on, every other by-key read of that record throws too: the
+ * Any write to the table copies it (`{ ...s.contacts }`), which drops the
+ * fault, so the test then fails loudly, never quietly. While the fault is
+ * on, every other by-key read of that record throws too: for a contact, the
  * activity, appointment and conversation rows that look it up, the copy in
  * any contact write, and persist's `JSON.stringify` on any store write. So
  * turn it on only while the page is idle; the fixture's console watcher
  * turns any such throw outside a read into a test failure.
  */
-export async function armContactFault(page: Page, id: string): Promise<void> {
+export async function armRecordFault(page: Page, id: string): Promise<void> {
   await page.evaluate((id) => {
     const w = window as unknown as ContactFaultWindow;
     if (!w.__e2eContactFaultInstalled) {
-      const real = Object.values;
+      // Only a store table has the record's id as a key holding a plain
+      // record with that id. The first one seen after arming gets the getter.
+      const arm = (o: unknown) => {
+        const fault = w.__e2eContactFault;
+        if (!fault || fault.armed || typeof o !== "object" || o === null) {
+          return;
+        }
+        const record: unknown = Object.getOwnPropertyDescriptor(
+          o,
+          fault.id,
+        )?.value;
+        if (
+          typeof record !== "object" ||
+          record === null ||
+          (record as { id?: unknown }).id !== fault.id
+        ) {
+          return;
+        }
+        Object.defineProperty(o, fault.id, {
+          enumerable: true,
+          configurable: true,
+          get() {
+            if (fault.failing && !fault.listing) {
+              throw new Error(`e2e: reading record ${fault.id} failed`);
+            }
+            return record;
+          },
+          set(value: unknown) {
+            Object.defineProperty(o, fault.id, {
+              value,
+              writable: true,
+              enumerable: true,
+              configurable: true,
+            });
+          },
+        });
+        fault.armed = { table: o, record };
+      };
+      const realValues = Object.values;
       Object.values = function values(o: object) {
         const fault = w.__e2eContactFault;
         if (fault?.armed && o === fault.armed.table) {
           fault.listing = true;
           try {
-            return real(o);
+            return realValues(o);
           } finally {
             fault.listing = false;
           }
         }
-        const result = real(o);
-        // Only the contacts object has the contact's id as a key holding a
-        // plain record with that id.
-        const record: unknown =
-          fault && !fault.armed && typeof o === "object" && o !== null
-            ? Object.getOwnPropertyDescriptor(o, fault.id)?.value
-            : undefined;
-        if (
-          fault &&
-          typeof record === "object" &&
-          record !== null &&
-          (record as { id?: unknown }).id === fault.id
-        ) {
-          Object.defineProperty(o, fault.id, {
-            enumerable: true,
-            configurable: true,
-            get() {
-              if (fault.failing && !fault.listing) {
-                throw new Error(`e2e: reading contact ${fault.id} failed`);
-              }
-              return record;
-            },
-            set(value: unknown) {
-              Object.defineProperty(o, fault.id, {
-                value,
-                writable: true,
-                enumerable: true,
-                configurable: true,
-              });
-            },
-          });
-          fault.armed = { table: o, record };
-        }
+        const result = realValues(o);
+        arm(o);
         return result;
       } as typeof Object.values;
+      // Reading a table's keys (the Demo Data counts) arms it too, and never
+      // reads a value, so it never trips the getter.
+      const realKeys = Object.keys;
+      Object.keys = function keys(o: object) {
+        const result = realKeys(o);
+        arm(o);
+        return result;
+      } as typeof Object.keys;
       w.__e2eContactFaultInstalled = true;
     }
     w.__e2eContactFault = { id, failing: false, armed: null, listing: false };
   }, id);
 }
 
+/** `armRecordFault` for a contact, by the name the calendars specs use. */
+export const armContactFault = armRecordFault;
+
 /**
- * Turns the fault `armContactFault` prepared on: reading that contact by key
+ * Turns the fault `armRecordFault` prepared on: reading that record by key
  * throws from now on. Waits until the fault is armed first.
  */
-export async function failContactRead(page: Page): Promise<void> {
+export async function failRecordRead(page: Page): Promise<void> {
   await expect
     .poll(
       () =>
@@ -935,7 +955,8 @@ export async function failContactRead(page: Page): Promise<void> {
               ?.armed,
         ),
       {
-        message: "armContactFault was never armed: no contacts list read since",
+        message:
+          "armRecordFault was never armed: no read of the record's table since",
       },
     )
     .toBe(true);
@@ -945,12 +966,15 @@ export async function failContactRead(page: Page): Promise<void> {
   });
 }
 
+/** `failRecordRead`, by the name the calendars specs use. */
+export const failContactRead = failRecordRead;
+
 /**
- * Ends the fault: the record is a plain property on the store's contacts
- * object again, and reads succeed. The `Object.values` wrapper stays
- * installed and passes every call through, as after `restoreReads`.
+ * Ends the fault: the record is a plain property on its store table again,
+ * and reads succeed. The `Object.values` and `Object.keys` wrappers stay
+ * installed and pass every call through, as after `restoreReads`.
  */
-export async function restoreContactRead(page: Page): Promise<void> {
+export async function restoreRecordRead(page: Page): Promise<void> {
   await page.evaluate(() => {
     const w = window as unknown as ContactFaultWindow;
     const fault = w.__e2eContactFault;
@@ -970,6 +994,9 @@ export async function restoreContactRead(page: Page): Promise<void> {
     w.__e2eContactFault = null;
   });
 }
+
+/** `restoreRecordRead`, by the name the calendars specs use. */
+export const restoreContactRead = restoreRecordRead;
 
 /**
  * The `LoadError` alert with this title. Filtered by text because Next's

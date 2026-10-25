@@ -312,3 +312,89 @@ describe("api.users.remove()", () => {
     }
   });
 });
+
+/**
+ * The profile page saves through `users.update` (P9-T02). It checks the
+ * profile keys with the form's own rules, so the API is never looser than
+ * the form; other keys pass as before (P9-T03 owns the allow-list).
+ */
+describe("api.users.update() on the profile keys", () => {
+  it.each([
+    ["firstName", { firstName: "  " }, "Enter a first name."],
+    ["lastName", { lastName: "" }, "Enter a last name."],
+    [
+      "email",
+      { email: "jordan@" },
+      "Enter a valid email address, like name@example.com.",
+    ],
+    ["email", { email: "" }, "Enter an email address."],
+    [
+      "timezone",
+      { timezone: "Mars/Olympus" },
+      "Choose a time zone from the list.",
+    ],
+  ] as const)(
+    "refuses a bad %s with a 422 naming it, and writes nothing",
+    async (field, patch, message) => {
+      const { db } = await seededWorld();
+      const users = await import("./users");
+      const before = db.getState();
+      await expect(
+        settle(users.update("usr_jordan", patch)),
+      ).rejects.toMatchObject({
+        status: 422,
+        code: "INVALID_PROFILE",
+        field,
+        message,
+      });
+      expect(db.getState()).toBe(before);
+    },
+  );
+
+  it("saves the profile trimmed and removes emptied optional values", async () => {
+    const { db } = await seededWorld();
+    const users = await import("./users");
+    expect(db.getState().users.usr_jordan!.phone).toBeTruthy();
+
+    const saved = await settle(
+      users.update("usr_jordan", {
+        firstName: " Taylor ",
+        lastName: "Reyes",
+        email: " taylor@northwind.studio ",
+        phone: "  ",
+        jobTitle: "",
+        timezone: "Asia/Singapore",
+      }),
+    );
+    expect(saved).toMatchObject({
+      id: "usr_jordan",
+      slug: "jordan",
+      role: "agency_owner",
+      firstName: "Taylor",
+      email: "taylor@northwind.studio",
+      timezone: "Asia/Singapore",
+    });
+    expect(saved).not.toHaveProperty("phone");
+    expect(saved).not.toHaveProperty("jobTitle");
+    expect(db.getState().users.usr_jordan).toEqual(saved);
+    expect((await settle(users.me())).firstName).toBe("Taylor");
+  });
+
+  it("ignores an undefined value instead of storing it", async () => {
+    const { db } = await seededWorld();
+    const users = await import("./users");
+    const saved = await settle(
+      users.update("usr_jordan", { firstName: undefined, role: undefined }),
+    );
+    expect(saved.firstName).toBe("Jordan");
+    expect(saved.role).toBe("agency_owner");
+    expect(db.getState().users.usr_jordan!.firstName).toBe("Jordan");
+  });
+
+  it("still takes keys outside the profile as before", async () => {
+    const { db } = await seededWorld();
+    const users = await import("./users");
+    await settle(users.update("usr_priya", { role: "user" }));
+    expect(db.getState().users.usr_priya!.role).toBe("user");
+  });
+});

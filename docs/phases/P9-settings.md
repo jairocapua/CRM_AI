@@ -69,6 +69,10 @@ management notes).
     (no field yet). `users.update` ignores `id` and `slug` (role change only
     from the UI), with a test. `REASSIGN_TARGET_NOT_FOUND` text names no raw
     id. The confirm says follows are dropped and history keeps the name.
+  - From the P9-T02 review: the page sits in the settings layout (return a
+    fragment, keep the "Team settings" heading the shell and smoke e2e use);
+    decide email uniqueness for invites; `invite` should take the location's
+    time zone rather than a hard-coded one.
 - **Acceptance:**
   - [ ] e2e: invite a member, then see them listed as pending.
   - [ ] e2e: removing a member who owns contacts reassigns them and the
@@ -129,7 +133,7 @@ management notes).
 - **Refs:** `src/lib/api/tags.ts`
 
 ### P9-T07 — e2e: create required custom fields via settings UI
-- **Owner:** agent · **Depends:** —
+- **Owner:** agent · **Depends:** P9-T04
 - **Scope:** After P9-T04 lands, replace addRequiredCustomFields/DB_KEY in e2e/deal-form.spec.ts with the custom fields manager UI.
 - **Acceptance:**
   - [ ] (define before starting)
