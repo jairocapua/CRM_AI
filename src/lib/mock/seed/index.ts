@@ -127,9 +127,52 @@ export function buildDb(): DbState {
   };
 }
 
+/** The only seeded timestamps allowed to lie ahead of the demo clock. */
+const SCHEDULED_FIELDS = new Set([
+  "dueAt",
+  "expectedCloseAt",
+  "startAt",
+  "endAt",
+]);
+
+/**
+ * Dev-only standing check: nothing that has already happened may be dated
+ * after `seededAt`. A record past the anchor sorts above everything done in
+ * the session and pads every "last N days" window — twice now it has gone
+ * unnoticed until a screen looked wrong.
+ */
+function assertNothingAfterAnchor(state: DbState) {
+  const anchor = state.seededAt;
+  if (!anchor) return;
+  const offenders = new Map<string, number>();
+  for (const [name, rows] of Object.entries(state)) {
+    if (!rows || typeof rows !== "object") continue;
+    for (const row of Object.values(rows as Record<string, object>)) {
+      for (const [field, value] of Object.entries(row)) {
+        if (
+          typeof value === "string" &&
+          !SCHEDULED_FIELDS.has(field) &&
+          /^\d{4}-\d{2}-\d{2}T/.test(value) &&
+          value > anchor
+        ) {
+          const key = `${name}.${field}`;
+          offenders.set(key, (offenders.get(key) ?? 0) + 1);
+        }
+      }
+    }
+  }
+  if (offenders.size > 0) {
+    console.error(
+      "Seed wrote timestamps after seededAt:",
+      Object.fromEntries(offenders),
+    );
+  }
+}
+
 /** Replaces the store wholesale. Used on first run and by Settings → Demo Data. */
 export function seedDatabase(): DbState {
   const next = buildDb();
+  if (process.env.NODE_ENV !== "production") assertNothingAfterAnchor(next);
   db.setState(next, true);
   return next;
 }

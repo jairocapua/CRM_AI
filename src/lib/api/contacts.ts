@@ -1,6 +1,7 @@
 import type { Activity, Contact, ID, Note } from "@/types";
+import { fullName } from "@/lib/format";
 import { db } from "@/lib/mock/db";
-import { applyQuery } from "@/lib/mock/query-engine";
+import { applyQuery, type SearchField } from "@/lib/mock/query-engine";
 import { newId } from "@/lib/mock/ids";
 import { cascadeContactDelete } from "@/lib/mock/cascade";
 import { invalidate } from "./cache";
@@ -13,9 +14,14 @@ import {
   type Page,
 } from "./http";
 
-const SEARCH_FIELDS = [
-  "firstName",
-  "lastName",
+/**
+ * Shared by `list()` and `exportCsv()`. The name is searched as the app prints
+ * it ("First Last"), so a full name typed into the contact picker matches. Any
+ * part of the first or last name is a substring of it, so a first or last name
+ * alone still matches as it did when they were separate fields.
+ */
+const SEARCH_FIELDS: SearchField<Contact>[] = [
+  fullName,
   "email",
   "phone",
   "companyName",
@@ -100,7 +106,8 @@ export async function update(
     return next;
   });
 
-  invalidate("contacts", "activities");
+  // Analytics too: the lead-source breakdown reads `source`.
+  invalidate("contacts", "activities", "analytics");
   return contact;
 }
 

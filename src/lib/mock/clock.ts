@@ -93,11 +93,15 @@ export function nowIso(): ISODate {
   return new Date(ms).toISOString();
 }
 
-/** Local midnight `daysAgo` days back, on the demo clock. */
+/**
+ * Local midnight `daysAgo` days back, on the demo clock. Steps by calendar
+ * day, not by 24h, so a DST change inside the window cannot land it at 23:00.
+ */
 export function startOfDayAgo(daysAgo: number): number {
   const d = apiNow();
+  d.setDate(d.getDate() - daysAgo);
   d.setHours(0, 0, 0, 0);
-  return d.getTime() - daysAgo * 86_400_000;
+  return d.getTime();
 }
 
 /** The last instant of the demo world's "today", as an ISO string. */

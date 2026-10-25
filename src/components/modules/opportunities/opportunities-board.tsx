@@ -19,12 +19,13 @@ import { toast } from "sonner";
 
 import type { Contact, Opportunity, User } from "@/types";
 import * as api from "@/lib/api";
-import { useResource } from "@/lib/api";
+import { invalidate, loadErrorOf, useResource } from "@/lib/api";
 import { EmptyState } from "@/components/common/empty-state";
+import { LoadError } from "@/components/common/load-error";
 import { Money } from "@/components/common/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { isDeadDeal, stageIdFromDroppable } from "./board-dnd";
+import { stageIdFromDroppable } from "./board-dnd";
 import { BoardColumn } from "./board-column";
 import { BoardToolbar } from "./board-toolbar";
 import { DealCardBody } from "./deal-card";
@@ -91,6 +92,7 @@ export function OpportunitiesBoard() {
   );
   const users = useResource("users", () => api.users.list());
   const tags = useResource("tags", () => api.tags.list());
+  const tagsError = loadErrorOf(tags);
 
   const contactsById = useMemo(
     () => new Map((contacts.data?.rows ?? []).map((c) => [c.id, c])),
@@ -130,7 +132,10 @@ export function OpportunitiesBoard() {
    * mid-funnel columns — are hidden by default.
    */
   const visible = useMemo(
-    () => (showLost ? searched : searched.filter((d) => !isDeadDeal(d))),
+    () =>
+      showLost
+        ? searched
+        : searched.filter((d) => !api.opportunities.isDeadDeal(d)),
     [searched, showLost],
   );
 
@@ -140,7 +145,7 @@ export function OpportunitiesBoard() {
    * rollups read `live`, not `visible`.
    */
   const live = useMemo(
-    () => searched.filter((d) => !isDeadDeal(d)),
+    () => searched.filter((d) => !api.opportunities.isDeadDeal(d)),
     [searched],
   );
 
@@ -278,6 +283,17 @@ export function OpportunitiesBoard() {
         />{" "}
         weighted forecast
       </p>
+
+      {/* The contacts table's rule: only once the board is on screen, never
+          above its skeleton. The columns and cards stay, without tags. */}
+      {!board.isLoading && tagsError ? (
+        <LoadError
+          title="Could not load tags"
+          message={tagsError.message}
+          onRetry={() => invalidate("tags")}
+          retrying={tags.isRefreshing}
+        />
+      ) : null}
 
       {board.isLoading ? (
         <Skeleton className="h-96 w-full" />

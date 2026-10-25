@@ -1,0 +1,348 @@
+# Decision log
+
+> Small judgment calls go here as one-liners. Format: `- YYYY-MM-DD [TASK-ID] decision — why`.
+> If the spec is silent, pick the simplest option that respects CLAUDE.md and log it here. Product-level questions go to the owner instead.
+
+## Before the tracker (Phases 0–6)
+- 2026-09-08 [plan] Front-end only behind an `api.*` seam; a real backend replaces `src/lib/api/http.ts`'s body with `fetch()` and no component changes.
+- 2026-09-08 [plan] `@tanstack/react-table` pinned to 8.21.3 with an `overrides` entry — 9.x is a hard API break.
+- 2026-09-24 [plan] Automations are developer-authored code in `src/lib/automations/`, read-only for staff; no drag-and-drop builder (`docs/design/automation.md`).
+- 2026-09-26 [P3] CSV import/export and Smart Lists deferred; the API already supports both.
+- 2026-09-26 [P4] Pipeline/stage management and an opportunities list view deferred; "Show lost" replaces "show closed" so won deals always show.
+- 2026-09-26 [P6] Lead sources are one-hue bars, not a donut (9 sources, 8 palette slots, no cycling).
+- 2026-09-26 [P6] Won revenue is cumulative, so the line ends on the headline figure.
+- 2026-09-26 [P6] Pipeline value, forecast and stage counts cover one pipeline, never all three summed (Client Onboarding is post-sale work).
+- 2026-09-26 [P6] Reads keep `canFail: false`; the dashboard period is component state, not `?period=`.
+
+## Build system (2026-10-21, owner decisions)
+- 2026-10-21 [bootstrap] Build through AIPM's `build-phase` workflow: small tasks, one commit per task on a phase branch, the owner merges at each gate, never push.
+- 2026-10-21 [bootstrap] Proof is Vitest (logic) plus Playwright (e2e, headless).
+- 2026-10-21 [bootstrap] Autopilot: Claude approves or reworks each task; stops for the owner on product questions, phase gates and pushes.
+- 2026-10-21 [bootstrap] Calendar times follow each calendar's own timezone (`@date-fns/tz`), displayed in the viewer's local time.
+- 2026-10-21 [bootstrap] Phases 8a and 8b merged into P8; `SEED_VERSION` 4 goes to P7, 5 to P8.
+- 2026-10-21 [bootstrap] CSV import/export, Smart Lists UI and the opportunities list view stay in `docs/BACKLOG.md` until P7–P10 are done.
+
+## During the build
+- 2026-10-21 [P7-T01] Vitest 4.1, not 5: Vitest 5 needs Node ^22.12 and @types/node ^22 || >=24; repo declares node >=20.9 and @types/node 20.
+- 2026-10-21 [P7-T01] vite pinned as a devDependency at ^7.3.7: vite 8's optional peer @vitejs/devtools loops back to vitest@* and crashes npm 10.9.4. Do not bump blindly.
+- 2026-10-21 [P7-T01] resolve.alias in vitest.config.mts instead of vite-tsconfig-paths (single tsconfig mapping).
+- 2026-10-21 [P7-T01] Tests sit beside code in src/lib/api and src/lib/mock, so the existing lint rule already permits @/lib/mock/* imports; ESLint and CLAUDE.md unchanged.
+- 2026-10-21 [P7-T01] test.include is src/**/*.test.ts, so Vitest skips scripts/progress.test.mjs (node:test) and the P7-T02 Playwright specs.
+- 2026-10-21 [P7-T01] Analytics series assertions use expect.soft so a regression reports every KPI at once.
+- 2026-10-21 [P7-T01] settle() has its own tests; rollupByStage gets a rounding test (two 3c deals at 50% weigh 4c).
+- 2026-10-21 [P7-T01] The clock anchor test moves the wall clock 30 days off the anchor (and asserts Date.now() did) rather than renaming the test; mutants ran via a transform-plugin config, no source edits.
+- 2026-10-21 [P7-T02] e2e runs against `next build && next start -p 3100 -H 127.0.0.1`, not a second `next dev`: Next 16 locks .next/dev/lock; build keeps .next/dev and start takes no lock. Dev-only React warnings are out of e2e's reach; hydration errors still arrive as pageerror.
+- 2026-10-21 [P7-T02] e2e server bound to 127.0.0.1 (loopback only, matches baseURL exactly).
+- 2026-10-21 [P7-T02] Smoke test asserts the exact title `${item.title} · ${APP_NAME}` (APP_NAME from src/lib/constants), stricter than the planned regex.
+- 2026-10-21 [P7-T02] Init script clears all of localStorage (incl. next-themes key), one-shot per tab via a sessionStorage flag, so reloads inside a test keep its data; avoids hard-coding the origin in storageState.
+- 2026-10-21 [P7-T02] Added self-test 'waits while the boot skeleton is up' to cover waitForBoot's waiting branch.
+- 2026-10-21 [P7-T02] e2e is not part of `npm run check` (it does its own build); the gate runs it separately.
+- 2026-10-21 [P7-T03] slots.ts lives in src/lib/mock: availability is server-owned like delivery.ts, the seam lint keeps components out, and the API, book() and the seed share it so they cannot disagree.
+- 2026-10-21 [P7-T03] The day passed to availableSlots is a 'YYYY-MM-DD' date in the calendar's zone, checked by round-trip parse; anything else (ISO instants, 2026-02-30) gets 422 INVALID_DAY. T08 handoff: from Asia one local day spans two LA dates, so the booking dialog must map its day onto calendar-zone dates and never pass toISOString().
+- 2026-10-21 [P7-T03] dateRangeDays is inclusive in calendar days: the last bookable day is the calendar-zone date of the demo now plus dateRangeDays. Past days need no lower bound; the notice filter empties them.
+- 2026-10-21 [P7-T03] Slots step by elapsed minutes from each window's start; on the 25-hour fall-back day a window over 01:00-02:00 offers that hour twice. Window edges in a DST gap/overlap resolve as TZDate does (skipped 02:30 -> 03:30; repeated 01:30 takes PDT). Known limit for the T09 editor.
+- 2026-10-21 [P7-T03] book() rejects any start not in freeSlots for its calendar-zone day with 409 SLOT_UNAVAILABLE, and a non-instant start with 422 INVALID_START. Starts are normalised to UTC ISO; endAt is always start + slotDurationMin.
+- 2026-10-21 [P7-T03] AppointmentDraft is narrowed to calendarId, contactId, startAt plus optional title, notes, location, assignedUserId, source. The record is built field by field so callers cannot set id, status or endAt. source defaults to 'manual' and stays an enum with no workflowId.
+- 2026-10-21 [P7-T03] Seed placement: from the drawn day and hour:minute as LA wall-clock, take the first open grid slot at or after that time, else the day's first open slot, then repeat on following days (max 21, else throw). Open = openSlots(): on grid, clear of earlier placements incl. buffers, day under cap. Notice and range ignored. Every placed appointment, cancelled or not, occupies its slot.
+- 2026-10-21 [P7-T03] Seed isPast is endAt <= REF_DATE. createdAt/updatedAt use the final day offset; showed/no-show get updatedAt >= endAt before the updatedAt >= createdAt clamp.
+- 2026-10-21 [P7-T03] Engine buffer rule unchanged: a slot is blocked if slot.start < booked.end + after and slot.end > booked.start - before. Buffers do not reach across midnight from the previous day.
+- 2026-10-21 [P7-T03] settings.test.ts asserts SEED_VERSION === 4 in its own test so the reseed test fails on behaviour alone under version 3.
+- 2026-10-21 [P7-T03] Fixed a harness bug outside the plan: vitest.setup.ts preloads @date-fns/tz so TZDate extends the real Date.
+- 2026-10-21 [P7-T03] 'cancelled' stays reversible; restoring checks the slot (409 on conflict) rather than forbidding the move, giving the P7-T07 UI a clear error.
+- 2026-10-21 [P7-T03] The restore check covers collisions and the daily cap only (hasRoomFor), not hours, notice or dateRangeDays; a past cancelled appointment can still be marked showed/no_show if its time is free.
+- 2026-10-21 [P7-T03] A missing calendar during a restore returns 404 via notFound(), matching book().
+- 2026-10-21 [P7-T03] hasRoomFor and liveBookings live in slots.ts so book(), availableSlots() and setStatus() share one definition of live bookings and the daily cap.
+- 2026-10-21 [P7-H2] Buffers are symmetric: no appointment may sit inside another appointment's before/after buffer, whichever was booked first (buffers may overlap each other). Decided in review as the meaning of "buffer before/after" in GHL/Calendly; the order-dependent check was a defect, fixed in the P7-T03 rework.
+- 2026-10-21 [P7-T03] Rework (P7-H2), supersedes "Engine buffer rule unchanged": isBlocked checks both ways (slot vs booking widened by [before, after], and booking vs slot widened the same). Net gap = max(before, after); touching at exactly that gap is allowed; independent of booking order. Kept the two-way intrudes() form over Math.max padding (equivalent) because it states the rule as written.
+- 2026-10-21 [P7-T03] Boundary tests reconfigure Strategy via api.update to slotIntervalMin 1 (and 20/5 buffers): seeded grids step a whole slot and every seeded calendar has after >= before, so otherwise the after-only and swapped-padding mutants survive.
+- 2026-10-21 [P7-T03] Each booking-order case asserts availableSlots membership matches the book() outcome (expect(includes, message) to avoid dumping the slot list).
+- 2026-10-21 [P7-T03] The seed buffer oracle includes cancelled appointments (every placed appointment occupies its slot) and uses independent Date.parse arithmetic, not slots.ts.
+- 2026-10-21 [P7-T03] SEED_VERSION stays 4 after the rework (task pins it; P8 reserves 5). A browser store saved from the first P7-T03 attempt keeps the old 18:00Z placement until a manual reseed; harmless (past, showed).
+- 2026-10-21 [P7-T04] URL state is client-only: useSearchParams inside <Suspense> in a static page.tsx, writes through window.history.pushState (verified: no RSC request, Back/Forward work). page.tsx does not read searchParams, so the route stays prerendered.
+- 2026-10-21 [P7-T04] Weeks start on Sunday (date-fns default).
+- 2026-10-21 [P7-T04] The URL `date` is a viewer-local calendar day; it becomes a Date only in calendar-nav.ts, as local midnight.
+- 2026-10-21 [P7-T04] Calendar visibility is component state: survives view/date changes, resets on reload. Not in the URL because seeded nanoid ids change on every reseed.
+- 2026-10-21 [P7-T04] Invalid or missing params are not rewritten into the URL on load; the next user step writes canonical values.
+- 2026-10-21 [P7-T04] The month range is the full weeks-by-days grid (Sep 2026: 2026-08-30 to 2026-10-04 exclusive), so T05 can reuse visibleDays.
+- 2026-10-21 [P7-T04] Month steps keep the day of month and clamp to the shorter month (01-31 +1 month = 02-28), as date-fns addMonths does.
+- 2026-10-21 [P7-T04] The timezone label's offset is taken at the viewed date's local midnight, not at the demo now.
+- 2026-10-21 [P7-T04] No stepLabel helper: Previous/Next aria-labels use the view name ('Previous month', 'Next week'); toggle labels come from VIEW_LABELS.
+- 2026-10-21 [P7-T04] Hidden calendars are left out of the placeholder list entirely (not shown as 0); the total drops by their count.
+- 2026-10-21 [P7-T04] The placeholder counts every row listAppointments returns, cancelled included; T05/T06 decide whether to show cancelled.
+- 2026-10-21 [P7-T04] Inactive calendars default to visible but muted (text-muted-foreground, 50% dot, data-inactive) with an outline 'Inactive' Badge.
+- 2026-10-21 [P7-T04] A skeleton shows on appointments.isLoading after every view/date step (new query), so the previous range's data never appears under the new label; never on isRefreshing.
+- 2026-10-21 [P7-T05] Only the day-number button and '+N more' open day view, not the whole cell; the cell stays free for chips (T07) and click-to-book (T08).
+- 2026-10-21 [P7-T05] Cancelled appointments stay in the month grid (struck through, 60% opacity, sr 'Cancelled') and count toward '+N more'.
+- 2026-10-21 [P7-T05] historyMethod: 'none' if URL unchanged, 'replace' if same position but non-canonical URL (bare /calendars or fallback), else 'push'. URLs still not rewritten on load.
+- 2026-10-21 [P7-T05] Appointments cacheKey stays the range only; while loading, the previous result is drawn at its own position (dimmed, aria-busy); skeleton only on first load.
+- 2026-10-21 [P7-T05] Below sm, chips collapse to colour bars (text kept via 'sr-only sm:not-sr-only') and '+N more' shows '+N' with aria-label '+N more'.
+- 2026-10-21 [P7-T05] Local-day e2e runs in three zones (Singapore, Kolkata, Los Angeles), each asserting how many appointments move off their UTC day, since LA alone cannot detect UTC bucketing with this seed.
+- 2026-10-21 [P7-T05] Colour e2e reads each calendar's colour from the DB and expects bg-{color}-100 (at least 2 calendars), not hard-coded colours.
+- 2026-10-21 [P7-T05] Stepping e2e proves the new grid via Oct 31 present / Aug 30 gone ('October 1' also sits in the September grid).
+- 2026-10-21 [P7-T05] Singapore Sep 2026 total of 58 kept as a seed tripwire.
+- 2026-10-21 [P7-T05 review] Cancelled appointments stay visible (struck through) but sort after live ones within a day, so they never push live bookings behind "+N more" (carried out in P7-T07).
+- 2026-10-21 [P7-T06] Block text is contact first, then 'start - end' (deviates from the plan's time-first order): grid position already shows time and narrow week columns truncate the tail. Blocks under 40px use one line, taller two. Screen readers read name, times, ', <calendar>', ', Cancelled'.
+- 2026-10-21 [P7-T06] Day-header row is aria-hidden; aria-current='date' and the full day label (role=group, aria-label=rangeLabel('day')) sit on the day column, matching month cells, not on the header as planned.
+- 2026-10-21 [P7-T06] Each block <li> is placed exactly (top = start minute, height = real duration, min 20px); the 1px gap comes from p-px on an inner tinted div so DOM boxes match the maths.
+- 2026-10-21 [P7-T06] Day columns use overflow-y-clip: a min-height block at day end is clipped at midnight while the now-line dot can still overhang left.
+- 2026-10-21 [P7-T06] A segment cut at midnight loses its rounded corners and border on the cut edge.
+- 2026-10-21 [P7-T06] Scroll target: 30 min before the earliest segment start in view (cut segment starts at 0), clamped at 0; with nothing in view, 30 min before the now line if today is visible, else 08:00. Cancelled appointments count and take a column.
+- 2026-10-21 [P7-T06] Now line: integer wall-clock minutes from apiNow() on a 60s setInterval, red 2px rule with a dot, centred with -translate-y-1/2, only on the matching localDay column.
+- 2026-10-21 [P7-T06] Scroll container is role=region, tabIndex=0, named 'Time grid, <rangeLabel>', with an inset focus outline (a ring would be clipped by the card's rounded overflow).
+- 2026-10-21 [P7-T06] Week grid has min-w-[42rem]; hour gutter and header corner are sticky-left so hour labels stay visible when scrolling sideways.
+- 2026-10-21 [P7-T06] historyMethod: 'none' if search string unchanged; 'replace' if view unchanged and visibleDays start/endExclusive equal (covers the old same-position case); else 'push'.
+- 2026-10-21 [P7-T06] Hide-calendar e2e takes the shown Discovery Call count in the Singapore week from the oracle (segmentsIn), asserting > 0, instead of the placeholder's '1'.
+- 2026-10-21 [P7-T06] Week placement e2e asserts a Singapore tripwire of 11 appointments for Sep 6-12; Kolkata exactly one cut at midnight and some-but-not-all off their UTC day; LA none off the UTC day and none cut.
+- 2026-10-22 [P7-T07] Plan deviation: no separate 'Calendar' row in the details <dl>; the DialogDescription shows the calendar's colour dot and name (seeded titles already contain the calendar name).
+- 2026-10-22 [P7-T07] 'Cancel appointment' shows while the stored row is not cancelled (not the optimistic status), so its Spinner shows while pending and it goes when the refetch lands.
+- 2026-10-22 [P7-T07] Cancel button uses Base UI focusableWhenDisabled with data-disabled:opacity-50 so focus stays put while pending; Dialog restoreFocus 'popup' takes it when the button unmounts.
+- 2026-10-22 [P7-T07] Status Select is readOnly while a status change or cancel is pending, and handlers guard on busy: random simulate() latency could resolve overlapping setStatus calls out of order.
+- 2026-10-22 [P7-T07] Slot-availability line mounts only when the stored row is cancelled; Skeleton on isLoading only, never isRefreshing.
+- 2026-10-22 [P7-T07] Undo restores the status shown at cancel time (restored or error toast, 409-checked setStatus); clicking Undo does not close the dialog.
+- 2026-10-22 [P7-T07] Location values become links only for zoom/google_meet values starting with https://; otherwise text.
+- 2026-10-22 [P7-T07] No footer Close button; the built-in X stays.
+- 2026-10-22 [P7-T07] Details are a controlled Dialog driven by workspace state, not the URL (seeded ids change on reseed); it shows the latest fetched row, falling back to the click-time snapshot.
+- 2026-10-22 [P7-T07] Cancel has no confirmation step but offers Undo; the Select lists a disabled Cancelled item.
+- 2026-10-22 [P7-T07] liveFirst is a stable split applied once in the workspace; views keep the order they are given. pack-intervals tie-break (input order for identical intervals) is now documented and tested.
+- 2026-10-22 [P7-T07] No seed change: SEED_VERSION stays 4.
+- 2026-10-22 [P7-T08] Booking dialog offers only active calendars. Calendar starts empty; Day defaults to the date in view (today if past); from the contact page Day is today and the contact is pre-filled but changeable.
+- 2026-10-22 [P7-T08] Form is noValidate so zod is the only validator; date input min=today only steers the picker. Slot fetcher returns null until a calendar and a real day are set.
+- 2026-10-22 [P7-T08] Time fieldset is aria-busy on load or refresh; skeleton only on isLoading. On a failed book(): clear time, set 'root.server' error (API message) as role=alert, refetch slots; editing any field clears it. submit() ignores re-entry while in flight.
+- 2026-10-22 [P7-T08] Time card ids = useId + slot ms; radio name is the local time, data-start on the visible span. Appointments tab rows: Item (outline) in li[data-appointment-id][data-status]; status via Badge variants, no new colour constants.
+- 2026-10-22 [P7-T08] Plan deviation: e2e error path installs the fake clock after load (demo time = seededAt + fake now - load time), target = slot - notice + 15 min. e2e picks contacts by unique last name.
+- 2026-10-22 [P7-T08] No seed change: SEED_VERSION stays 4.
+- 2026-10-22 [P7-T09] Availability/Back links are `<Link className={buttonVariants({ variant: 'outline' })}>`, not `<Button render={<Link/>} nativeButton={false}>`, to keep link semantics (Base UI adds role=button).
+- 2026-10-22 [P7-T09] Day switch is named via its label with sr-only "Available on " (aria-label is overridden by Base UI's aria-labelledby); fieldset named by sr-only FieldLegend.
+- 2026-10-22 [P7-T09] Time-format check runs in the enabled-only superRefine so a half-typed time on a disabled day cannot block save; a reversed window is excluded from the overlap sweep.
+- 2026-10-22 [P7-T09] Upper limits: duration/interval/buffers <= 1440 min, notice <= 8760 h, range <= 365 days, each with a pinned message.
+- 2026-10-22 [P7-T09] nextWindow starts at the latest well-formed end (not the last listed); none -> 09:00-17:00; at 23:59 returns zero-length, which the schema flags.
+- 2026-10-22 [P7-T09] After a failed save, edits re-check the whole day (register deps + trigger on add/remove/switch) so partner-window errors don't go stale.
+- 2026-10-22 [P7-T09] Focus: after remove -> day's 'Add hours'; switching a day on appends with shouldFocus:false; 'Add hours' (aria-label 'Add hours on <Day>') focuses the new start input.
+- 2026-10-22 [P7-T09] Picker lists inactive calendars too; unknown/missing slug falls back to first calendar by name without writing the URL.
+- 2026-10-22 [P7-T09] Phone widths hide the time inputs' picker icon; fieldset gets min-w-0. No seed change: SEED_VERSION stays 4.
+- 2026-10-22 [P7-T10] e2e:install has no --with-deps (sudo on Linux, no-op on Windows) and no --only-shell (--headed needs full Chromium).
+- 2026-10-22 [P7-T10] Smoke heading locator: getByRole('main') > h1 with exact NAV_ITEMS title, so sidebar links and detail-page h1s cannot match; redirect test also checks Dashboard h1.
+- 2026-10-23 [P7-T11] calendars.update() validates each patch with calendarSettingsSchema after the 404 lookup, before any write; failure is 422 INVALID_CALENDAR with message '<path>: <issue>' for the first issue. It saves the raw patch, so uncovered keys (name, color, isActive) still save.
+- 2026-10-23 [P7-T11] calendarSettingsSchema = availabilitySchema, all keys optional, plus one rule per weekday, an Intl-valid timezone, maxBookingsPerDay whole 1-1440 (undefined clears the cap). The editor keeps availabilitySchema. Disabled days' windows are not checked (availability is replaced whole).
+- 2026-10-23 [P7-T11] Inactive calendar: 409 CALENDAR_INACTIVE from both book() and availableSlots() (not an empty list). Unknown contactId in book(): 404 NOT_FOUND. Error order book(): 404 calendar, 422 INVALID_START, 404 contact, 409 inactive, 409 SLOT_UNAVAILABLE; availableSlots(): 404, 422 INVALID_DAY, 409 inactive. Order is documented, not test-pinned.
+- 2026-10-23 [P7-T11] startAt must end in Z or ±HH:mm, hours 00-23 (so 'T24:00:00Z' is rejected), optional seconds and up to 3 fraction digits, on a real calendar day; else 422 INVALID_START.
+- 2026-10-23 [P7-T11] Tests: each rejected-settings row names its field (`at`) and checks the message contains '<at>: '; the 'nothing was written' check is one shared snapshot(world) helper.
+- 2026-10-23 [P7-T12] src/lib/dates.ts uses plain Date.UTC + UTC getters (no TZDate, no argument-less new Date()), so it is zone-independent and immune to the P7-T08 fake-timer/TZDate trap.
+- 2026-10-23 [P7-T12] CalendarDay is type-only re-exported from calendar-nav.ts and slots.ts so downstream importers stay unchanged; isCalendarDay is not re-exported (one import path).
+- 2026-10-23 [P7-T12] calendar-nav.test.ts isCalendarDay block moved to src/lib/dates.test.ts with all cases kept; parseCalendarParams fallback tests unchanged.
+- 2026-10-23 [P7-T12] zod 4 .refine(isCalendarDay, ...) takes the type predicate directly; BookingFormValues.day stays string.
+- 2026-10-23 [P7-T12] No SEED_VERSION bump: slots.ts accepts the same days as before (old TZDate probe already refused 0099); no faker call touched.
+- 2026-10-23 [P7-T13] A load error shows only when the read failed and there is no data; shared LoadError (src/components/common/load-error.tsx) on shadcn Alert. A failed refetch with data on screen keeps the data.
+- 2026-10-23 [P7-T13] Reads keep canFail:false (P6 decision; changes belong to P10-T02). Nothing under src/lib/api or src/lib/mock changed.
+- 2026-10-23 [P7-T13] e2e read fault = Object.values wrapper in e2e/calendar-helpers.ts (failReads/restoreReads), matching tables by record shape. No production fault switch; stands in for page.route().abort() until http.ts uses fetch().
+- 2026-10-23 [P7-T13] Retry spinner is aria-hidden (avoids 'Loading Retry'); button stays focusable while busy (focusableWhenDisabled); alert carries aria-busy.
+- 2026-10-23 [P7-T13] Calendars page: skeleton still wins while calendars.list loads; the error shows once the calendar list has loaded.
+- 2026-10-23 [P7-T13] LoadError widens alert action space pr-18 -> pr-22 (has-data-[slot=alert-action]:pr-22) since the sm Retry button exceeds 4.5rem.
+- 2026-10-23 [P7-H3] Owner decision: past appointments (end before the demo now) can only be marked Showed or No-show, or switched between them. Cancel and Confirmed are offered only for future appointments. Applies in the details dialog and at the API seam (setStatus/cancel reject the disallowed moves with a 422).
+- 2026-10-23 [P7-T14] Mobile month chips: CSS-only 24px tap targets (not "open the day on tap"); same DOM and behaviour at every width.
+- 2026-10-23 [P7-T14] Details finalFocus order: connected opener, then the appointment's chip by id (after Undo), then that day's '+N more', then true (Base UI default). No day-number branch (unreachable).
+- 2026-10-23 [P7-T14] appointmentFocusFallback lives in month-view.tsx; the workspace reads refs only at close time.
+- 2026-10-23 [P7-T14] Details e2e locates the grid with includeHidden: true because the page behind the modal is aria-hidden.
+- 2026-10-23 [P7-T15] Crossing midnight: ZonedTimes.times reads '<start> – <end weekday, month day[, year]>, <end time>'. End dated by its last millisecond (midnight end keeps start date, as daySegments); year only when it differs. Shape unchanged, callers untouched.
+- 2026-10-23 [P7-T15] appointmentFocusFallback moved as-is to calendars/appointment-focus.ts (serves month chips and week/day blocks). Supersedes the P7-T14 line saying it lives in month-view.tsx.
+- 2026-10-23 [P7-T15] Month chips gap-1 below sm, gap-0.5 from sm up; e2e keeps ≥3px (outline-2 + offset-1) between chips at both widths.
+- 2026-10-23 [P7-T15] Kolkata e2e picks the seed's first Kolkata midnight-crossing appointment (10–11 Aug) at runtime, opens it from its after-midnight part in day view, checks against an Intl oracle.
+- 2026-10-23 [P7-T16] Verdict: not a bug. Base UI 1.8.0 sets tabIndex -1 and aria-hidden after the props spread (SelectRoot.mjs:448-449); no select.tsx change.
+- 2026-10-23 [P7-T16] Added a 9th, pure self-test of selectAxProblems (zero triggers; 2 triggers/0 inputs) so A3's branches are tested, not just read.
+- 2026-10-23 [P7-T16] Focus test targets the input as the sibling of the aria-label="Pipeline" trigger, count 1, not `.first()`.
+- 2026-10-23 [P7-T16] Inputs ignored for any reason other than their own aria-hidden count as problems.
+- 2026-10-23 [P7-T16] CLAUDE.md note placed after the "So: prefer read_page..." paragraph; spelled "artifact".
+- 2026-10-23 [P7-T16] Add contact test checks six Selects by exact name plus trigger count 6; seed field changes fail loudly.
+- 2026-10-23 [P7-T17] Contact SEARCH_FIELDS = [fullName, email, phone, companyName, jobTitle] (`SearchField<Contact>[]`), shared by list() and exportCsv(); first `@/lib/format` import under src/lib/api (pure module).
+- 2026-10-23 [P7-T17] query-engine exports `SearchField<T> = string | ((row: T) => unknown)`; matching unchanged (trimmed lower-case substring).
+- 2026-10-23 [P7-T17] ContactPicker uses `filter={null}`; selected contact merged only when debounced term is empty or equals its full name. inputValue stays uncontrolled.
+- 2026-10-23 [P7-T17] e2e (3) waits for A's aria-selected=true before typing; product race left for a follow-up task.
+- 2026-10-23 [P7-T17] e2e picks are stricter: C's company unique across name/email/company; B's email unique among emails. SeededContact gains email/companyName (`string | null`).
+- 2026-10-23 [P7-T17] Booking spec's uniqueContact selection unchanged; only comment and chooseContact's typed text changed.
+- 2026-10-23 [P7-T18] Phone test's "inside" check uses the card's content box (0.5px tolerance), stricter than the plan: 3 columns overflow ~1.3px into the padding.
+- 2026-10-23 [P7-T18] LoadError condition is `slots.error && slots.data === undefined`, matching contact-appointments-panel.tsx, not `== null`.
+- 2026-10-23 [P7-T18] Skills line: vercel-react-best-practices, shadcn, playwright-cli.
+- 2026-10-23 [P7-T18] Fresh-form test uses a local uniquelyNamed helper; calendars-booking.spec.ts left untouched. Failed-reread test takes the first contact (booking fails anyway).
+- 2026-10-23 [P7-T18] Failed-reread test observes the Time fieldset's aria-busy so it cannot pass if the re-read stops happening.
+- 2026-10-23 [P7-T19] Links styled as buttons are `<Link className={cn(buttonVariants({ variant, size }))}>`, never `<Button render={<Link/>} nativeButton={false}>` (role=button) and never a bare `buttonVariants()` string (conflicting classes survive). Replaces the P7-T09 spelling.
+- 2026-10-23 [P7-T19] Scope included the two P7-T09 calendars links (Availability, Back to calendars) for the same missing-border defect; they now match the Today button. Link children unchanged (no data-icon added).
+- 2026-10-23 [P7-T19] Look checks compare one object (height, radius, icon, border) so a regression reports every difference at once.
+- 2026-10-23 [P7-T20] Empty open day: removing an enabled day's last window switches the day off and focuses its switch. No schema message; availabilitySchema and calendars.update unchanged.
+- 2026-10-23 [P7-T20] Guard scope: only the Calendar select and Back to calendars link are guarded. Sidebar links, back/forward, reload and tab close still drop edits silently (documented in AvailabilityWorkspace).
+- 2026-10-23 [P7-T20] The leave question stores source and target calendar names at open, so the dialog text does not change during its exit animation.
+- 2026-10-23 [P7-T20] Shared ConfirmDialog (components/common): ReactNode title/description, cancelLabel, confirmLabel, confirmVariant, onConfirm, optional finalFocus. Confirm calls onConfirm() then onOpenChange(false). Synchronous for now.
+- 2026-10-23 [P7-T21] The exit-check booking flow stays one test with test.slow() rather than a split: each test starts from a fresh seed, so every piece would have to book again.
+- 2026-10-23 [P7-T21] Only the per-test timeout changed (60s suite-wide, 180s on the two slow-marked flows); expect's 5s timeout and worker count stay default, owned by P7-T27.
+- 2026-10-23 [P7-T21] The other two calendars-booking tests are not marked slow (rule: >20s alone on 1 worker; they took 4.2s/3.5s). :259 hit 24.5s under load, within the 60s budget.
+- 2026-10-23 [P7-T21] failReads' comment states the narrow truth: setStatus() reads the appointments table only when un-cancelling; cancel() never does.
+- 2026-10-23 [P7-T22] An undefined value in an update() patch is ignored, never written (as JSON would drop it). Supersedes the P7-T11 note "(undefined clears the cap)".
+- 2026-10-23 [P7-T22] maxBookingsPerDay: null removes the daily cap; the key is deleted, never stored as null, so Calendar type and seed are unchanged. 0 is still a 422.
+- 2026-10-23 [P7-T22] The 422 INVALID_CALENDAR message is now '<label>: <rule>' in the editor's words (supersedes P7-T11's '<path>: <issue>'); the dotted path moves to optional ApiError.field, not for display.
+- 2026-10-23 [P7-T22] SETTING_LABELS is Record<keyof calendarSettingsSchema.shape, string>, so a new setting needs a label; lookup uses Object.hasOwn so prototype keys never become labels.
+- 2026-10-23 [P7-T23] Expected close input gets no min/max: without noValidate, native validation would block submit with a browser bubble before the schema message. JSX comment says so.
+- 2026-10-23 [P7-T23] Field uses `data-invalid={Boolean(...)}`; Input uses `aria-invalid={Boolean(...) || undefined}` so the attribute is absent (not 'false') when valid; e2e asserts absence.
+- 2026-10-23 [P7-T23] e2e field filter's `has` locator is page-rooted, and the spec asserts the field locator matches exactly one element.
+- 2026-10-23 [P7-T23] 0100-01-01 is asserted only as a round trip (pre-1883 local mean time gives odd seconds); UTC/Singapore midnight tables also pin LA DST days 2026-03-08 and 2026-11-01.
+- 2026-10-23 [P7-T24] Sidebar error branch is `calendars.error && calendars.data === undefined` (shape from P7-T18), skeleton gated on `isLoading` only, so Retry never blanks the column.
+- 2026-10-23 [P7-T24] The view does not wait on the calendar list: appointment rows carry calendar name/colour and `hidden` starts empty, so every appointment still draws while the list is down.
+- 2026-10-23 [P7-T24] e2e records the month chip count while the list is down and checks it unchanged after recovery with all 4 calendars checked, proving the error hid no calendar.
+- 2026-10-23 [P7-T24] Bounding-box helpers (`boxOf`, `intersects`, `Box`) live in the spec, not calendar-helpers.ts; boxes use locator.boundingBox().
+- 2026-10-23 [P7-T24] Not verified in the Browser pane (fault needs the e2e Object.values wrapper); the Playwright test covers behaviour and layout at 1280x720.
+- 2026-10-23 [P7-T25] Contact fault: Object.values reads of the armed table do not throw (a `listing` flag); only by-key reads of that contact throw, so an in-flight tag count cannot fail silently.
+- 2026-10-23 [P7-T25] `restoreContactRead` restores the plain property only if the getter is still there, so a newer written value is never replaced by a stale one.
+- 2026-10-23 [P7-T25] A refetch that 404s still shows 'Contact not found' (404 branch first, no data check); A4 (refetch failure keeps the contact) holds by construction, not e2e.
+- 2026-10-23 [P7-T26] hasEnded = `Date.parse(endAt) < nowMs` (strict); a running appointment or one at its exact end can still be cancelled/confirmed. Seed isPast uses `<=`; differs only at the end ms.
+- 2026-10-23 [P7-T26] setStatus() error order: 404 NOT_FOUND, 422 PAST_APPOINTMENT, 409 SLOT_UNAVAILABLE; nothing written on any.
+- 2026-10-23 [P7-T26] The past check reads apiNowMs(), not nowIso(), so a refused call does not move the persisted high-water mark.
+- 2026-10-23 [P7-T26] Rule names target statuses only: an ended Cancelled appointment can still go to Showed/No Show (subject to 409), not Confirmed. Re-setting the same blocked status is also 422. Flagged to owner.
+- 2026-10-23 [P7-T26] Dialog lists all four statuses and disables unoffered ones, so Base UI Select's alignItemWithTrigger always finds the selected item.
+- 2026-10-23 [P7-T26] The rule lives in src/lib/validation/appointment.ts, shared by API and dialog like calendarSettingsSchema.
+- 2026-10-23 [P7-T27] No Playwright worker cap and expect's 5s default stays: only client-side navigations to another route were slow, and a cap would slow every run.
+- 2026-10-23 [P7-T27] One shared NAVIGATION = { timeout: 15_000 } in e2e/fixtures.ts covers the first wait after every cross-route navigation; same-route (pushState/replaceState) and "URL unchanged" checks keep 5s.
+- 2026-10-23 [P7-T27] In the calendars-load-errors contact-page test, the heading check right after the first row.click() gets NAVIGATION (first wait after navigation, no URL check before it), like link-buttons.spec.ts:159.
+- 2026-10-23 [P7-T27] The playwright.config.ts comment names NAVIGATION and e2e/fixtures.ts but not the 15s value, so the two cannot drift.
+- 2026-10-23 [P7-T28] Each new Select aria-label is the trigger's placeholder (Status, Pipeline, Assign owner); both pipeline switchers are named "Pipeline".
+- 2026-10-23 [P7-T28] TagPicker is named via the existing FieldLabel htmlFor="tagIds" (new optional id prop passed to ComboboxChipsInput), not aria-label; other TagPickers left for a follow-up.
+- 2026-10-23 [P7-T28] CLAUDE.md read_page note keeps "Select and Combobox"; the new TagPicker test backs it.
+- 2026-10-23 [P7-T28] Names are pinned twice in e2e: waited for by role (catches late mounts) and compared to Chromium CDP names in page order.
+- 2026-10-23 [P7-T28] Pure self-test also asserts TAG_COMBOBOX's zero-trigger message says "found no Combobox triggers"; both Add contact tests first wait for the "Add contact" dialog.
+- 2026-10-23 [P7-T29] ContactPicker value comes from pure `pickerValue(value, picked, fetched)` in contact-picker-value.ts (unit-tested): id-matched picked wins over fetched, because Base UI compares value by reference and rewrites the uncontrolled input on change.
+- 2026-10-23 [P7-T29] Mutant M2 (fetched first) is invisible to e2e while the mock returns records by reference; unit case 2 is its only guard. No e2e workaround added.
+- 2026-10-23 [P7-T29] Race test freezes page timers with page.clock (installed after load, never before: @date-fns/tz, P7-T08), pausing 1s ahead of page Date.now(); chosen over raising Demo Data latency, whose jitter could reorder responses.
+- 2026-10-23 [P7-T29] New-conversation dialog is the third picker surface (/conversations, 'New' button exact). Race test skips chooseByName; 'finds a contact by its full name' covers the label.
+- 2026-10-23 [P7-T30] Implementer did not edit LEARNINGS.md; A9 says the implementer reports the NAVIGATION note and the recorder appends it.
+- 2026-10-23 [P7-T30] Calendar-column scope guard also asserts exactly one alert containing 'Could not load calendars' (strict mode), covering A5's "holds the calendars alert".
+- 2026-10-23 [P7-T30] Fixture self-test only reads NAVIGATION (never writes), so a broken freeze cannot leak a changed timeout to other tests in the worker.
+- 2026-10-23 [P7-T30] Fixed A9 by annotating `NAVIGATION: Readonly<{ timeout: number }>` rather than rewording acceptance; the literal 15000 type gave callers nothing.
+- 2026-10-23 [P7-T30] Decided lines sit in the P7-T30 scope list as '- Decided:' bullets, matching P7-T29; A1-A10 copied from the planner's map.
+- 2026-10-23 [P7-T31] The helper is a component, `LinkButton` (Link + cn(buttonVariants(...))), not a class-string function, so callers never handle the class string.
+- 2026-10-23 [P7-T31] PaginationLink stays a plain `<a>` (any href, e.g. `?page=2`) with cn(buttonVariants(...)); its `size` type comes from `typeof Button` via a type-only import.
+- 2026-10-23 [P7-T31] Lint rule covers src/**/*.{ts,tsx} except src/components/ui/**: bans every `nativeButton={false}` and a bare `className={buttonVariants(...)}`; a real non-link exception disables the line with a reason.
+- 2026-10-23 [P7-T31] LinkButton uses `data-slot="link-button"` so `[data-slot="button"]` lookups match buttons only; per-site P7-T19 why-comments removed, the why lives in LinkButton's JSDoc.
+- 2026-10-23 [P7-T31] JSDoc spells the banned pattern without `nativeButton=` so `git grep "nativeButton=" -- src` stays empty; a typecheck `expectTypeOf<Exclude<...>>().toBeNever()` guards 6x8 parity coverage.
+- 2026-10-23 [P7-T32] Padding is pinned through the shared sizeLook object (all four look tests). Supersedes P7-T19 "Link children unchanged (no data-icon added)": View contact and Open board now carry data-icon.
+- 2026-10-23 [P7-T32] Thread header is found from its 'Contact details' toggle via a test-only nearest-ancestor XPath; no markup hook added to thread-view.tsx.
+- 2026-10-23 [P7-T32] ESLint trigger clause proven by a PopoverTrigger-as-div: flagged with the clause, clean behind a reasoned eslint-disable-next-line.
+- 2026-10-23 [P7-T32] button.test.ts 'lists every variant and size' stays, type-only; its expectTypeOf pair is the typecheck guard.
+- 2026-10-23 [P7-T32] The nativeButton message spells the directive form ('eslint-disable-next-line no-restricted-syntax -- why').
+- 2026-10-23 [P7-T32] link-buttons.spec.ts header still explains both causes (P7-T31 A7); only the ESLint block comment shrank to a pointer.
+- 2026-10-23 [P7-T33] BackLink calls useLeaveGuard() itself (onNavigate={guardLeave("/calendars")}); the load-error BackLink is guarded too (no-op there).
+- 2026-10-23 [P7-T33] Provider uses React 19 use(Context) / <Context value>; default context is a no-op.
+- 2026-10-23 [P7-T33] beforeunload listener calls preventDefault() and sets legacy returnValue = true; added only while a subject is registered.
+- 2026-10-23 [P7-T33] T-A excuses only the /settings/team?_rsc 404 via excuseTeamSettingsPrefetch; drop it once P9 adds the page.
+- 2026-10-23 [P7-T33] T-C counts non-prefetch /calendars?_rsc requests: 0 before Discard, 1 after, 2 after the second click.
+- 2026-10-23 [P7-T33] Extra mutants m3b, m5, m5b show each T-E control check fails on its own.
+- 2026-10-23 [P7-T33] beforeUnloadPrevented is read via expect.poll in T-B, T-D and T-E; its JSDoc says so.
+- 2026-10-23 [P7-T34] update() saves calendarSettingsSchema's parsed output (allow-list), never the raw patch. Editable: booking settings + name, description, color, teamMemberIds, isActive; id, slug, type, createdAt, createdBy, updatedAt and unknown keys ignored at every depth. Supersedes P7-T11's "saves the raw patch" line.
+- 2026-10-23 [P7-T34] slug and type are fixed at creation (slug is the editor's ?calendar= key; editing it would need a uniqueness rule).
+- 2026-10-23 [P7-T34] null removes an optional field (description, maxBookingsPerDay); a required field given null is a 422 'Not a valid value.'
+- 2026-10-23 [P7-T34] name trimmed, not blank; color must be a tag-palette value; teamMemberIds checked for shape only (not against users), like contacts' ownerId.
+- 2026-10-23 [P7-T34] A non-object patch is a 422 'Calendar settings: Not a valid value.' with ApiError.field undefined. New labels: Name, Description, Colour, Team members, Active.
+- 2026-10-23 [P7-T34] CALENDAR_COLORS = Object.keys(TAG_COLOR_CLASSES) in availability.ts (contact.ts pattern); availabilitySchema untouched.
+- 2026-10-23 [P7-T35] A6 red proof uses timezoneId 'UTC' (host zone is Singapore, so removing timezoneId still passes); phase wording "timezoneId removed" holds only off UTC+8.
+- 2026-10-23 [P7-T35] deal-form.spec.ts uses const ZONE = "Asia/Singapore" for both timezoneId and localDayIn; existing tests unchanged.
+- 2026-10-23 [P7-T35] Deal-form zone test is describe.each(zones) x it.each(days), 18 named cases, so a failure names zone and day.
+- 2026-10-23 [P7-T35] "Writes nothing" is checked through the API (list, activities.listForContact, get toEqual FIXTURE), per calendars.test.ts.
+- 2026-10-23 [P7-T35] "create() without an expected close stores none" asserts the key is absent from Object.keys, so an own undefined key fails it.
+- 2026-10-23 [P7-T35] parseInstant test constant is SPELLINGS so grep INSTANT hits only dates.ts; toParts doc names its 0100-minimum callers.
+- 2026-10-24 [P7-T36] Booking dialog calendar-list failure: the LoadError renders inside the Calendar Field under a disabled Select; field and label stay so FieldLabel htmlFor still points at a control.
+- 2026-10-24 [P7-T36] Guard `calendars.data === undefined ? calendars.error : null`; the failed-refetch-keeps-list half holds by construction (use-resource keeps prev.data; only calendars.update and settings invalidateAll invalidate "calendars", neither runs while the modal is open). No test hook; the drop-data-check mutant stays green by design.
+- 2026-10-24 [P7-T36] watchRetry(page, alertScope, skeletonScope = alertScope): the calendars-column test reads its alert in the column but watches skeletons across main (mutant f proves the wider scope).
+- 2026-10-24 [P7-T36] The aria-busy flag is __timesBusySpellEnded, and its observer installs only after `expect(group).not.toHaveAttribute('aria-busy','true')`.
+- 2026-10-24 [P7-T37] While the contacts load error shows, the table and the count/pager footer are hidden; the toolbar (search, status, tags, Add contact) stays usable.
+- 2026-10-24 [P7-T37] `loadErrorOf(resource)` (use-resource.ts, exported from @/lib/api) returns `data === undefined ? error : null` and replaces every inline guard; loaded falsy data (e.g. slots `null`) counts as loaded. calendars-workspace's appointments guard keeps `shown === null ? appointments.error : null` (keys on the shown range).
+- 2026-10-24 [P7-T37] Contacts-list e2e tests live in calendars-load-errors.spec.ts (P7-T25 precedent). failReads counts its failures (`__e2eReadFaultThrows`, `readFaultThrows(page)`); T3 polls it, then waits two frames and a setTimeout before reading its MutationObserver flag.
+- 2026-10-24 [P7-T37] loadErrorOf unit (e) cases are tuples (`it.each<[unknown]>([[null], [0], [''], [[]], [false]])`).
+- 2026-10-24 [P7-T38] Hook tests use happy-dom, opted in per file with `// @vitest-environment happy-dom`; global env stays node. Not jsdom: jsdom 30 needs Node >=22.22.2, this machine has 22.21.0.
+- 2026-10-24 [P7-T38] No @testing-library/react: a small in-file harness (createRoot + act + a Probe reporting renders via an onRender prop, which keeps React-compiler lint quiet) covers it.
+- 2026-10-24 [P7-T38] Hook tests assert in afterEach that console.error was never called, so act or other React warnings fail the test.
+- 2026-10-24 [P7-T39] Contacts search box named "Search contacts" (placeholder minus ellipsis, like board-toolbar's "Search deals").
+- 2026-10-24 [P7-T39] Contacts toolbar TagPicker named "Filter by tags" (like "Filter by channel"); its "Add tags…" placeholder would mislead.
+- 2026-10-24 [P7-T39] Bulk Tags popover TagPicker named "Tags", matching its button; deal sheet TagPicker named via FieldLabel htmlFor="tagIds" + id, not aria-label.
+- 2026-10-24 [P7-T39] Add contact a11y tests retitled to the "... is named and its hidden input ignored" pattern.
+- 2026-10-24 [P7-T40] ContactPicker hold is one hook, useHeldValue(value, fetched), in contact-picker-value.ts on the pure pickerValue; first fetched copy per id adopted by guarded setState during render (not an effect, which commits a frame with the new object; not a ref, react-hooks/refs).
+- 2026-10-24 [P7-T40] No refresh on rename: docs state the stale-name limit; every consumer unmounts the picker on close (no keepMounted; BookingForm keyed per open).
+- 2026-10-24 [P7-T40] e2e pauseTimers margin is PAUSE_MARGIN_MS = 5_000; its doc states both limits.
+- 2026-10-24 [P7-T40] Input-level pick is chooseContactIn(page, input, contact) + contactOption(page, contact) in calendar-helpers.ts; chooseContact delegates, calendars specs unchanged; the race test keeps its own fill/pause/click sequence. chooseContactIn relies on click auto-wait (no separate toBeVisible).
+- 2026-10-24 [P7-T40] Today's mock returns store records by reference, so no e2e can show the refetch bug; the happy-dom hook test is the only guard.
+- 2026-10-24 [P7-T41] LinkButton JSDoc names both lint exceptions (non-link real button; Base UI trigger rendering a non-button) with the exact disable directive; each message clause asserted exactly once; link-buttons spec keeps "Two causes" and gives padding's data-icon cause its own sentence.
+- 2026-10-24 [P7-T41] Phase A4 also lists mutant M4, which proves the reworded TRIGGER_DIV_DISABLED comment.
+- 2026-10-24 [P7-T42] /settings/team got a Phase 9 placeholder page instead of prefetch={false}: removes both prefetch and click 404s, no Link prop for P9 to remember; P9-T03 replaces it in place.
+- 2026-10-24 [P7-T42] The Team settings prefetch 404 excuse is removed from the editor e2e; the earlier P7-T33 entries stay as history.
+- 2026-10-24 [P7-T43] subject lives in a ref (subjectRef) read inside guardLeave at click time; the subject state stays only for the beforeunload effect; guardLeave is useCallback with [] deps.
+- 2026-10-24 [P7-T43] guardLeave(href, { onLeave?, returnFocus? }): onLeave runs when the link goes ahead (clean click at once, or Discard next to router.push); returnFocus becomes ConfirmDialog finalFocus (undefined when absent, so Base UI's default applies).
+- 2026-10-24 [P7-T43] Scope 'close mobile Sheet on question' read through its detail bullet: the Sheet stays open under the question, Escape closes only the question, the Sheet closes via onLeave = setOpenMobile(false). Recorded as a Decided line.
+- 2026-10-24 [P7-T43] A save finishing while the question is open keeps today's behaviour (question closes, link dropped, onLeave not run); documented in the JSDoc and pinned by U4.
+- 2026-10-24 [P7-T43] nav-user holds the trigger element in state via a callback ref (ref={setTrigger}) rather than useRef, so it can be passed into guardLeave during render.
+- 2026-10-24 [P7-T43] Phone tests scope the sidebar opener with page.locator('header'): the header sits inside SidebarInset's <main> (not a banner landmark), and the Sheet's SidebarRail shares the 'Toggle Sidebar' name.
+- 2026-10-24 [P7-T43] Only My profile is followed in the clean phone test (Team settings is the P9 placeholder; the Discard path is covered by the sidebar Contacts link).
+- 2026-10-24 [P7-T44] book() checks isCalendarDay(zonedDay(startMs, calendar.timezone)) and passes that same day to freeSlots.
+- 2026-10-24 [P7-T44] parseStart and the string-date check (value.slice(0,10)) are removed: 0099-12-31T20:00-10:00 on Tokyo (0100-01-01 there) is now a 409, not a 422. Supersedes P7-T35 A5's parseStart wording; that done entry stays as written.
+- 2026-10-24 [P7-T44] Two messages, one code (INVALID_START): a non-instant string keeps today's message byte for byte; a day outside 0100-9999 in the calendar's zone gets a new message naming the day and zone.
+- 2026-10-24 [P7-T44] New tests match name: 'ApiError' rather than toBeInstanceOf, because seededWorld() calls vi.resetModules() and a static ApiError import is a different class.
+- 2026-10-24 [P7-T45] withoutRemoved takes only the merged record: stored records and create() defaults hold no nulls, so a merged null came from the patch. Destructuring rebuilds the record with no `as Opportunity` cast.
+- 2026-10-24 [P7-T45] withoutRemoved copies a removable key only when it is an own key of the merged record, so own undefined keys are kept; dropping undefined stays with P7-T46.
+- 2026-10-24 [P7-T45] Tests use a typed Record<Removable, OpportunityPatch> table, not computed { [key]: null } objects (a union computed key widens to an index signature and proves nothing).
+- 2026-10-24 [P7-T45] OpportunityDraft is now exported from the @/lib/api barrel next to OpportunityPatch.
+- 2026-10-24 [P7-T46] D1-D7 recorded under P7-T46 in docs/phases/P7-calendars.md: allow-list keys, checks, error format, undefined/null rules, clearing lostReason on a lost deal allowed (D5), setStatus uses a private writer (D6), setStatus/move argument checks go to the backlog (D7).
+- 2026-10-24 [P7-T46] applyPatch drops removable keys with a generic withoutKeys(value, keys): Omit<T, K> (copy then delete), not rest-destructuring (unused bindings trip no-unused-vars); no cast.
+- 2026-10-24 [P7-T46] Expected close is checked in the schema (z.unknown().transform(checkExpectedClose) adds an issue with EXPECTED_CLOSE_RULE), rebuilding P7-T35's message exactly; INVALID_EXPECTED_CLOSE replaced by EXPECTED_CLOSE_RULE.
+- 2026-10-24 [P7-T46] currency uses a mapped `{ [K in CurrencyCode]: K }` object for z.enum (complete, no cast); source reuses the `Object.keys(LEAD_SOURCE_LABELS) as [LeadSource, ...]` pattern.
+- 2026-10-24 [P7-T46] An empty or unknown issue path gets label 'Deal' and no field; a no-issue failure yields the same 'Deal: Not a valid value.', so no separate untestable branch.
+- 2026-10-24 [P7-T47] While the contacts list is in error only the contacts alert shows (`!loadError && tagsError`); its Retry also calls invalidate('tags'). One fault, one alert.
+- 2026-10-24 [P7-T47] Tags Retry uses invalidate('tags'), not tags.refetch(): refetch re-reads only the table's hook, the toolbar TagPicker has its own useResource('tags').
+- 2026-10-24 [P7-T47] TagPicker hides Create while its read has failed with no data (cannot check duplicates); applies to every TagPicker.
+- 2026-10-24 [P7-T47] e2e TABLE_SHAPES is now { has, lacks? }; tags = name+slug+color without timezone (Calendar is the only other record with slug).
+- 2026-10-24 [P7-T47] No new Vitest tests: no pure logic added; component branches proven red/green by e2e mutants (a)-(f).
+- 2026-10-24 [P7-T48] next 16.3.4 -> 16.4.3 (minor, not patch): the Image-Optimization and use-cache RCE advisories plus the Server Actions DoS cover <=16.4.0. eslint-config-next moves with it; both stay exact-pinned. Transitive fixes via npm audit fix, no --force.
+- 2026-10-24 [P7-T48] shadcn lockfile resolution moved 4.21.0 -> 4.22.1 via npm audit fix (within ^4.21.0), dropping its nested zod 3.25.76; zod root 4.5.4 -> 4.6.7. package.json not edited for either.
+- 2026-10-24 [P7-T49] userMenu(page) keeps the exact unscoped page-wide getByRole locator, so the phone Sheet test resolves the same element.
+- 2026-10-24 [P7-T49] Kept `import type { Page }` in both specs (other local helpers use it); no Review/Skills lines added, matching neighbouring added tasks.
+- 2026-10-24 [P7-T50] D1: number fields use Number.isFinite(Number(v)); currency uses Number.isFinite(Number(v) * 100) (parseCents scale). Message stays 'Enter a number.'; required messages unchanged.
+- 2026-10-24 [P7-T50] D2: deal Value field (buildOpportunityFormSchema.value) out of scope; recorded in docs/BACKLOG.md. D3: API schemas unchanged.
+- 2026-10-24 [P7-T50] e2e asserts the Field's data-invalid='true', not the input's aria-invalid (custom-fields-section.tsx sets none; component changes out of scope). A3 reworded to match.
+- 2026-10-24 [P7-T51] Contacts tags-alert gate is `!contactsPage.isLoading`, not `data !== undefined`: on a page change the previous page's data is held while the skeleton shows.
+- 2026-10-24 [P7-T51] Single records (contact Info panel, deal detail) show the tags error only when the record has tagIds; lists (contacts table, board) show it whenever the read failed and the list loaded.
+- 2026-10-24 [P7-T51] TagPicker empty-state message wrapped in its own <span> so exact getByText still matches beside the Retry button.
+- 2026-10-24 [P7-T51] Local spec helpers retryFailsAgain(page, alert) and countTagBadges(page, tagNames); the alert-over-skeleton observer is duplicated in two tests for now.
+- 2026-10-24 [P7-T51] No new Vitest (no pure logic), no API/mock/seed changes, no SEED_VERSION bump.
+- 2026-10-24 [P7-T51] Board test's guard is the pipeline switch (new cache key shows skeleton while tags error persists); tagless test waits for readFaultThrows plus two frames before asserting no alert.
+- 2026-10-24 [P7-T52] aria-invalid goes on SelectTrigger, not the Select root, so Base UI's hidden input never gets it.
+- 2026-10-24 [P7-T52] `invalid || undefined` so a valid control renders no attribute rather than aria-invalid="false"; the new e2e fails on that regression.
+- 2026-10-24 [P7-T52] Checkbox-type custom field left unwired: its schema is z.boolean() and cannot be invalid.
+- 2026-10-24 [P7-T53] TagPicker focus restore needs a "focus was in the alert" ref (cleared only by a blur with relatedTarget) AND activeElement body/null, so it never steals focus.
+- 2026-10-24 [P7-T53] Focus target found via anchor.current.querySelector('[data-slot="combobox-chip-input"]'); ui/combobox.tsx unchanged.
+- 2026-10-24 [P7-T53] Inline LoadError sits in a flex-col gap-2 wrapper because Combobox.Root renders no DOM. New prop inlineLoadError (default true); contacts toolbar passes false (page alert exists).
+- 2026-10-24 [P7-T53] AC4 "one alert in main" waits for contact rows, then one-shot count(), since the toolbar alert can render before the table's.
+- 2026-10-24 [P7-T54] Custom fields injected into persisted DB by an init script on the 2nd navigation (no settings UI until P9-T04); page.evaluate would race the 250ms debounced persist that flushes on pagehide.
+- 2026-10-24 [P7-T54] E2E field labels 'E2E Tier/Channels/Brief/Kickoff', ids cf_e2e_*, positions 10-13, to avoid seeded collisions; labels read from frozen as-const REQUIRED_FIELDS[n].label.
+- 2026-10-24 [P7-T54] BACKLOG aria-invalid entry left alone: it never listed custom fields.
+- 2026-10-24 [P7-H4] Owner decision: an ended appointment that is already Cancelled is NOT frozen. It can still be marked Showed or No Show (the current target-only rule in `canMoveToStatus` stays; no code change). The 409 SLOT_UNAVAILABLE check still applies when its time has been rebooked; P7-T56 rewords that message for an ended appointment.
+- 2026-10-24 [P7-T55] TagPicker's retryHadFocus is set only in LoadError's onRetry (native button, so Enter/Space fire click); no separate onKeyDown, no wrapper onFocus.
+- 2026-10-24 [P7-T55] Wrapper onBlur clears the flag when relatedTarget is outside the wrapper, null included; Chromium fires no blur when the focused Retry is removed, so success tests still pass.
+- 2026-10-24 [P7-T55] The e2e starts the outside read with dispatchEvent('click', { detail: 1 }) so the non-modal popover stays open.
+- 2026-10-24 [P7-T56] The ended test for the 409 wording is strict hasEnded(), as in canMoveToStatus; a running appointment or one exactly at its end instant keeps "Book a new slot instead." (pinned by the END boundary row).
+- 2026-10-24 [P7-T56] setStatus reads apiNowMs() once for both the 422 check and the 409 wording, so they agree and a refused call does not move the clock's mark.
+- 2026-10-24 [P7-T56] DB_KEY is exported from e2e/calendar-helpers.ts so specs can inject data without redeclaring the key.
+- 2026-10-24 [P7-T57] /settings/demo-data smoke test hardcodes title 'Demo Data' and h1 'Demo data' separately (metadata and PageHeader differ in case); a comment says why.
+- 2026-10-24 [P7-T57] Reused routeHeading() and the NAV_ITEMS loop's check order and messages; no new helpers.
+- 2026-10-24 [P7-T58] update() treats a call as a pipeline move only when pipelineId differs from prev.pipelineId, not when the key is merely present; whole-record resends stay no-ops.
+- 2026-10-24 [P7-T58] update() does not derive status from the destination stage (unlike move()); setStatus() owns status/closedAt and the form applies the chosen status afterwards.
+- 2026-10-24 [P7-T58] updateSchema = editableSchema.extend({ stageId: optional }); OpportunityPatch widened with `& { stageId?: ID }`; stageId is pulled out before applyPatch.
+- 2026-10-24 [P7-T58] The acceptance test checks integrityReport() before the 422, so its red run shows the orphan stage itself.
+- 2026-10-24 [P7-T59] stageOf() takes the stage message as a parameter: update() keeps 'Pick a stage from the new pipeline.', create() says 'Pick a stage from this pipeline.'.
+- 2026-10-24 [P7-T59] create() still stores status 'open' even in an isWon/isLost stage, matching update(); now stated in its doc comment. (Superseded by [P7-T62].)
+- 2026-10-24 [P7-T59] No e2e run: API-only change, and the deal form already sends a stage from the selected pipeline.
+- 2026-10-24 [P7-T60] Seeded pipelines/stages are found by constant seed names (Sales Pipeline, Client Onboarding / Agreement Signed / Kickoff Call, Renewals / Renewed, New Lead); stageOf/pickOpenSalesDeal throw clearly if renamed.
+- 2026-10-24 [P7-T60] Board cards are found by `a[href="/opportunities/<id>"]` and timeline entries by full quoted summary, because seeded deal names are not unique.
+- 2026-10-24 [P7-T60] The board is reached via the detail page's back link scoped to `main` (client-side nav, so no reload races the 250ms debounced save).
+- 2026-10-24 [P7-T60] Test B checks only the end state, never that a 'Won' entry is absent, so it stays green after P7-T61.
+- 2026-10-24 [P7-T60] No Vitest added: e2e coverage of existing behaviour; API rules already unit-tested in P7-T58/T59.
+- 2026-10-25 [P7-T61] Supersedes [P7-T58] "update() does not derive status from the destination stage": update()'s pipeline move now takes status, closedAt and its timeline entry from the target stage, via helpers shared with move().
+- 2026-10-25 [P7-T61] move() deletes the closedAt key on an open stage instead of storing closedAt: undefined (JSON round-trip rule).
+- 2026-10-25 [P7-T61] The deal form's lost-reason guard fires only when the save moved the deal and the move left it lost; reason edits on an already-lost deal without a move are out of scope.
+- 2026-10-25 [P7-T61] e2e/deal-pipeline-move.spec.ts now expects 'Won "<deal>"' then 'Reopened "<deal>"', since a won stage logs a won entry like move().
+- 2026-10-25 [P7-T62] Supersedes [P7-T59] "create() still stores status open": create() now takes status and closedAt from its stage via enterStage(), and a won or lost stage logs the stageEntryActivity() entry after 'created', at the same instant.
+- 2026-10-25 [P7-T62] The deal form's lost-reason guard also fires on create, so a new deal saved Lost in a lost stage keeps its typed reason (P7-T63 replaces the guard with a one-write lostReason).
+- 2026-10-25 [P7-T63] A lostReason lives only on a lost deal: enterStage() deletes it for open and won stages, so create(), move() and update()'s pipeline move agree with setStatus(). Narrows D2 / P7-T45 A3 ("lostReason stored as sent") and [P7-T46]: it is stored as sent only when the deal ends up lost; D5 (clearing allowed) still holds.
+- 2026-10-25 [P7-T63] Supersedes [P7-T61] and [P7-T62] lost-reason guard lines: moveDropsReason is gone. The deal form sends lostReason (Status Lost only) in its single create()/update() write, so an edited reason on a lost deal saves with no timeline entry, and setStatus() runs only when the chosen status differs from the one the save left.

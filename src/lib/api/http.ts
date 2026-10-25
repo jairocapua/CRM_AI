@@ -14,11 +14,22 @@ export {
   startOfDayAgo,
 } from "@/lib/mock/clock";
 
+/**
+ * A failed API call. `message` is a plain sentence, written to be shown to
+ * the user as it is (a toast, an inline error).
+ */
 export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
     readonly code = "ERROR",
+    /**
+     * Where in the request the problem is, as a dotted path
+     * ("availability.2.windows.0.end"), for a caller that wants to mark that
+     * field. Never meant to be shown as it is: `message` is the sentence to
+     * show. Unset when the error is not about one field.
+     */
+    readonly field?: string,
   ) {
     super(message);
     this.name = "ApiError";

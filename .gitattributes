@@ -1,0 +1,17 @@
+# Keep LF everywhere: core.autocrlf=true would otherwise rewrite files with CRLF
+# on every branch switch, and Prettier's format:check (part of npm run check)
+# rejects CRLF. Windows-only scripts keep CRLF.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binaries
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary

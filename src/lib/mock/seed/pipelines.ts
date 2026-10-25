@@ -7,7 +7,7 @@ import type {
   User,
 } from "@/types";
 import { newId } from "../ids";
-import { chance, int, pick, pickSome, refPlusDays } from "./rng";
+import { chance, int, pick, pickSome, refPast, refPlusDays } from "./rng";
 
 type StageSeed = [name: string, probability: number, color: TagColor];
 
@@ -140,9 +140,16 @@ export function seedOpportunities(
       const lost = !won && chance(0.12);
 
       const createdDaysAgo = int(5, 240);
-      const stageDaysAgo = Math.min(createdDaysAgo, int(0, 40));
+      // Closed deals reach back 4.5x as far as open ones (six months), so the
+      // dashboard's 90-day window and the 90 before it both have wins in them
+      // rather than every close landing in the last five weeks.
+      const stageDraw = int(0, 40);
+      const stageDaysAgo = Math.min(
+        createdDaysAgo,
+        won || lost ? Math.round(stageDraw * 4.5) : stageDraw,
+      );
 
-      opportunities.push({
+      const opportunity: Opportunity = {
         id: newId("opp"),
         name: `${contact.companyName ?? "Account"} - ${pick(DEAL_SUFFIXES)}`,
         contactId: contact.id,
@@ -166,12 +173,16 @@ export function seedOpportunities(
           proposal_link: null,
         },
         expectedCloseAt: refPlusDays(int(-20, 75), 17),
-        closedAt: won || lost ? refPlusDays(-stageDaysAgo, 16) : undefined,
+        closedAt: lost ? refPast(-stageDaysAgo, 16) : undefined,
         lostReason: lost ? pick(LOST_REASONS) : undefined,
-        stageEnteredAt: refPlusDays(-stageDaysAgo, int(9, 17), int(0, 59)),
+        stageEnteredAt: refPast(-stageDaysAgo, int(9, 17), int(0, 59)),
         createdAt: refPlusDays(-createdDaysAgo, int(8, 18)),
-        updatedAt: refPlusDays(-stageDaysAgo, int(9, 18)),
-      });
+        updatedAt: refPast(-stageDaysAgo, int(9, 18)),
+      };
+      // Reaching the won stage is the close. Set after the literal so no draw
+      // moves: `stageEnteredAt`'s draws must stay where they always were.
+      if (won) opportunity.closedAt = opportunity.stageEnteredAt;
+      opportunities.push(opportunity);
     }
   }
 

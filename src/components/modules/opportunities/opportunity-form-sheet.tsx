@@ -148,32 +148,48 @@ export function OpportunityFormSheet({
   const status = form.watch("status");
 
   const [save, isSaving] = useAction(async (values: OpportunityFormValues) => {
+    // The reason travels in the same write as everything else: a changed
+    // reason on a lost deal is saved by update() alone, and a create or move
+    // into a lost stage keeps it with its one Lost entry. Any status but Lost
+    // clears it.
+    const lostReason =
+      values.status === "lost"
+        ? values.lostReason.trim() || undefined
+        : undefined;
     const patch = {
       name: values.name.trim(),
       contactId: values.contactId,
       pipelineId: values.pipelineId,
+      stageId: values.stageId,
       value: parseCents(values.value),
       currency: selectedPipeline?.currency ?? "USD",
       source: values.source,
       ownerId: values.ownerId || undefined,
       tagIds: values.tagIds,
       expectedCloseAt: dateInputToIso(values.expectedCloseAt),
+      lostReason,
       customFields: toCustomFieldsPatch(values.customFields, fields),
     };
 
     /**
-     * `status` and `stageId` are deliberately not in that patch. `update()` is
-     * a dumb field write, so patching either one directly would skip the
-     * bookkeeping the API keeps for them: `move()` owns column `position` and
-     * `stageEnteredAt`, and `setStatus()` owns `closedAt` and the won/lost
-     * activity. Writing them through `update()` leaves a duplicated position,
-     * a stale "N days in stage", and no timeline entry.
+     * `status` is not in that patch: `setStatus()` owns it, with `closedAt`
+     * and the won/lost activity, so a status change goes through it below.
+     * `update()` reads `stageId` only when the pipeline changes: it then moves
+     * the deal to that stage of the new pipeline in the same write, with the
+     * status that stage gives (as `move()` does). `create()` also takes the
+     * status from the new deal's stage. A stage change inside the same
+     * pipeline goes through `move()`, which owns column `position` and
+     * `stageEnteredAt` there. Each keeps `lostReason` only when it leaves the
+     * deal in a lost stage.
      */
     const record = opportunity
       ? await api.opportunities.update(opportunity.id, patch)
-      : await api.opportunities.create({ ...patch, stageId: values.stageId });
+      : await api.opportunities.create(patch);
 
-    const stageChanged = opportunity && opportunity.stageId !== values.stageId;
+    const pipelineChanged =
+      opportunity && opportunity.pipelineId !== values.pipelineId;
+    const stageChanged =
+      opportunity && !pipelineChanged && opportunity.stageId !== values.stageId;
     if (stageChanged) {
       const column = await api.opportunities.listForBoard(values.pipelineId);
       const appendAt = column.filter(
@@ -185,21 +201,21 @@ export function OpportunityFormSheet({
       });
     }
 
-    // `move()` derives status from the destination stage, so an explicit
-    // choice is applied after it and wins.
+    // `create()`, `move()` and `update()`'s pipeline move all derive the
+    // status from the destination stage: `record.status` is what `create()`
+    // or the pipeline move left, and `stageStatus()` predicts what `move()`
+    // leaves. An explicit choice is applied after any of them and wins, so a
+    // new deal in a Won stage saved as Open is reopened here.
     const statusAfterMove = stageChanged
-      ? selectedPipeline?.stages.find((s) => s.id === values.stageId)?.isWon
-        ? "won"
-        : "open"
+      ? api.opportunities.stageStatus(
+          selectedPipeline?.stages.find((s) => s.id === values.stageId),
+        )
       : (record.status ?? "open");
+    // Only a status the save did not already leave needs `setStatus()`: the
+    // reason is already stored, so calling it for the reason alone would log
+    // a second Lost entry.
     if (values.status !== statusAfterMove) {
-      await api.opportunities.setStatus(
-        record.id,
-        values.status,
-        values.status === "lost"
-          ? values.lostReason.trim() || undefined
-          : undefined,
-      );
+      await api.opportunities.setStatus(record.id, values.status, lostReason);
     }
 
     toast.success(opportunity ? "Deal updated" : "Deal created");
@@ -321,7 +337,20 @@ export function OpportunityFormSheet({
                   control={form.control}
                   name="stageId"
                   render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // Status follows the stage the way `move()` derives it;
+                        // otherwise "Open" rides along into Closed Won and the
+                        // save reopens the deal `move()` just won.
+                        const won = stages.find((s) => s.id === value)?.isWon;
+                        if (won) form.setValue("status", "won");
+                        else if (form.getValues("status") === "won") {
+                          form.setValue("status", "open");
+                        }
+                      }}
+                    >
                       <SelectTrigger id="stageId" className="w-full">
                         <SelectValue>
                           {(value: string) =>
@@ -386,14 +415,29 @@ export function OpportunityFormSheet({
                 </Field>
               ) : null}
 
-              <Field>
+              <Field
+                data-invalid={Boolean(form.formState.errors.expectedCloseAt)}
+              >
                 <FieldLabel htmlFor="expectedCloseAt">
                   Expected close
                 </FieldLabel>
+                {/* No `min`/`max`: native constraint validation would block
+                    the submit with a browser bubble before the schema's
+                    message could show. */}
                 <Input
                   id="expectedCloseAt"
                   type="date"
+                  aria-invalid={
+                    Boolean(form.formState.errors.expectedCloseAt) || undefined
+                  }
                   {...form.register("expectedCloseAt")}
+                />
+                <FieldError
+                  errors={
+                    form.formState.errors.expectedCloseAt
+                      ? [form.formState.errors.expectedCloseAt]
+                      : undefined
+                  }
                 />
               </Field>
             </FieldGroup>
@@ -468,12 +512,16 @@ export function OpportunityFormSheet({
               </Field>
 
               <Field>
-                <FieldLabel>Tags</FieldLabel>
+                <FieldLabel htmlFor="tagIds">Tags</FieldLabel>
                 <Controller
                   control={form.control}
                   name="tagIds"
                   render={({ field }) => (
-                    <TagPicker value={field.value} onChange={field.onChange} />
+                    <TagPicker
+                      id="tagIds"
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
                   )}
                 />
               </Field>

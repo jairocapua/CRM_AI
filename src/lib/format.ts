@@ -1,4 +1,4 @@
-import { differenceInCalendarDays, format } from "date-fns";
+import { differenceInCalendarDays, format, formatDistance } from "date-fns";
 
 import type { Cents, CurrencyCode, ISODate } from "@/types";
 
@@ -83,6 +83,15 @@ export function parseCents(input: string): Cents {
 export function centsToInput(cents: Cents): string {
   if (!cents) return "";
   return cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2);
+}
+
+/**
+ * "3 days ago" / "in 2 hours", measured from `now` — pass the demo clock
+ * (`apiNow()`). `formatDistanceToNow` measures from the wall clock, which has
+ * drifted weeks past the seeded world, so everything read "18 days ago".
+ */
+export function formatRelative(iso: ISODate, now: Date): string {
+  return formatDistance(toDate(iso), now, { addSuffix: true });
 }
 
 /*

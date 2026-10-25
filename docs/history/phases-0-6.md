@@ -1,4 +1,9 @@
-# Progress
+# Build history: Phases 0–6
+
+> Moved here from `PROGRESS.md` on 2026-10-21, when the agentic build system took
+> over tracking. The live tracker is `docs/PROGRESS.md`; remaining work is in
+> `docs/phases/` and `docs/BACKLOG.md`. The unchecked Phase 7–10 rows below are
+> kept as they were written.
 
 Phases come from the approved build plan. A phase is done only when
 `npm run check` is green and its manual checks pass.
@@ -141,11 +146,73 @@ Phases come from the approved build plan. A phase is done only when
       unused `assigneeId` filter) are left for a cleanup pass.
       Deferred: attachments, assign/close conversation (no API setters yet),
       a Demo Data link from `/settings`.
-- [ ] **Phase 6 — Dashboard** (4 pts) ← next
+- [x] **Phase 6 — Dashboard** (4 pts, ran to 5 with step 0)
+      Period toggle (7/30/90), four KPI `StatCard`s with sparklines and
+      deltas (new contacts, won revenue + win rate, appointments, messages),
+      cumulative won-revenue chart, deals-by-stage with a pipeline switcher,
+      lead sources, activity feed, due-today tasks (complete in place) and
+      upcoming appointments. `StatCard` is the Phase 1 primitive that was
+      never built; it lives in `components/common/`.
+      The exit check was "numbers reconcile against other modules". A Node
+      script over the real seed showed the Phase 2 analytics could not pass
+      it, so step 0 fixed existing code first:
+      - **KPI charts did not add up to their totals** east of UTC: windows
+        were cut at local midnight but bucketed by UTC date, so today had no
+        bucket (7d messages read 316 over a series summing to 247). Both
+        sides now use local dates; `sum(series) === value` is asserted.
+      - **Windows had no upper bound**, so 39 upcoming appointments counted
+        as held (7d: 51, +538%). Every window now ends at the demo "now".
+      - **The seed wrote the future again** (Phase 5's bug class): day-0
+        hours past 09:00 UTC. Future appointments were "booked" up to 28
+        days ahead, so the feed's top 8 rows were future bookings. New
+        `refPast()` keeps every draw and never lands after `REF_DATE`;
+        `seedDatabase()` now logs a console error in dev if anything
+        past-tense is dated after `seededAt`. Closed deals also reach back
+        six months instead of five weeks, so the 90-day view has a baseline.
+        `SEED_VERSION` → 3 (Phase 8a's bump becomes 4).
+      - **`setStatus()` logged every non-win as "Lost"**, reopening included.
+      - `contacts.update` did not invalidate `analytics`.
+      Reconcile contract, which the script checks and the browser confirmed:
+      pipeline value, forecast and stage counts come from the board's own
+      `rollupByStage` over the board's own live-deal rule (`isDeadDeal`
+      moved into the API for this). They cover **one pipeline**, never all
+      three summed: Client Onboarding is post-sale work, and adding it
+      counted won revenue twice. Lead-source bars total the New contacts
+      card. Win rate covers deals closed in the period. Messages exclude
+      calls. After winning a $103K New Lead deal from the form, revenue,
+      win rate, forecast (+$92,700), Closed Won count and feed all moved by
+      exactly that amount, and matched the board.
+      Deviations from the plan row:
+      - **Lead sources are bars, not a donut.** There are 9 sources with
+        close counts, and the palette has 8 slots with no cycling. Per the
+        dataviz rules that calls for one-hue bars with direct labels.
+      - **Revenue is cumulative.** A smoothed per-day area drew a handful of
+        discrete closes as hills of revenue on days nothing closed.
+        Cumulative ends exactly on the headline figure.
+      - Reads keep `canFail: false`, as everywhere else in the API (the
+        failure-rate slider covers mutations), so there is no per-card error
+        state. The period is component state, not `?period=`; no route uses
+        URL state yet.
+      Found and fixed along the way:
+      - **The deal form reopened deals it had just won.** Choosing Closed Won
+        left Status on "Open", so the save ran `move()` (won) and then
+        `setStatus("open")`. Status now follows the stage.
+      - **Every save moved Expected close back a day** east of UTC: the input
+        read the UTC date while every screen shows the local one.
+      - **Contact screens used the wall clock** for relative times (a
+        `formatDistanceToNow` in four places, now `formatRelative(iso,
+        apiNow())`), so they disagreed with the feed that links to them.
+      - Completing a task wrote no `task.completed` activity.
+      - `calendars.listUpcoming` called `nowIso()`, advancing the clock's
+        persisted high-water mark on a read.
+      - Activity copy read "Sent a sms message"; it now reads "SMS sent".
+        `CHANNEL_LABELS` moved to `@/types` so the seed and API share it.
       Phase 7 carries the Phase 8 trap noted before Phase 5:
       `appointment.source === "workflow"` is an enum value, not a foreign key
-      — keep it that way.
-- [ ] **Phase 7 — Calendars** (5 pts)
+      — keep it that way. The P7 check's "appears on the dashboard" lands in
+      the Upcoming appointments card (`calendars.listUpcoming`, keyed on
+      `appointments`).
+- [ ] **Phase 7 — Calendars** (5 pts) ← next
 - [ ] **Phase 8a — Automation, read-only** (5 pts)
       *Direction changed 2026-09-24: no drag-and-drop builder.* Automations are
       custom-coded by a developer in `src/lib/automations/` and staff can only

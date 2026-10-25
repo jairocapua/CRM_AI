@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   BellIcon,
@@ -9,6 +10,7 @@ import {
   UserIcon,
 } from "lucide-react";
 
+import { useLeaveGuard } from "@/components/providers/unsaved-changes";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -34,13 +36,22 @@ const CURRENT_USER = {
 };
 
 export function NavUser() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile } = useSidebar();
+  // Held in state through a callback ref: it is handed to guardLeave during
+  // render, which a ref object must not be.
+  const [trigger, setTrigger] = useState<HTMLElement | null>(null);
+  // Each link asks first while a page has unsaved edits. The menu item that
+  // asked is gone once the question closes, so focus comes back to the
+  // menu's trigger; and a link that really navigates closes the phone Sheet.
+  const guardLeave = useLeaveGuard();
+  const leave = { onLeave: () => setOpenMobile(false), returnFocus: trigger };
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger
+            ref={setTrigger}
             render={
               <SidebarMenuButton
                 size="lg"
@@ -80,11 +91,25 @@ export function NavUser() {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem render={<Link href="/settings" />}>
+              <DropdownMenuItem
+                render={
+                  <Link
+                    href="/settings"
+                    onNavigate={guardLeave("/settings", leave)}
+                  />
+                }
+              >
                 <UserIcon className="size-4" />
                 My profile
               </DropdownMenuItem>
-              <DropdownMenuItem render={<Link href="/settings/team" />}>
+              <DropdownMenuItem
+                render={
+                  <Link
+                    href="/settings/team"
+                    onNavigate={guardLeave("/settings/team", leave)}
+                  />
+                }
+              >
                 <SettingsIcon className="size-4" />
                 Team settings
               </DropdownMenuItem>

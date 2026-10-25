@@ -11,12 +11,18 @@ behind without rewriting the UI.
 ## Commands
 
 ```bash
-npm run dev      # dev server (Turbopack)
-npm run check    # format:check -> lint -> typecheck -> build. The gate.
+npm run dev          # dev server (Turbopack)
+npm test             # Vitest unit tests (src/**/*.test.ts); helpers in src/lib/mock/testing.ts
+npm run check        # format:check -> lint -> typecheck -> test -> test:scripts -> build. The gate.
+npm run e2e:install  # once per machine: downloads Playwright's Chromium (fresh clone)
+npm run e2e          # Playwright e2e (e2e/*.spec.ts) on a production build at 127.0.0.1:3100
 ```
 
-Run `npm run check` at the end of every phase. Do not tick a phase off in
-`PROGRESS.md` until it is green.
+Every build task runs `npm run check` before it is committed (see "Running the
+build"). Build status lives in `docs/PROGRESS.md` and changes only through
+`node scripts/progress.mjs`; a task or phase is never marked done while the
+gate is red. `npm run e2e` is not part of `npm run check` (it runs its own
+`next build`), and the two share `.next`, so never run them at the same time.
 
 ## The one rule: the API seam
 
@@ -61,6 +67,16 @@ directly. The mock database lives in `src/lib/mock/` behind `src/lib/api/`.
   `render` prop, not `asChild`: `<Trigger render={<Button />}>label</Trigger>`.
   Menu labels must sit inside a `DropdownMenuGroup` — a bare
   `DropdownMenuLabel` throws `MenuGroupContext is missing` at runtime.
+- **A navigating control is a link, never a `Button`.** Use
+  `<LinkButton href variant size>` from `ui/button.tsx` (or
+  `<Link className={cn(buttonVariants(...))}>`). Never
+  `<Button render={<Link />} nativeButton={false}>`: Base UI gives any
+  non-native button `role="button"`, even an `<a href>`, so screen readers
+  announce a button. Never a bare `buttonVariants()` string either: without
+  `cn()` the conflicting classes survive, and `border-transparent` hides the
+  outline border in light mode. The shadcn skill recommends
+  `nativeButton={false}`, so expect to reach for it; ESLint
+  (`no-restricted-syntax`) rejects both spellings outside `src/components/ui/`.
 - **`form` is not used.** react-hook-form integrates through the `Field*`
   components; `FieldError` accepts RHF's errors array directly.
 - **Tailwind v4**: no config file, dark mode needs `@custom-variant`, and the
@@ -85,3 +101,129 @@ So: prefer `read_page` / `get_page_text` over screenshots while the pane is
 hidden, and do not "fix" animation-state oddities observed there without first
 checking `document.timeline` / a `requestAnimationFrame` callback actually
 fires.
+
+`read_page` also lists Base UI's form inputs, the
+`<input aria-hidden tabindex=-1>` behind every Select and Combobox, as a
+textbox named after the value. Chromium's accessibility tree ignores them
+(`e2e/select-a11y.spec.ts`), so this is a read_page artifact, not a bug. Check
+a suspected a11y-tree problem with `getByRole` or that spec's CDP reader, not
+`read_page`.
+
+## Running the build
+
+The build runs through the saved workflow `.claude/workflows/build-phase.js`.
+Each run handles **one task** from `docs/phases/` (plan → implement → verify +
+review → fix → record/commit on the phase branch) and then stops.
+
+| The owner says | You do |
+|---|---|
+| "run the build-phase workflow" / "next task" | `Workflow({ name: 'build-phase' })` |
+| "approve" | `Workflow({ name: 'build-phase', args: { approve: true } })`: marks the reviewed task done, then runs the next one |
+| "rework P7-T03: <feedback>" | `Workflow({ name: 'build-phase', args: { rework: 'P7-T03', feedback: '<feedback>' } })` |
+| "run task P7-T05" | `Workflow({ name: 'build-phase', args: { task: 'P7-T05' } })` |
+| "run task P7-T05 as is" (after a split proposal) | `Workflow({ name: 'build-phase', args: { task: 'P7-T05', allowLarge: true } })` |
+| "next task in P8" | `Workflow({ name: 'build-phase', args: { phase: 'P8' } })` |
+| "run the gate for P7" | `Workflow({ name: 'build-phase', args: { gate: 'P7' } })` |
+| "dry run" | `Workflow({ name: 'build-phase', args: { dryRun: true } })`: reports what would run, changes nothing |
+| "approve P7-T03 but don't continue" | `node scripts/progress.mjs set P7-T03 done --commit <sha>` directly |
+
+- Pass `args` as a JSON object, not a string. When your session gives a
+  `Co-Authored-By:` line, pass it as `args.trailer`.
+- A run stops if the tree has uncommitted changes outside `docs/` and
+  `AGENTS.md`. Ask the owner what to do with them.
+- After a run, relay the result: status, commit, `reviewTier`, what changed,
+  human checks, suggestions and `howToContinue`. Don't claim results the
+  workflow didn't return.
+- Phase branches (`phase/p7-calendars` …) are cut from `master`. The owner
+  merges each one at its gate (`git switch master && git merge --no-ff <branch>`).
+  Nothing is pushed.
+
+## Autopilot
+
+**Autopilot is on** (owner, 2026-10-21): you act as the owner's reviewer and
+keep the build loop moving without waiting for "approve".
+
+After every run:
+1. **Review it yourself.** Read the full diff (`git show <commit>`), the
+   acceptance evidence and the suggestions. For a task that changed UI, also
+   open the page in the in-app browser (`preview_start` with `crm`, then
+   `read_page`) and look.
+2. **Decide**, then call the workflow:
+   - **Rework** for a real defect: a bug, a broken CLAUDE.md rule, new logic
+     without a test that can go red, docs that contradict the code. Feedback
+     names files and the exact fix. If the same defect survives two reworks,
+     stop and ask the owner.
+   - **Approve** otherwise. Cosmetic or optional suggestions become a
+     `docs/BACKLOG.md` entry or a new task (`node scripts/progress.mjs add …`),
+     never a rework.
+   - **Split proposal:** accept it when each piece is testable on its own:
+     narrow the task in its phase file, `add` the rest, `set <ID> todo`, then
+     `run task <ID>`.
+3. **Tell the owner** in a few plain-language lines: what the task changed,
+   your verdict and why, any new task or backlog entry.
+
+**Stop and wait for the owner** when the next step is theirs: a run is blocked
+on a product question, a phase gate passed (they merge), or anything would be
+pushed.
+
+**Fresh session:** after about 6 approved tasks in one session, or right after
+a phase gate, hand off and stop:
+1. Approve the last task with `node scripts/progress.mjs set <ID> done --commit
+   <sha>` (the workflow's approve would start the next task).
+2. Rewrite `docs/memory/HANDOFF.md` (read it first: the recorder rewrites it
+   every run) and commit.
+3. Ask the owner to open a new top-level session in this folder and type
+   "Autopilot: continue the build per CLAUDE.md". The SessionStart brief and
+   HANDOFF.md carry everything it needs.
+
+Do not call `start_session` for this. A session started by another nests under
+it, reports back up the chain and wakes the older sessions, and still needs the
+owner's click.
+
+## Subagents (`.claude/agents/`)
+
+| Subagent | Role |
+|---|---|
+| `planner` | Plans a task and checks its size; read-only |
+| `implementer` | Writes code + tests; never commits |
+| `verifier` | Runs checks and proves acceptance; no edit tools |
+| `reviewer` | Diff review against these notes; no edit tools |
+| `recorder` | Git + tracker + memory only |
+
+The workflow uses them; the owner can also ask for one directly ("use the
+reviewer on my changes"). Memory for the build lives in `docs/memory/`
+(HANDOFF, LEARNINGS, DECISIONS); the plan is `docs/spec.md` plus
+`docs/design/`; Phases 0–6 history is `docs/history/phases-0-6.md`.
+
+## Skills
+
+Each task's **Skills** line in its phase file names what to load. The set:
+
+| Task type | Skills |
+|---|---|
+| React and UI code | `vercel-react-best-practices`, `shadcn`, `vercel-composition-patterns` |
+| Logic and tests | `tdd`, `vitest`, `playwright-cli`, `webapp-testing` |
+| Next 16 runtime checks | `next-dev-loop` |
+| Charts | `dataviz` |
+| The Phase 8 diagram | `react-flow` |
+| UI and accessibility review | `web-design-guidelines`, `frontend-design` |
+| Motion | `fixing-motion-performance` |
+| Editing the build system | `workflow-authoring`, `update-config`, `writing-for-agents` |
+| When stuck | `diagnosing-bugs` |
+
+The skills live at user scope, outside this repo.
+
+## Session start and guardrails
+
+A SessionStart hook runs `node scripts/progress.mjs --brief`, so each session
+opens with the current phase, the next task, pending reviews, blockers and the
+handoff. If it isn't there, run the command yourself.
+
+`.claude/settings.json` denies `git push`, `git reset --hard` and `git clean`,
+and pre-approves the routine commands the workflow needs (tracker script, npm
+scripts, local git) for both the Bash and PowerShell tools.
+
+## Talking to the owner
+
+The owner builds solo and learns as they go: use plain words, and explain any
+technical term the first time it comes up.

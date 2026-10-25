@@ -2,12 +2,30 @@ import type { Activity, ID } from "@/types";
 import { db } from "@/lib/mock/db";
 import { simulate } from "./http";
 
-export async function listRecent(limit = 20): Promise<Activity[]> {
+export interface ActivityRow extends Activity {
+  /** Who it happened to — a workspace-wide feed has no contact page around it. */
+  contactName?: string;
+}
+
+export async function listRecent(limit = 20): Promise<ActivityRow[]> {
   return simulate(
-    () =>
-      Object.values(db.getState().activities)
+    () => {
+      const { activities, contacts } = db.getState();
+      return Object.values(activities)
         .sort((a, b) => b.at.localeCompare(a.at))
-        .slice(0, limit),
+        .slice(0, limit)
+        .map((activity) => {
+          const contact = activity.contactId
+            ? contacts[activity.contactId]
+            : undefined;
+          return {
+            ...activity,
+            contactName: contact
+              ? `${contact.firstName} ${contact.lastName}`
+              : undefined,
+          };
+        });
+    },
     { canFail: false },
   );
 }

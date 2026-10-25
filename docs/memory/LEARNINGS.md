@@ -1,0 +1,279 @@
+# Learnings
+
+> **Append-only**, one line per lesson, newest at the bottom: `- YYYY-MM-DD [TASK-ID] lesson (why it matters)`.
+> Read the last ~20 entries before starting a task. Never delete entries. If one becomes obsolete, strike it through (`~~…~~`) and add a note.
+> CLAUDE.md "Non-obvious constraints" holds the standing rules; this file holds lessons that are narrower or newer. Entries tagged `[P3]`…`[P6]` were carried over from `docs/history/phases-0-6.md` when the tracker started.
+
+- 2026-09-26 [P3] Base UI's `SelectValue` shows the raw value unless given a label-mapping render function; every status/source/owner/custom-field select needs one.
+- 2026-09-26 [P4] Currency custom fields are stored in cents; a shared converter that writes them back raw turns $13,500 into $135. Convert at the form edge only.
+- 2026-09-26 [P4] Controlling a combobox's `inputValue` blanks the selected item's label on edit; leave it uncontrolled unless searching needs it.
+- 2026-09-26 [P4] Won deals live in the terminal stage; any "hide closed" filter must keep them or Closed Won reads `0 · $0`. Forecasts read live deals only (`isDeadDeal` in the API).
+- 2026-09-26 [P4] Writing `stageId`/`status` through `update()` skips `move()` (position, `stageEnteredAt`) and `setStatus()` (`closedAt`, activity). Route stage and status changes through those two.
+- 2026-09-26 [P5] Seed day-0 hours must count back from `REF_DATE`; a clock-hour draw on day 0 lands after the anchor ("seed writes the future"). Reuse the same draws so the faker stream is unchanged.
+- 2026-09-26 [P5] Faker is seeded once and consumed in call order (`seed/index.ts`): append new seeders at the end of `buildDb()`; inserting or removing one shifts every later draw.
+- 2026-09-26 [P6] Cut and bucket time windows on the same calendar: local midnight with UTC-date buckets drops today's bucket east of UTC. Assert `sum(series) === value`.
+- 2026-09-26 [P6] Every analytics window ends at the demo "now"; without an upper bound future appointments count as held.
+- 2026-09-26 [P6] A read must never call `nowIso()`: it advances the persisted clock high-water mark. Reads use `apiNow()`.
+- 2026-09-26 [P6] Date inputs must read and write the local date; reading the UTC date moved Expected close back a day on every save east of UTC.
+- 2026-09-26 [P6] Adding a `ResourceKey` means editing `cache.ts` twice: the union and the literal list in `invalidateAll()`. Missing the second makes reseed leave that screen stale.
+- 2026-10-21 [bootstrap] `node --test scripts/` (a folder) fails on Node 22 here; use the glob `node --test "scripts/*.test.mjs"`.
+- 2026-10-21 [bootstrap] `core.autocrlf=true` rewrites files with CRLF on branch switches, which fails Prettier's `format:check`; `.gitattributes` pins LF.
+- 2026-10-21 [P7-T01] npm 10.9.4 crashes ('reading edgesOut') installing vitest 4 beside vite 8 (vite 8 -> @vitejs/devtools -> vitest@* peer loop). Install vite@^7 first, then vitest with --legacy-peer-deps, then a plain `npm install` to undo wrongly-set dev flags (react-is). Compare lockfile packages against HEAD.
+- 2026-10-21 [P7-T01] Set TZ for tests via `process.env.TZ` at runtime (setup file or vi.stubEnv); an inline `TZ=` npm script fails under cmd.exe, and a shell $env:TZ did not reach the worker.
+- 2026-10-21 [P7-T01] clock.ts captures sessionStart = Date.now() on load: install fake timers (after vi.resetModules) before importing clock users; import modules under test dynamically after freshModules()/seededWorld().
+- 2026-10-21 [P7-T01] Vitest prints failure details to stderr: capture with `> file 2>&1`, not `2>&1 > file`.
+- 2026-10-21 [P7-T01] Seeded KPIs at the anchor (reference only, tests avoid exact totals): Singapore 90-day newContacts 122, wonRevenue 137,450,000c, appointments 57, messages 806; today's messages bar 94 Singapore, 60 UTC, 11 Los Angeles.
+- 2026-10-21 [P7-T01] Git Bash quoted heredocs here still collapsed doubled backslashes in a regex literal; build a backslash with String.fromCharCode(92) in throwaway scripts.
+- 2026-10-21 [P7-T01] For mutation checks without touching source, use a vitest config that mergeConfigs the base and adds an `enforce: "pre"` transform plugin.
+- 2026-10-21 [P7-T02] Playwright's fixture `use(...)` trips eslint-config-next's react-hooks/rules-of-hooks; turn the rule off for e2e/**.
+- 2026-10-21 [P7-T02] Mock DB persist writes are debounced 250ms (db.ts debounceWrites): localStorage['nimbus-crm-db'] is null right after boot; e2e reads of persisted state need expect.poll.
+- 2026-10-21 [P7-T02] On Windows, stopping a background `npm run dev`/`npm run start` leaves the child node process holding the port (3000/3100); find it with netstat and kill the PID.
+- 2026-10-21 [P7-T02] With Turbopack's build cache the `next build` inside `npm run e2e` takes ~10s; a full e2e run is ~15-25s.
+- 2026-10-21 [P7-T02] Playwright reports console.warn as type 'warning', not 'warn'; pageerror text reads 'pageerror: Error: <msg>' when built from error.stack.
+- 2026-10-21 [P7-T02] about:blank and opaque-origin pages throw on storage access: an addInitScript touching storage needs a location.protocol check and try/catch.
+- 2026-10-21 [P7-T02] `timeout: 0` on a Playwright expect means no timeout; for a one-shot check use locator.count().
+- 2026-10-21 [P7-T03] @date-fns/tz installs its Date overrides when the module first evaluates; if that first import happens under vi.useFakeTimers (ClockDate global), TZDate silently reads runtime-local fields (right in UTC, a day off in Singapore). vitest.setup.ts preloads it while Date is real; it is external, so vi.resetModules keeps that copy.
+- 2026-10-21 [P7-T03] new TZDate('YYYY-MM-DD', tz) parses the string as UTC midnight, not midnight in the zone. Build zone times from components: new TZDate(y, m-1, d, h, min, tz).
+- 2026-10-21 [P7-T03] TZDate.prototype.toISOString() returns an offset string (…-07:00), not Z. Take .getTime() and format with new Date(ms).toISOString().
+- 2026-10-21 [P7-T03] setDemoNow(iso) works after seededWorld(): clock.ts loads in freshModules with sessionStart = REF_DATE, so vi.setSystemTime moves apiNow() to iso. Install stubLocalStorage() before the first API call, because clock.ts caches its high-water read.
+- 2026-10-21 [P7-T03] faker number.int and number.float each consume one draw, so switching a draw between pick and chance does not shift the stream; the fingerprint confirmed every downstream collection is identical.
+- 2026-10-21 [P7-T03] Scratchpad mutant/fingerprint configs cannot resolve bare 'vitest/config'; a temporary node_modules junction (New-Item -ItemType Junction) fixes it. Remove junctions with `cmd /c rmdir`, never a recursive rm.
+- 2026-10-21 [P7-T03] Seeded KPIs at the anchor are unchanged by the P7 seed (Singapore 90-day appointments 57, messages 806, newContacts 122, wonRevenue 137,450,000c). The Upcoming card's first appointment is now 2026-09-08T17:00Z (10:00 PDT); it was 09:30Z.
+- 2026-10-21 [P7-T03] book() and setStatus() are the only code paths that write appointments. Any future reschedule/update API needs the same hasRoomFor check to keep the no-double-booking guarantee.
+- 2026-10-21 [P7-T03] Rework (P7-H2): the symmetric rule moved one seeded appointment, Discovery 2026-08-31 18:00Z -> 19:30Z; its clamped updatedAt and status_changed activity move 18:30Z -> 20:00Z, swapping that activity with a neighbour. Faker stream, other collections, KPIs and first upcoming (2026-09-08T17:00Z) unchanged; SEED_VERSION stays 4.
+- 2026-10-21 [P7-T03] A scratch Vitest config that imports the repo vitest.config.mts by absolute path and spreads it ({...base, plugins, test: {...base.test, include}}) needs no node_modules junction; only a bare `vitest/config` import from the scratchpad fails to resolve.
+- 2026-10-21 [P7-T03] Swapping before/after in the mirrored clause of the two-way buffer check reduces to the one-sided rule, so that mutant fails the same tests as the old rule.
+- 2026-10-21 [P7-T04] Next 16 window.history.pushState('?view=…') re-renders useSearchParams consumers with zero network requests, and Back/Forward restore the state. No router.push fallback was needed.
+- 2026-10-21 [P7-T04] Node's ICU resolves Asia/Kolkata as the legacy Asia/Calcutta in Intl.DateTimeFormat().resolvedOptions().timeZone. Use Australia/Adelaide (GMT+9:30, canonical) in tests that need a half-hour offset.
+- 2026-10-21 [P7-T04] A Base UI Checkbox wrapped in a native <label> gets aria-labelledby (generated label id) from a layout effect; getByRole('checkbox', { name }) works with no aria-label. The name includes all the label's text, e.g. 'Monthly ReviewInactive'.
+- 2026-10-21 [P7-T04] A Browser-pane tab left open on a stopped dev server collects 'WebSocket … _next/hmr failed' errors, and read_console_messages keeps reporting them after restart. Compare error counts across navigations rather than reading them as new errors.
+- 2026-10-21 [P7-T04] Seeded counts at the anchor, viewed from Singapore: the Sep 2026 month grid has 58 appointments; the week of Sep 6-12 has 11 (Discovery Call 3, Onboarding Kickoff 3, Strategy Session 5). Monthly Review (inactive) has none.
+- 2026-10-21 [P7-T04] An absence assertion (toHaveCount(0)) passes trivially while a view is still loading. The e2e helper expectViewLoaded waits for zero [data-slot=skeleton] and the '<View> view' title first.
+- 2026-10-21 [P7-T05] Every seeded appointment starts 16:00–22:45 UTC (all 4 calendars are America/Los_Angeles), so in any American zone the local day equals the UTC day. Asia/Kolkata splits the Sep 2026 grid 29 of 58; Singapore moves all 58.
+- 2026-10-21 [P7-T05] Sep 2026 grid from Singapore: Sep 1 has 8 appointments ('+6 more'); Sep 15 and 22 have 5; Sep 3, 4, 8, 29 and Oct 1 have 4.
+- 2026-10-21 [P7-T05] useResource returns the previous query's data while isLoading. A fetcher that returns its own position ({view, date, rows}) lets the page keep the old grid without drawing old rows on the new range.
+- 2026-10-21 [P7-T05] In the hidden Browser pane a CSSTransition can stay at currentTime 0 while document.timeline advances and rAF fires (no compositor commit). Check transition-driven styles with element.style.transition = 'none'.
+- 2026-10-21 [P7-T05] A Playwright run during mutation testing rebuilds .next from mutated sources; rerun npm run check after restoring.
+- 2026-10-21 [P7-T05] `python` is not available in Git Bash here (Windows Store alias). Use Edit, sed or node for scripted edits.
+- 2026-10-21 [P7-T05] Tailwind v4 `data-pending:` matches the bare attribute, so `data-pending={pending || undefined}` with `data-pending:opacity-60` works.
+- 2026-10-21 [P7-T06] Tailwind v4: `outline-none` sets `--tw-outline-style: none` and `focus-visible:outline-2` uses `outline-style: var(--tw-outline-style)`, so a focus outline on top of outline-none also needs `focus-visible:outline-solid` or it stays invisible.
+- 2026-10-21 [P7-T06] Playwright `page.clock.setFixedTime(...)` before gotoApp freezes Date.now, so apiNow() is exactly REF_DATE; timers keep running (simulate() latency and debounced persist still work). A sharp test that a component uses the demo clock, not the wall clock.
+- 2026-10-21 [P7-T06] In packIntervals the group-close check (`start >= groupEnd`) hides the column-reuse touch rule for an isolated back-to-back pair; killing a `columnEnd < start` mutant needs a touching pair inside an overlap group, e.g. [0,60],[0,45],[45,90].
+- 2026-10-21 [P7-T06] An 'off its UTC day' count in e2e must use each row's first segment (its local start day), not `start > 0`: a seeded 16:00Z appointment is 00:00 in Singapore (start minute 0).
+- 2026-10-21 [P7-T06] Intl en-US time output puts U+202F before AM/PM; build 'h:mm AM' from formatToParts (hourCycle h23) to match date-fns 'h:mm a'.
+- 2026-10-21 [P7-T06] Reading block geometry in one evaluateAll (getBoundingClientRect per column and block) works inside an inner scroll container; offsets relative to the column hold at any scroll position.
+- 2026-10-21 [P7-T06] Seed facts (Singapore): week Sep 6-12 has Sep 8 = 4 blocks, first at 00:00 (cancelled), so the week opens at scrollTop 0. Day Sep 10 opens at scrollTop 168 (03:30, for a 04:00 cancelled Strategy Session). Sep 15: Strategy 00:00-01:00 and Onboarding 00:00-00:45 overlap, then Discovery 01:00-01:30 touches.
+- 2026-10-21 [P7-T06] `git rm` stages the deletion; use plain rm (or `git restore --staged`) when the index must stay untouched.
+- 2026-10-22 [P7-T07] Base UI Select.Icon keeps its default '▼' child inside the shadcn chevron, so toHaveText on the combobox reads 'Confirmed▼'; assert on the trigger's [data-slot=select-value].
+- 2026-10-22 [P7-T07] A focused button that becomes natively disabled drops focus to <body>. Base UI Button's focusableWhenDisabled keeps it focusable (aria-disabled + data-disabled); style with data-disabled:, not disabled:.
+- 2026-10-22 [P7-T07] Base UI Dialog sets restoreFocus: 'popup': when the focused element inside the popup unmounts, focus moves to the popup itself.
+- 2026-10-22 [P7-T07] While a modal Base UI dialog is open the rest of the page is aria-hidden, so getByRole('region', { name: 'Day view' }) finds nothing; press Escape first.
+- 2026-10-22 [P7-T07] A sonner toast action clicked while a modal Base UI dialog is open runs without closing the dialog; the toaster is not inert or aria-hidden.
+- 2026-10-22 [P7-T07] The persisted store (localStorage 'nimbus-crm-db', key state) holds seededAt, contacts and activities; e2e helpers readSeededAt/readPersistedStatus/readContactActivitySummaries use it as an oracle. Object.values order = store order, so a stable sort by startAt reproduces the API's tie order.
+- 2026-10-22 [P7-T07] A full `npm run e2e` once failed on page.goto with net::ERR_NO_BUFFER_SPACE (Windows socket flake); a plain rerun passed.
+- 2026-10-22 [P7-T07] Seed fact (Singapore, Sep 2026 month grid): with live-first ordering, Sep 8 shows its 2 live chips and '+2 more' (the two cancelled behind it).
+- 2026-10-22 [P7-T08] Playwright page.clock installed before load breaks @date-fns/tz: TZDate subclasses the global Date at load, and the fake Date returns a native Date, so TZDate silently reads local fields. Install page.clock after gotoApp and derive demo time from wall-clock reads around loading.
+- 2026-10-22 [P7-T08] ContactPicker search: API q matches one field at a time, so 'First Last' finds nothing, and Base UI Combobox re-filters by label so email/company hits show 'No contacts found'. In e2e, search by last name and click the option by exact name.
+- 2026-10-22 [P7-T08] Base UI RadioGroupItem inside a FieldLabel: id lands on the hidden input; the visible span[role=radio] is named via aria-labelledby, so getByRole('radio', { name: '12:00 AM' }) works. Extra data-* props land on the span.
+- 2026-10-22 [P7-T08] A FieldSet with a FieldLegend is role group named by the legend: getByRole('group', { name: 'Time', exact: true }).
+- 2026-10-22 [P7-T08] Seed facts (Singapore, demo clock 2026-09-08T09:00Z): Discovery Call offers 16 slots on LA Sep 8 (16:00Z-23:30Z) and 16 on LA Sep 9; first upcoming confirmed is 2026-09-08T17:00Z, so a 16:00Z Discovery booking heads Upcoming. SGT Sep 9 and 10 hold 2 appointments each; each contact has at most 1 seeded appointment; SGT Sep 8 has no open Discovery slots.
+- 2026-10-22 [P7-T08] e2e mutants: apply a string replacement, run `npx playwright test <spec>`, restore in finally. Each run rebuilds .next from mutated source, so rerun check and e2e after restoring.
+- 2026-10-22 [P7-T08] Browser pane screenshots can lag the DOM (showed a dialog already closed); confirm state with get_page_text or javascript_tool.
+- 2026-10-22 [P7-T09] Base UI Button with nativeButton={false} always adds role="button", even on `<a href>`; for navigation use `<Link className={buttonVariants(...)}>`.
+- 2026-10-22 [P7-T09] Base UI Switch gets aria-labelledby from an associated native `<label>`, overriding aria-label; put sr-only text inside the label for a longer name.
+- 2026-10-22 [P7-T09] `<fieldset>` defaults to min-width: min-content, so a FieldSet in a narrow card overflows; add min-w-0.
+- 2026-10-22 [P7-T09] Chromium input[type=time] at 16px needs ~140px for '09:00 AM' plus icon; hiding ::-webkit-calendar-picker-indicator saves ~24px.
+- 2026-10-22 [P7-T09] zod 4.5: z.number({ error }) covers NaN/Infinity/undefined, .int(msg) fractions; z.literal([0..6]) works; object superRefine still runs after a nested regex failure, but not after invalid_type.
+- 2026-10-22 [P7-T09] RHF with a resolver re-validates only the changed field on onChange and useFieldArray skips nested array errors; cross-item rules need register `deps` plus trigger() after append/remove. `deps` fire only after first submit in onSubmit mode.
+- 2026-10-22 [P7-T09] Seed facts (Singapore, clock 2026-09-08T09:00Z): Discovery Call offers 16 times on SGT 2026-09-09 and 16 on 2026-09-10; ending Tuesday at 12:00 PDT leaves the first 6 (12:00 AM-2:30 AM SGT).
+- 2026-10-22 [P7-T09] A 'X is not defined' console error in the hidden pane can be a transient hot reload between two edits; reopen before chasing it.
+- 2026-10-22 [P7-T10] First Chromium launch from a fresh cache with 8 workers pushed calendars-booking flows (spec :152, ~30 s normally) past the 30 s default timeout.
+- 2026-10-22 [P7-T10] Git Bash passes PLAYWRIGHT_BROWSERS_PATH=C:/... to Node fine; set it on each command since Bash calls don't keep env.
+- 2026-10-22 [P7-T10] `playwright install chromium` on Windows downloads chromium-*, chromium_headless_shell-*, ffmpeg-* and winldd-*.
+- 2026-10-23 [P7-T11] V8 Date.parse is lenient: '2026-02-30T..Z' rolls to Mar 2, 'T24:00:00Z' is next midnight, zone-less date-time is local, date-only is UTC midnight. Never validate an instant with Date.parse alone.
+- 2026-10-23 [P7-T11] Intl.DateTimeFormat accepts offset zones ('+05:30') and case-insensitive aliases ('us/pacific'); throws RangeError for '' and 'Mars/Olympus'. isTimeZone accepts and stores them as given.
+- 2026-10-23 [P7-T11] calendars.ts is the first src/lib/api module importing src/lib/validation; the seam lint rule allows it since validation imports neither @/lib/mock nor faker.
+- 2026-10-23 [P7-T11] zod 4: schema.extend({...}).partial() works; shape.availability.superRefine adds array rules keeping per-item checks. Parsed output drops unknown keys, so an API saving the raw patch uses safeParse only to validate.
+- 2026-10-23 [P7-T12] date-fns parse(value,'yyyy-MM-dd') rejects year '0000' but accepts '0099' as year 99; only the 0099 row was a real red for the old isDayInput.
+- 2026-10-23 [P7-T12] new TZDate(99,0,1,'UTC'), new Date(99,0,1) and Date.UTC(99,0,1) all read 1999; every Date round-trip check refuses years 0000-0099, so the shared rule documents that range as unsupported.
+- 2026-10-23 [P7-T12] `export type { X } from ...` does not bring X into local scope; a module that uses and re-exports a type also needs its own `import { type X }`.
+- 2026-10-23 [P7-T13] useResource: while isLoading it returns the previous query's data; if the new query fails it drops it (data undefined, error set). During Retry error stays and isRefreshing is true, so a `data === undefined && error` view stays up without a skeleton flash.
+- 2026-10-23 [P7-T13] Wrapping window.Object.values via page.evaluate works on the production build: bundled API code looks it up at call time, so a table read rejects inside simulate() and useResource reports 'Something went wrong.'.
+- 2026-10-23 [P7-T13] Next's route announcer (role=alert) lives in a shadow root: getByRole pierces it (filter alerts by text), document.querySelector does not (use data-slot selectors in MutationObservers).
+- 2026-10-23 [P7-T13] el.querySelector(':scope') returns null (descendants only); measure the element itself.
+- 2026-10-23 [P7-T13] shadcn base-nova Alert keeps only pr-18 (4.5rem) clear for AlertAction; an outline sm Button with icon is wider, overlapping the description ~5px at 375px.
+- 2026-10-23 [P7-T13] October 2026 month grid (Sunday-first) runs 2026-09-27 to 2026-10-31, 35 cells.
+- 2026-10-23 [P7-T13] A full npm run e2e on a loaded machine (16 workers, another dev server running) can time out the whole first batch at 30s; a plain rerun passed all 53.
+- 2026-10-23 [P7-T14] Behind an open Base UI modal the page is aria-hidden; getByRole skips it, so toHaveCount(0) there passes vacuously. Use includeHidden: true or CSS locators.
+- 2026-10-23 [P7-T14] Base UI 1.8.0 reads finalFocus at popup unmount; a function return is honoured even if focus is outside the dialog (e.g. toast Undo). Default: trigger, prior focus, recent list, body.
+- 2026-10-23 [P7-T14] Base UI default already refocuses a day-view block that stays mounted through cancel+Undo; only month-view cases (A5, A6) depend on finalFocus.
+- 2026-10-23 [P7-T14] Hidden browser pane: after resize_window, reload before measuring; some nodes keep stale layout.
+- 2026-10-23 [P7-T14] Seed (Asia/Singapore, Sept): Tue 15 Sept is a future crowded day ('+3 more'). At 375px a chip is 39.9px wide; week rows 114px (was ~64px).
+- 2026-10-23 [P7-T15] Chromium with Playwright timezoneId 'Asia/Kolkata' labels the viewer zone 'Asia/Calcutta · GMT+5:30' (same alias as Node ICU); e2e should assert only 'GMT+5:30'.
+- 2026-10-23 [P7-T15] Seed's first Kolkata midnight-crossing appointment is 10–11 Aug 2026 (23:30–00:30 IST); 7–8 Sept (23:45–00:30) is the only crossing in the week of 6 Sept.
+- 2026-10-23 [P7-T15] Full e2e under load (16 workers + another dev server): cross-route link clicks can miss the 5s toHaveURL (server took 4–6s); plain rerun passed 57/57.
+- 2026-10-23 [P7-T16] CDP Accessibility.getPartialAXTree on a Base UI Select hidden input: ignored, ignoredReasons [ariaHiddenElement]. Without aria-hidden: role textbox, empty name, value = raw value. read_page's "textbox named after the value" is its own heuristic.
+- 2026-10-23 [P7-T16] Base UI Select hidden input id is `${rootId}-hidden-input` (root id base-ui-_r_N_ even if trigger has its own id); it is the trigger's next DOM sibling. Combobox and OTPField use the same suffix; TagPicker's is also ignored.
+- 2026-10-23 [P7-T16] Unnamed Select triggers (empty CDP name): contacts status filter, opportunities pipeline, bulk Owner Select. FieldLabel htmlFor names sheet triggers.
+- 2026-10-23 [P7-T16] page.context().newCDPSession(page) + DOM.getDocument({depth:0}) + DOM.querySelectorAll works without the full tree; AXNode.role.value is `any`, narrow with typeof.
+- 2026-10-23 [P7-T16] The P7-T15 cross-route toHaveURL flake recurred (calendars-details.spec.ts:413); rerun passed 66/66.
+- 2026-10-23 [P7-T16] expect.poll cannot catch late-mounting Selects: trigger and hidden input mount in the same commit, so counts always agree. Wait for every Select before polling.
+- 2026-10-23 [P7-T16] ContactFormSheet's custom fields load via their own useResource; the sheet can open with only Status/Source/Owner for ~165–275ms.
+- 2026-10-23 [P7-T17] Base UI Combobox 1.8.0 `filter={null}` becomes `() => true`; the default filter matches only itemToStringLabel, dropping email/phone/company/job-title hits.
+- 2026-10-23 [P7-T17] Base UI writes the selected label back into the input (fires onInputValueChange) on value change, popup close, or new `items` identity/label while queryChangedAfterOpen is false; inline `[current, ...rows]` can trigger it.
+- 2026-10-23 [P7-T17] useResource keeps the previous key's data, so ContactPicker's value stays null until contacts.get resolves (~110-330ms) and then overwrites typed text. In e2e wait for aria-selected=true before typing.
+- 2026-10-23 [P7-T17] The selected label comes from value via itemToStringLabel, not `items`; omitting the selected contact from results does not blank the input.
+- 2026-10-23 [P7-T17] Playwright fill() sends one insertText input event; Base UI treats it as typing (opens popup, sets queryChangedAfterOpen).
+- 2026-10-23 [P7-T17] On Windows, TaskStop on a background `npx next start` can leave node holding port 3100; find it with Get-NetTCPConnection -LocalPort 3100 and stop it.
+- 2026-10-23 [P7-T17] A temporary `true || ...` edit fails next build's typecheck so the e2e webServer won't start; prove tests red with type-clean edits.
+- 2026-10-23 [P7-T18] Base UI 1.8.0 useAnimationsFinished has no timeout; injecting `animation-duration:60s !important` on a closed dialog popup + overlay keeps it mounted in e2e, and open=true reopens the same element.
+- 2026-10-23 [P7-T18] The repo's eslint react-hooks plugin accepts a guarded setState during render (`if (prev.open !== open) setState(...)`).
+- 2026-10-23 [P7-T18] In the booking dialog every Field has role=group; scope time-card queries to `fieldset`/timeGroup() and match `label[data-slot=field-label]` (FieldTitle shares the slot).
+- 2026-10-23 [P7-T18] In the hidden pane a Base UI Select popup sits at 0,0 and ref clicks are refused; DOM `.click()` on [role=option] via javascript_tool works.
+- 2026-10-23 [P7-T18] useId looks like `_r_1h_` on the production build and `_r_q_` in dev.
+- 2026-10-23 [P7-T18] After a failed booking, setError and slots.refetch() commit together: once the root error shows, the Time group is already aria-busy.
+- 2026-10-23 [P7-T18] failReads('appointments') also makes book() throw (calendars.ts:228 reads appointments); plain Error, so the dialog shows 'Could not book the appointment.'.
+- 2026-10-23 [P7-T19] A raw `buttonVariants()` string is not what `<Button>` renders: Button wraps it in cn() (tailwind-merge). Without it border-transparent beats outline's border-border (no light-mode border), rounded-lg beats sm's 8px radius, and size-4 beats size-3.5 icons. Dark mode hides it, so look tests pin light mode. Supersedes the raw spelling noted for P7-T09.
+- 2026-10-23 [P7-T19] Base UI useButton sets role="button" on any non-native element, including `<a href>`; `nativeButton={false}` on a link always makes it a button to assistive tech.
+- 2026-10-23 [P7-T19] Computed-style e2e checks: page.mouse.move(0, 0) before reading, or a leftover hover state leaks into the reading.
+- 2026-10-23 [P7-T19] next build (Next 16) runs TypeScript but not ESLint, and tsconfig has no noUnusedLocals: a red-proof edit can leave unused imports, but must stay type-clean.
+- 2026-10-23 [P7-T20] Base UI AlertDialog opened from a Base UI Select's onValueChange: the dialog's first-tabbable focus (Cancel) wins over the Select's focus return; no race, no initialFocus ref needed.
+- 2026-10-23 [P7-T20] Next 16 Link onNavigate also fires for keyboard Enter (Enter dispatches a click); preventDefault in it cancels navigation (next/dist/client/app-dir/link.js ~l.51-88). Not called for modifier clicks.
+- 2026-10-23 [P7-T20] Base UI Switch (nativeButton off): `ref` lands on the role="switch" span (useRef<HTMLSpanElement>); `id` goes to the hidden input, so focus via the ref.
+- 2026-10-23 [P7-T20] While a Base UI alert dialog is open, page-level queries need { includeHidden: true }. A 'no dialog' check only means something after a URL change only the unguarded path makes.
+- 2026-10-23 [P7-T20] calendars-availability.spec.ts:69 (default-5s toHaveURL after clicking Availability) failed 2 of 3 full e2e runs under load: the most frequent P7-T27 flake site.
+- 2026-10-23 [P7-T21] calendars-booking flows take ~6-7s alone on 1 worker but 20-28s in a full 16-worker e2e run: length is machine load, not the flows. Alone: :153 7.1s, :259 4.2s, :317 6.4s, :387 3.5s.
+- 2026-10-23 [P7-T21] Playwright JSON reporter records test.slow() as annotation type 'slow' and the tripled test.timeout (180000 on a 60s base). `npx playwright test --list --reporter=json` gives config.projects[0].timeout without starting the webServer.
+- 2026-10-23 [P7-T21] `node script.cjs arg`: the first argument is process.argv[2]; argv[1] is the script path.
+- 2026-10-23 [P7-T22] zod 4.5.4: a per-parse error map (`safeParse(data, { error: () => '...' })`) ranks below schema/check messages, so it replaces only zod's built-in wording: a safe catch-all for wrong-type JSON input.
+- 2026-10-23 [P7-T22] Vitest toEqual treats a key holding undefined as missing. To prove no key was written as undefined, filter Object.entries for undefined or use not.toHaveProperty.
+- 2026-10-23 [P7-T22] Python is not installed here; scratch scripts must be node .mjs. Large mixed-quote bash heredocs can fail to parse; write the payload with Write and splice it with node.
+- 2026-10-23 [P7-T23] Playwright `locator.filter({ has })` matches the inner locator inside each candidate, so root it at the page (`page.getByLabel(...)`), not the dialog.
+- 2026-10-23 [P7-T23] Chromium's `<input type=date>` accepts `fill('0099-01-01')` without a 'Malformed value' error; no `locator.evaluate` fallback needed.
+- 2026-10-23 [P7-T23] A `Date.UTC` mutant still passes the Asia/Singapore round trip (UTC midnight is 08:00 same day); exact-ISO rows and the LA round trip are what catch it.
+- 2026-10-23 [P7-T23] `npx playwright test` (build + start on :3100) runs fine alongside the owner's `next dev` on :3000 in the same folder.
+- 2026-10-23 [P7-T24] Before the fix, a failed calendars.list() rendered the 'Calendars' fieldset with an empty <ul> while the month view drew normally beside it.
+- 2026-10-23 [P7-T24] A mutant showing the skeleton while `isRefreshing` fails at the sawBusy poll, not sawSkeleton: the alert unmounts during Retry, so its button never reaches aria-disabled.
+- 2026-10-23 [P7-T24] With the Turbopack build cached, `npx playwright test <spec> -g ...` rebuilds and starts in ~12s, so running mutants through the real webServer is cheap.
+- 2026-10-23 [P7-T25] `contacts.get` reads `contacts[id]` by key, so `failReads` (wraps Object.values) cannot fail it; a per-record accessor armed from the Object.values wrapper can.
+- 2026-10-23 [P7-T25] The contact page itself reads the whole contacts table (ContactInfoPanel's `tags.list`), so a fault keyed on the next table read arms there first.
+- 2026-10-23 [P7-T25] useResource turns a plain Error in simulate() into ApiError 500 'Something went wrong.', which drives the error branch, not 'Contact not found'.
+- 2026-10-23 [P7-T26] With setTuning({ latencyMs: 0, jitter: 0 }), simulate() via settle() does not advance the fake clock, so after setDemoNow(t) and no writes nowIso() returns exactly t; a stray nowIso() in a refused path shows as t + 1ms.
+- 2026-10-23 [P7-T26] Base UI disabled SelectItems read correctly via getByRole('option', { disabled: false }) and toBeDisabled(); option text has no stray glyph, so toHaveText([...]) works.
+- 2026-10-23 [P7-T26] Python is not installed in this machine's Git Bash; use heredocs, sed or the Edit tool.
+- 2026-10-23 [P7-T27] The stress run (six specs x3, 16 workers) loads the first batch heavily: calendars-load-errors tests took 11-13s in batch one, 4-6s later. All 96 passed; no NAVIGATION site needed over 15s.
+- 2026-10-23 [P7-T27] Only six e2e specs click links or the sidebar (calendars-availability, -availability-editor, -booking, -details, -load-errors, link-buttons): the whole set of cross-route navigation sites today.
+- 2026-10-23 [P7-T27] e2e/fixtures.ts already had two lines over 80 columns (the BOOT_FAILED throw message and one more); left alone.
+- 2026-10-23 [P7-T28] Base UI chips Combobox: its hidden input is a later sibling of [data-slot="combobox-chips"], id ending -hidden-input (multiple never gets a name). Passing id to ComboboxChipsInput sets only the text input's id.
+- 2026-10-23 [P7-T28] With aria-label removed, a Base UI Select trigger's Chromium name is "" (no fallback to the selected value), so the empty-name rule catches it.
+- 2026-10-23 [P7-T28] The bulk-actions PopoverContent is role=dialog, so [role="dialog"] also matches an open popover; scope popover tests to [data-slot="popover-content"].
+- 2026-10-23 [P7-T28] The Contacts table's Owner header is plain text (enableSorting: false), so getByRole('button', { name: 'Owner', exact: true }) on /contacts finds only the bulk bar's button.
+- 2026-10-23 [P7-T29] Supersedes the P7-T17 aria-selected advice: a ContactPicker pick is now the combobox value at once, so e2e need not wait for aria-selected (or press ArrowDown) before typing after a pick.
+- 2026-10-23 [P7-T29] The mock's simulate() returns store objects by reference: contacts.list rows and contacts.get(id) are the same object until written. E2e cannot catch reference-identity regressions; guard them with unit tests.
+- 2026-10-23 [P7-T29] Base UI 1.8.0 AriaCombobox re-syncs the input on `items` change only while queryChangedAfterOpen is false; typing with the popup open sets it, so typed text survives new result pages.
+- 2026-10-23 [P7-T29] Any expect wait between a pick and a fill (e.g. toHaveValue) can push past contacts.get's 165-275ms window and let a race test pass vacuously; freeze timers instead.
+- 2026-10-23 [P7-T29] Mutant e2e loops without rebuilds: run npx playwright test once, then `npm run start -- -p 3100 -H 127.0.0.1` in background with E2E_REUSE_SERVER=1; kill the leftover node.exe on 3100 by PID afterwards.
+- 2026-10-23 [P7-T29] Back-to-back --repeat-each runs on Windows can fail page.goto with net::ERR_NO_BUFFER_SPACE (sockets exhausted): the machine, not the test.
+- 2026-10-23 [P7-T29] page.clock.pauseAt(t) throws 'Cannot fast-forward to the past' if t is behind the fake now; after install() the clock keeps wall pace, so pause at page Date.now() + a margin.
+- 2026-10-23 [P7-T29] page.clock install-after-load + pauseAt + act + resume makes mock-latency races deterministic: simulate()'s sleep and useDebouncedValue freeze; React's MessageChannel scheduler and Playwright actionability keep working.
+- 2026-10-23 [P7-T30] E2e rule: the first wait after a client-side navigation to another route passes the shared, frozen `NAVIGATION` from e2e/fixtures.ts (15s); new specs import it rather than writing a local timeout.
+- 2026-10-23 [P7-T30] To scope a page-side watcher to an unhooked part of the page, tag it from the test (el.parentElement.setAttribute('data-e2e-...')); React leaves unmanaged attributes alone. Guard with count 1 plus what must/must not be inside.
+- 2026-10-23 [P7-T30] A MutationObserver catching a short attribute spell should read records with attributeOldValue: true (oldValue 'true' marks a spell's end), not the live attribute, which may already be back.
+- 2026-10-23 [P7-T30] `Object.freeze({ timeout: 15_000 })` keeps literal types (`Readonly<{ timeout: 15000 }>`); annotate the variable to get `Readonly<{ timeout: number }>`.
+- 2026-10-23 [P7-T31] esquery compares attribute-selector literals as strings, so `[value.expression.value=false]` matches boolean `false` (and the string "false"); scripts/eslint-config.test.mjs proves it fires.
+- 2026-10-23 [P7-T31] Vitest can render ui components with react-dom/server `renderToStaticMarkup` in the node env (no jsdom); works for Base UI Button and next/link (real `<a href>`, no router). Use `createElement` in `.test.ts`.
+- 2026-10-23 [P7-T31] An ESLint-API test of eslint.config.mjs must assert no fatal message and a ruleId on every message, or a parse error / 'File ignored' warning passes a 'no error' case.
+- 2026-10-23 [P7-T31] src/components/ui/ is prettier-ignored; format a test file there with `npx prettier --ignore-path ./nonexistent-ignore --write <file>`.
+- 2026-10-23 [P7-T31] Flat config replaces a rule's options per file: a later block setting `no-restricted-syntax` on overlapping src files silently drops LINK_BUTTON_RULE; merge selectors into one array.
+- 2026-10-23 [P7-T32] Computed padding, sm size, light mode: px-2.5 = 10px; sm's has-data-[icon=inline-start|inline-end] narrows that side to 6px; icon-sm on an <a> is 0px both sides. Without data-icon sm keeps 10/10.
+- 2026-10-23 [P7-T32] Playwright `xpath=ancestor::*[...][1]` in a chained locator is relative to the matched element: finds the nearest containing box.
+- 2026-10-23 [P7-T32] ESLint 9 reports an unused/misplaced disable directive as a warning with ruleId null; eslint-config.test.mjs restricted() fails on it, so a misplaced directive cannot fake a clean case.
+- 2026-10-23 [P7-T32] expectTypeOf assertions are inert under Vitest: a mutant dropping a VARIANTS entry passes vitest and fails only `npm run typecheck` (TS2349).
+- 2026-10-23 [P7-T32] Git Bash on Windows: `python` is the WindowsApps stub and a heredoc-fed `python -` hung. Use Edit or node for scripted edits.
+- 2026-10-23 [P7-T32] A scratch node script outside the repo cannot `import "eslint"`; load it via createRequire(<repo>/package.json).
+- 2026-10-23 [P7-T33] A production build logs a 404 for /settings/team?_rsc when the user menu opens (Next prefetches Team settings; page arrives in P9). Any e2e opening the user menu trips the console watcher.
+- 2026-10-23 [P7-T33] Chromium shows a beforeunload prompt only after a real user gesture: Playwright click() counts, fill() alone does not. Click a field before typing.
+- 2026-10-23 [P7-T33] For a reload whose prompt is dismissed, use page.evaluate(() => setTimeout(() => location.reload())); page.reload() waits forever. page.close({runBeforeUnload:true}) dismissed leaves isClosed() false.
+- 2026-10-23 [P7-T33] Next 16.3.4: viewport prefetch is a /_tree request (next-router-prefetch: 1); each push/link click issues its own ?_rsc= request without it. page.route holds keep the URL unchanged.
+- 2026-10-23 [P7-T33] Base UI AlertDialog without finalFocus, opened from a Link's onNavigate, returns focus to the clicked link.
+- 2026-10-23 [P7-T33] Another local project (ai_project_management) runs next start on 0.0.0.0:3100; E2E_REUSE_SERVER=1 could silently test the wrong app.
+- 2026-10-23 [P7-T33] Bare 'Failed to type check' in Playwright [WebServer] output came from a type error in an e2e spec; run npx tsc --noEmit after spec edits.
+- 2026-10-23 [P7-T33] A provider DOM listener driven by form state reported up through effects lags input by several commits; check it in Playwright with expect.poll, not a one-shot evaluate (also for removal).
+- 2026-10-23 [P7-T34] zod's default z.object strips unknown keys at every nested z.object (even inside superRefine'd schemas), so saving the parsed output is a deep allow-list with fresh arrays.
+- 2026-10-23 [P7-T34] For toMatchObject({ field: undefined }) to pass, pass undefined explicitly as ApiError's 4th arg so the key exists.
+- 2026-10-23 [P7-T34] A zod per-parse error map (safeParse(x, { error })) also replaces default messages of checks without their own text, e.g. z.string().min(1).
+- 2026-10-23 [P7-T34] Prove new tests red on HEAD without stash/reset: copy files to scratchpad, write git show HEAD:<path> over them, run vitest, copy back, confirm with cmp.
+- 2026-10-23 [P7-T34] Mutants that drop a schema key break Record<SettingKey,…>/Pick<Calendar,SettingKey>; run them under vitest only.
+- 2026-10-23 [P7-T35] This machine's zone is Asia/Singapore, so an e2e relying on timezoneId 'Asia/Singapore' still passes with it removed; prove zone dependence by setting 'UTC'.
+- 2026-10-23 [P7-T35] setUTCFullYear(y, m, d) takes years 0-99 literally; Date.UTC, new Date(y,m,d) and new TZDate(...) map them to 1900-1999. Use setUTCFullYear on new Date(0) to probe real dates in 0000-9999.
+- 2026-10-23 [P7-T35] Local midnight 0100-01-01 in Asia/Singapore is 0099-12-31T17:04:35Z (LMT +6:55:25), so instant validation must not reuse isCalendarDay's 0100 minimum.
+- 2026-10-23 [P7-T35] V8 Date.parse reads 1-3 fraction digits and THH:mm without seconds; years outside 0000-9999 UTC give '+010000-…'/'-000001-…' toISOString spellings a 4-digit pattern cannot read back.
+- 2026-10-24 [P7-T36] Base UI Select given `disabled` satisfies Playwright toBeDisabled() on getByRole('combobox'); no data-disabled fallback needed.
+- 2026-10-24 [P7-T36] A skeleton-on-isRefreshing mutant that replaces the alert fails watchRetry at sawBusy, not sawSkeleton; to prove a wider skeleton scope matters, keep the alert and add a skeleton elsewhere.
+- 2026-10-24 [P7-T36] Python is not installed here (the alias opens the Store); use Edit or sed. A stray `cat > file` with no input in Bash blocks until timeout.
+- 2026-10-24 [P7-T37] Vitest `it.each([..., [], ...])` spreads each array case into arguments, so an empty-array case arrives as `undefined`; wrap each case in a tuple.
+- 2026-10-24 [P7-T37] A bulk owner assignment (api.contacts.assignOwner) writes contacts by key, then invalidates "contacts": under failReads('contacts') the write succeeds and the list refetch fails, a reliable driver for a failed refetch with rows on screen.
+- 2026-10-24 [P7-T38] A React hook test in Vitest needs a DOM environment (happy-dom) plus `react-dom/client` createRoot and `act` from 'react'; stub `IS_REACT_ACT_ENVIRONMENT` with `vi.stubGlobal` or React 19 warns the environment does not support act(...).
+- 2026-10-24 [P7-T38] Resolving/rejecting a deferred inside `await act(async () => ...)` flushes useResource's `.then().catch()` state update; no fake timers or waitFor needed.
+- 2026-10-24 [P7-T38] `ReturnType<typeof useResource<Payload>>` (instantiation expression) types the hook result in tests without exporting a type.
+- 2026-10-24 [P7-T39] A multi-assertion e2e run against the old file stops at the first failing assertion; to prove a later one can fail, remove only the fix it covers, re-run with -g, then restore and confirm with cmp.
+- 2026-10-24 [P7-T39] TagPicker has an optional "aria-label" prop (toolbar filter, bulk Tags popover); where a visible FieldLabel exists, name it via id + htmlFor instead (deal sheet, Add contact sheet).
+- 2026-10-24 [P7-T40] A held-value hook is unit-testable under happy-dom with a Probe component (createRoot + act, IS_REACT_ACT_ENVIRONMENT stubbed); a guarded setState during render in a custom hook passes react-hooks 7.1.1 lint.
+- 2026-10-24 [P7-T40] In a hook test's Probe, assigning a module-level variable during render fails react-hooks/globals; pass an onRender callback prop and assign inside it (as use-resource.hook.test.ts does).
+- 2026-10-24 [P7-T40] Python is not on PATH here (the alias opens the Microsoft Store); use `node -` heredoc scripts for scripted multi-line edits.
+- 2026-10-24 [P7-T41] ESLint 9's unused-disable-directive report reaches lintText results with ruleId null; restricted() in scripts/eslint-config.test.mjs relies on it so an empty result proves the disable comment silenced the rule.
+- 2026-10-24 [P7-T41] scripts/eslint-config.test.mjs matches the nativeButton lint message clause by clause; rewording eslint.config.mjs:44 must update the test too (intended coupling).
+- 2026-10-24 [P7-T42] Without the page, a user-menu click logs three 404s: two `?_rsc=` route-data prefetches and the navigation's document 404; Chromium appends `:0` to the URL in the console message.
+- 2026-10-24 [P7-T43] Base UI 1.8.0 (shadcn base-nova): an AlertDialog opened from a DropdownMenuItem link's onNavigate, with no finalFocus, already returns focus to the menu trigger after Escape. An explicit finalFocus pins it; prove it with a mutant finalFocus={returnFocus ? false : undefined} (a global finalFocus={false} fails earlier, at the sidebar-link focus checks).
+- 2026-10-24 [P7-T43] Vitest 4 restoreMocks restores vi.spyOn spies only: a vi.fn(() => null) module-mock stub keeps its implementation between tests but must be mockClear()ed. Re-setting a component stub with mockImplementation(() => null) is a TS error (null is not an Element).
+- 2026-10-24 [P7-T43] For red runs against HEAD's src, move any new test file that uses the new API out of src first: next build (the e2e webServer) typechecks src/**/*.test.ts, and the webServer only reports 'not able to start' with exit code 1.
+- 2026-10-24 [P7-T43] On a phone viewport the sidebar is a Base UI Sheet: getByRole('dialog', { name: 'Sidebar' }) with data-slot='sidebar' on SheetContent, so sidebarLink helpers work once open. Under the provider's AlertDialog the Sheet needs includeHidden; getByLabel ignores aria-hidden, so slotDuration(page) still reads.
+- 2026-10-24 [P7-T43] Writing JS with backslash regex literals through a bash heredoc in the Bash tool lost the backslashes (\/ became /). Write such scripts with the Write tool instead.
+- 2026-10-24 [P7-T44] calendars.test.ts loads the API through seededWorld(), which resets modules: assert errors with toMatchObject({ name: 'ApiError' }), not toBeInstanceOf(ApiError).
+- 2026-10-24 [P7-T44] Year-0100 instants use LMT offsets (LA -7:52:58, Tokyo +9:18:59). Tokyo's 0100-01-01 day goes through freeSlots without throwing and returns no slots, so it is a 409.
+- 2026-10-24 [P7-T45] Mutant "store null" leaves a set-again test green (later values overwrite the nulls); only not.toHaveProperty / toStrictEqual assertions catch a stored null.
+- 2026-10-24 [P7-T45] Vitest can run a new test file against HEAD's src even if it imports a type HEAD lacks (esbuild strips type imports); typecheck/build would fail, so red runs use vitest only.
+- 2026-10-24 [P7-T46] Vitest toHaveProperty/toEqual treat an own `undefined` key as present/equal; to prove a key is gone assert `Object.keys(record).not.toContain(key)` (this exposed setStatus storing own undefined keys).
+- 2026-10-24 [P7-T46] zod 4: a ctx.addIssue({ message }) inside a transform keeps its message; the per-parse `{ error: () => 'Not a valid value.' }` map only fills issues without one.
+- 2026-10-24 [P7-T46] Bash-tool heredocs with long bodies containing apostrophes can fail (unexpected EOF); write the block to a scratch file with Write and append it with cat.
+- 2026-10-24 [P7-T47] Base UI Combobox inside a Popover: while the list is open, the popover's other controls drop out of the a11y tree (getByRole misses them); press Escape to close the list, the popover stays open.
+- 2026-10-24 [P7-T47] Clicking a TagPicker's chips input opens its list in Playwright; ComboboxEmpty shows when items is empty, so an error message can live there.
+- 2026-10-24 [P7-T47] TagBadge renders data-slot='badge'; scope e2e to td:nth-child(4) so status badges are excluded.
+- 2026-10-24 [P7-T48] npm audit says "fix via --force / outside range" for next only because it is exact-pinned; `npm install --save-exact next@X` fixes it without --force touching vite or the react-table pin.
+- 2026-10-24 [P7-T48] The e2e _rsc / next-router-prefetch interception in calendars-availability-editor.spec.ts still works on Next 16.4.3 (wire format unchanged from 16.3.4).
+- 2026-10-24 [P7-T48] On Windows the `crm` preview dev server holds node_modules/next open; preview_stop it before npm install of next, then preview_start crm.
+- 2026-10-24 [P7-T49] In Git Bash, an inline `node -e '...'` breaks on any apostrophe in the source text; write the edit script to a scratchpad file and run that instead.
+- 2026-10-24 [P7-T50] custom-fields-section.tsx marks only the Field (data-invalid); its inputs set no aria-invalid, so an e2e expecting aria-invalid there fails even when validation works.
+- 2026-10-24 [P7-T50] parseCents('Infinity') returns 0 but parseCents('1e308') returns Infinity (finite amount, overflowing cents); a currency check must test the cents value.
+- 2026-10-24 [P7-T50] Python is not on PATH in this Windows environment; use the Edit tool or node for scripted edits.
+- 2026-10-24 [P7-T51] A Retry inside a Base UI ComboboxEmpty keeps the list open if its onMouseDown calls preventDefault (the chips input keeps focus).
+- 2026-10-24 [P7-T51] Mutating a branch to literal `false ? (` breaks typecheck when the branch uses a narrowed value; use a runtime-false, TS-opaque condition like `x.length < 0`.
+- 2026-10-24 [P7-T51] Adding a button inside an element located by exact getByText changes its text; put the message in its own element.
+- 2026-10-24 [P7-T51] A Base UI SelectTrigger's textContent includes the arrow icon text ('Sales Pipeline▼'); compare against option names or use toContainText.
+- 2026-10-24 [P7-T51] To prove a skeleton gate deterministically, trigger a new useResource cache key (page or pipeline change) while the other read's error persists.
+- 2026-10-24 [P7-T52] Base UI Checkbox spreads props onto the root (role=checkbox), so aria-invalid reaches the right element; checkbox.tsx already has aria-invalid styles.
+- 2026-10-24 [P7-T53] For "exactly one X" checks, don't use retrying toHaveCount(1) when an unwanted second X can appear before the wanted one; wait for a state where both would exist, then count() once.
+- 2026-10-24 [P7-T53] The contacts table's tags LoadError renders only after the contacts page loads, while TagPicker's error shows as soon as the shared 'tags' resource fails, so the picker's alert can appear first.
+- 2026-10-24 [P7-T54] The multiselect custom field's FieldLabel htmlFor points at no element, so getByLabel misses it; locate via [data-slot=field] filtered by [data-slot=field-label] hasText '<label> *'.
+- 2026-10-24 [P7-T54] Playwright locator.check() works on Base UI Checkbox roots; getByRole('checkbox') in a field returns one element per option (hidden input not counted).
+- 2026-10-24 [P7-T54] Init scripts run in registration order; by the second navigation the fixture's one-shot localStorage clear is done, so a later addInitScript write survives into rehydrate.
+- 2026-10-24 [P7-T54] Playwright's webServer rebuilds on every `npx playwright test`, so each mutation run costs a full next build (~1-2 min on Windows).
+- 2026-10-24 [P7-T55] Base UI non-modal Popover dismisses on outside clicks with detail 0 (virtual); Playwright dispatchEvent('click') sends detail 0, so pass { detail: 1 } to click outside without closing it (useDismiss.js 'Press-less clicks').
+- 2026-10-24 [P7-T56] An e2e copy of a seeded appointment can be injected with addInitScript plus a one-shot sessionStorage flag, then gotoApp; the fixture's storage-clear has already run, so the injected data survives.
+- 2026-10-24 [P7-T57] A targeted `npx playwright test -g` run finished in ~11s; the full `npm run e2e` still runs `next build` via webServer.
+- 2026-10-24 [P7-T58] integrityReport() in src/lib/api/settings.ts is a handy oracle for orphan-reference tests: it lists lines like '<n> opportunities sit in a stage that does not exist'.
+- 2026-10-24 [P7-T59] A test store built with db.setState that sets only `opportunities` has no pipelines; any API path that checks pipelines (create(), update() pipeline moves) needs a pipelines fixture there, or every valid call gets a 422.
+- 2026-10-24 [P7-T60] Deal detail row in e2e: `page.locator('dl > div').filter({ has: page.locator('dt', { hasText: /^Label$/ }) }).locator('dd')`; Stage text includes probability ('Kickoff Call (60%)'), so use toContainText.
+- 2026-10-24 [P7-T60] Board 'Show lost' is a Base UI Switch found by `getByRole('switch', { name: 'Show lost' })`; it is component state and resets to off when the board remounts.
+- 2026-10-24 [P7-T60] Board columns are `<section aria-label="<stage> stage">`; scope with `getByRole('region', { name, exact: true })`. After switching pipelines, wait for a new region and 0 skeletons before asserting a card is absent.
+- 2026-10-24 [P7-T60] The deal status badge has no role/label; `page.locator('h1').locator('..').getByText(label, { exact: true })` finds it.
+- 2026-10-24 [P7-T60] The e2e box has no `python` (Windows Store alias exits 49); use the Edit tool or node for scripted edits.
+- 2026-10-25 [P7-T61] The first seeded deal (Object.values(opportunities)[0]) is status 'won'; a pipeline-move status test must not compare against w.deal.status.
+- 2026-10-25 [P7-T61] No seeded stage has isLost: true; lost-stage tests must mark a stage lost in the test store with db.setState.
+- 2026-10-25 [P7-T62] create()'s 'created' and won/lost entries share the same `at`; assert with toContainEqual plus toHaveLength, not order.
+- 2026-10-25 [P7-T62] In e2e, wait for the New deal sheet's Pipeline combobox to show 'Sales Pipeline' before filling: the open effect resets the form.
+- 2026-10-25 [P7-T62] Memory-doc acceptance items (DECISIONS.md) are not edited by fix rounds; the implementer must touch docs/memory explicitly or the task blocks.
+- 2026-10-25 [P7-T63] Before writing a regression test for a "dropped field" bug, check whether the API already accepts the field; here update()/create() did and the form never sent it, so only a form-level (e2e) test goes red without the fix.
+- 2026-10-25 [P7-T63] enterStage() is shared by create(), move() and update(); changing it changes what create() saves, so grep tests for drafts that create into an open stage with that field set.
+- 2026-10-25 [P7-T63] `vi.spyOn(db, "setState")` on the zustand store (import @/lib/mock/db after world()) proves "one write".
+- 2026-10-25 [P7-T63] To count activities in e2e, poll until the stored record settles, then read readDealActivities() once: the record and its activities persist in the same flush.

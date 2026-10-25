@@ -1,0 +1,232 @@
+import {
+  addDays,
+  addMonths,
+  addWeeks,
+  endOfMonth,
+  endOfWeek,
+  format,
+  startOfMonth,
+  startOfWeek,
+} from "date-fns";
+
+import { isCalendarDay, parseCalendarDay, type CalendarDay } from "@/lib/dates";
+import type { ISODate } from "@/types";
+
+export type { CalendarDay } from "@/lib/dates";
+
+/**
+ * Where the calendars page is looking: a view and a day, both kept in the URL
+ * (`/calendars?view=week&date=2026-09-08`). Everything derived from those two
+ * values lives here as pure functions, so the page, its toolbar and the
+ * month/week/day views agree on ranges and labels, and the tests can pin them
+ * without a browser.
+ *
+ * The URL date is a viewer-local calendar day. It is turned into a `Date` only
+ * here, at the render edge, as local midnight; instants leave this module as
+ * ISO strings. Weeks start on Sunday (date-fns' default).
+ *
+ * No imports from `@/lib/api`: this module is plain data in, data out. "Today"
+ * is the caller's to supply, from the demo clock.
+ */
+
+export const CALENDAR_VIEWS = ["month", "week", "day"] as const;
+export type CalendarView = (typeof CALENDAR_VIEWS)[number];
+
+export const VIEW_LABELS: Record<CalendarView, string> = {
+  month: "Month",
+  week: "Week",
+  day: "Day",
+};
+
+export interface CalendarPosition {
+  view: CalendarView;
+  date: CalendarDay;
+}
+
+/** The days a view shows, as [start, endExclusive). */
+export interface DayRange {
+  start: CalendarDay;
+  endExclusive: CalendarDay;
+}
+
+const EN_DASH = "–";
+
+/**
+ * `day` (a viewer-local day) as local midnight. Throws a `RangeError` unless
+ * it is a real "YYYY-MM-DD" day, by the shared rule in `@/lib/dates`.
+ */
+function mustParseDay(day: CalendarDay): Date {
+  const { year, month, day: date } = parseCalendarDay(day);
+  // `parseCalendarDay` refuses years 0000-0099, so `new Date` cannot read a
+  // two-digit year here as 1900-1999.
+  return new Date(year, month - 1, date);
+}
+
+export function isCalendarView(value: string | null): value is CalendarView {
+  return (CALENDAR_VIEWS as readonly (string | null)[]).includes(value);
+}
+
+/** The viewer-local calendar day an instant falls on. */
+export function localDay(at: Date): CalendarDay {
+  return format(at, "yyyy-MM-dd");
+}
+
+/**
+ * The view and day a query string asks for. Anything missing or invalid falls
+ * back (an unknown view to month, a bad date to `today`) and never throws: a
+ * hand-edited or stale URL still opens a working page. Matching is exact, so
+ * `?view=WEEK` is unknown. A duplicated parameter reads its first value, as
+ * `URLSearchParams.get` does.
+ */
+export function parseCalendarParams(
+  params: { get(name: string): string | null },
+  today: CalendarDay,
+): CalendarPosition {
+  const view = params.get("view");
+  const date = params.get("date");
+  return {
+    view: isCalendarView(view) ? view : "month",
+    date: date !== null && isCalendarDay(date) ? date : today,
+  };
+}
+
+/** The query string for a position, "?view=week&date=2026-09-08". */
+export function calendarSearch({ view, date }: CalendarPosition): string {
+  return `?${new URLSearchParams({ view, date }).toString()}`;
+}
+
+/**
+ * How moving from `current` to `next` should touch the browser history, given
+ * the query string the page has now (`window.location.search`, "" when bare):
+ *
+ * - `"none"`: the URL would not change (Today while already on today). No
+ *   entry, or Back would seem to do nothing.
+ * - `"replace"`: the URL changes but the screen would not: the same view
+ *   showing the same days. Either the position is unchanged and only the URL
+ *   is not canonical (a bare `/calendars`, or one that fell back,
+ *   `?view=year`), or the date moved within the range on screen (Today from
+ *   20 September in month view, or from Wednesday to Saturday of one week).
+ *   Rewritten in place, so the URL is right without a history entry that
+ *   Back would seem to skip.
+ * - `"push"`: a real move, to another view or other days; Back returns to it.
+ */
+export function historyMethod(
+  currentSearch: string,
+  current: CalendarPosition,
+  next: CalendarPosition,
+): "none" | "replace" | "push" {
+  if (calendarSearch(next) === currentSearch) return "none";
+  if (next.view === current.view) {
+    const shown = visibleDays(current.view, current.date);
+    const coming = visibleDays(next.view, next.date);
+    if (
+      shown.start === coming.start &&
+      shown.endExclusive === coming.endExclusive
+    ) {
+      return "replace";
+    }
+  }
+  return "push";
+}
+
+/**
+ * One step back or forward by the view's unit. Months clamp to the shorter
+ * month's last day (31 January + 1 month is 28 February), as date-fns does.
+ */
+export function shiftDate(
+  view: CalendarView,
+  date: CalendarDay,
+  step: -1 | 1,
+): CalendarDay {
+  const local = mustParseDay(date);
+  const next =
+    view === "month"
+      ? addMonths(local, step)
+      : view === "week"
+        ? addWeeks(local, step)
+        : addDays(local, step);
+  return localDay(next);
+}
+
+/**
+ * The days a view covers. Month is the full weeks-by-days grid around the
+ * month (September 2026 runs 30 August to 3 October), so the month view can
+ * fill its leading and trailing days from the same fetch.
+ */
+export function visibleDays(view: CalendarView, date: CalendarDay): DayRange {
+  const local = mustParseDay(date);
+  if (view === "day") {
+    return { start: date, endExclusive: localDay(addDays(local, 1)) };
+  }
+  if (view === "week") {
+    const start = startOfWeek(local);
+    return {
+      start: localDay(start),
+      endExclusive: localDay(addDays(start, 7)),
+    };
+  }
+  const last = endOfWeek(endOfMonth(local));
+  return {
+    start: localDay(startOfWeek(startOfMonth(local))),
+    // `last` is 23:59:59.999 on the grid's final Saturday; its next calendar
+    // day is the exclusive end.
+    endExclusive: localDay(addDays(mustParseDay(localDay(last)), 1)),
+  };
+}
+
+/**
+ * A day range as instants: local midnight to local midnight, which is not
+ * always a multiple of 24 hours (a DST change inside the range moves it).
+ */
+export function toInstantRange({ start, endExclusive }: DayRange): {
+  from: ISODate;
+  to: ISODate;
+} {
+  return {
+    from: mustParseDay(start).toISOString(),
+    to: mustParseDay(endExclusive).toISOString(),
+  };
+}
+
+/**
+ * The toolbar heading: "September 2026", "Sep 6 – 12, 2026",
+ * "Sep 27 – Oct 3, 2026", "Dec 27, 2026 – Jan 2, 2027" or
+ * "Tuesday, September 8, 2026".
+ */
+export function rangeLabel(view: CalendarView, date: CalendarDay): string {
+  const local = mustParseDay(date);
+  if (view === "month") return format(local, "MMMM yyyy");
+  if (view === "day") return format(local, "EEEE, MMMM d, yyyy");
+
+  const first = startOfWeek(local);
+  const last = addDays(first, 6);
+  if (first.getFullYear() !== last.getFullYear()) {
+    return `${format(first, "MMM d, yyyy")} ${EN_DASH} ${format(last, "MMM d, yyyy")}`;
+  }
+  if (first.getMonth() !== last.getMonth()) {
+    return `${format(first, "MMM d")} ${EN_DASH} ${format(last, "MMM d, yyyy")}`;
+  }
+  return `${format(first, "MMM d")} ${EN_DASH} ${format(last, "d, yyyy")}`;
+}
+
+/**
+ * A zone and its offset at `at`, "Asia/Singapore · GMT+8". Without
+ * `timeZone` it is the viewer's zone, the one times on the calendars page are
+ * shown in; with one (an IANA name such as a calendar's "America/Los_Angeles")
+ * it is that zone, whatever the viewer's.
+ */
+export function zoneLabel(at: Date, timeZone?: string): string {
+  const zone = timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const offset = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    timeZoneName: "shortOffset",
+  })
+    .formatToParts(at)
+    .find((part) => part.type === "timeZoneName")?.value;
+  return offset ? `${zone} · ${offset}` : zone;
+}
+
+/** Local midnight of a calendar day, for callers that need a `Date`. */
+export function dayStart(date: CalendarDay): Date {
+  return mustParseDay(date);
+}

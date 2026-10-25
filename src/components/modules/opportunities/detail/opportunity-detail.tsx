@@ -13,8 +13,9 @@ import {
 } from "lucide-react";
 
 import * as api from "@/lib/api";
-import { apiNow, useResource } from "@/lib/api";
+import { apiNow, invalidate, loadErrorOf, useResource } from "@/lib/api";
 import { EmptyState } from "@/components/common/empty-state";
+import { LoadError } from "@/components/common/load-error";
 import { Money } from "@/components/common/money";
 import { TagBadge } from "@/components/modules/contacts/tag-badge";
 import { Button } from "@/components/ui/button";
@@ -126,6 +127,7 @@ export function OpportunityDetail({ id }: { id: string }) {
     .map((tagId) => tagsById.get(tagId))
     .filter((tag) => Boolean(tag));
   const fields = customFields.data ?? [];
+  const tagsError = loadErrorOf(tags);
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
@@ -246,6 +248,18 @@ export function OpportunityDetail({ id }: { id: string }) {
               );
             })}
           </dl>
+          {/* Only where tags would have been drawn: the Tags row above
+              renders nothing while the tags are missing. */}
+          {tagsError && record.tagIds.length > 0 ? (
+            <div className="mt-3">
+              <LoadError
+                title="Could not load tags"
+                message={tagsError.message}
+                onRetry={() => invalidate("tags")}
+                retrying={tags.isRefreshing}
+              />
+            </div>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-2">

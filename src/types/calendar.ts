@@ -44,6 +44,19 @@ export const APPOINTMENT_STATUS_LABELS: Record<AppointmentStatus, string> = {
   cancelled: "Cancelled",
 };
 
+export type AppointmentLocationType =
+  "zoom" | "phone" | "in_person" | "google_meet";
+
+export const APPOINTMENT_LOCATION_LABELS: Record<
+  AppointmentLocationType,
+  string
+> = {
+  zoom: "Zoom",
+  phone: "Phone",
+  in_person: "In person",
+  google_meet: "Google Meet",
+};
+
 export interface Appointment extends Audited {
   id: ID;
   calendarId: ID;
@@ -56,7 +69,7 @@ export interface Appointment extends Audited {
   timezone: string;
   status: AppointmentStatus;
   location?: {
-    type: "zoom" | "phone" | "in_person" | "google_meet";
+    type: AppointmentLocationType;
     value?: string;
   };
   source: "booking_widget" | "manual" | "workflow";

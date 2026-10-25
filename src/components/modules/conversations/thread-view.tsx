@@ -18,7 +18,7 @@ import { apiNow, useResource } from "@/lib/api";
 import { ChannelIcon, CHANNEL_LABELS } from "@/components/common/channel-icon";
 import { EmptyState } from "@/components/common/empty-state";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import {
   MessageScrollerProvider,
   useMessageScroller,
@@ -75,13 +75,9 @@ export function ThreadView({ id }: { id: string }) {
           title="Conversation not found"
           description="It may have been deleted along with its contact."
           action={
-            <Button
-              variant="outline"
-              render={<Link href="/conversations" />}
-              nativeButton={false}
-            >
+            <LinkButton href="/conversations" variant="outline">
               Back to inbox
-            </Button>
+            </LinkButton>
           }
         />
       </div>
@@ -302,15 +298,14 @@ function ThreadHeader({
   return (
     <div className="flex h-14 shrink-0 items-center gap-3 border-b px-3 md:px-4">
       {isMobile ? (
-        <Button
+        <LinkButton
+          href="/conversations"
+          aria-label="Back to inbox"
           variant="ghost"
           size="icon-sm"
-          render={<Link href="/conversations" />}
-          nativeButton={false}
-          aria-label="Back to inbox"
         >
           <ArrowLeftIcon />
-        </Button>
+        </LinkButton>
       ) : null}
       <Avatar>
         <AvatarImage src={contact.avatarUrl} alt="" />

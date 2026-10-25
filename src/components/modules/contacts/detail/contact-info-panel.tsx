@@ -1,8 +1,9 @@
 "use client";
 
 import * as api from "@/lib/api";
-import { useResource } from "@/lib/api";
+import { invalidate, loadErrorOf, useResource } from "@/lib/api";
 import { LEAD_SOURCE_LABELS, type Contact } from "@/types";
+import { LoadError } from "@/components/common/load-error";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPhone, fullName } from "@/lib/format";
 import { TagBadge } from "../tag-badge";
@@ -16,8 +17,18 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+/**
+ * A contact's details, tags, do-not-disturb and custom fields. Mounted on the
+ * contact page and in the conversations contact panel.
+ *
+ * A tags read that fails with no tags to show (`loadErrorOf`) puts a
+ * "Could not load tags" LoadError with Retry in the Tags card, but only when
+ * the contact has tags: for a contact with none, "No tags" is still true. A
+ * failed re-read with badges on screen keeps them.
+ */
 export function ContactInfoPanel({ contact }: { contact: Contact }) {
   const tags = useResource("tags", () => api.tags.list());
+  const tagsError = loadErrorOf(tags);
   const users = useResource("users", () => api.users.list());
   const customFields = useResource("customFields", () =>
     api.customFields.list("contact"),
@@ -74,13 +85,26 @@ export function ContactInfoPanel({ contact }: { contact: Contact }) {
         <CardHeader>
           <CardTitle className="text-sm">Tags</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-1.5">
-          {contactTags.length > 0 ? (
-            contactTags.map((tag) => <TagBadge key={tag.id} tag={tag} />)
-          ) : (
-            <span className="text-sm text-muted-foreground">No tags</span>
-          )}
-        </CardContent>
+        {tagsError && contact.tagIds.length > 0 ? (
+          <CardContent>
+            <LoadError
+              title="Could not load tags"
+              message={tagsError.message}
+              // `invalidate`, not `tags.refetch`: one Retry re-reads every
+              // tags reader on the page.
+              onRetry={() => invalidate("tags")}
+              retrying={tags.isRefreshing}
+            />
+          </CardContent>
+        ) : (
+          <CardContent className="flex flex-wrap gap-1.5">
+            {contactTags.length > 0 ? (
+              contactTags.map((tag) => <TagBadge key={tag.id} tag={tag} />)
+            ) : (
+              <span className="text-sm text-muted-foreground">No tags</span>
+            )}
+          </CardContent>
+        )}
       </Card>
 
       {dndParts.length > 0 ? (

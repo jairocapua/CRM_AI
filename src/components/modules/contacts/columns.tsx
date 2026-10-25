@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
 import {
   EyeIcon,
   MoreHorizontalIcon,
@@ -21,7 +20,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatPhone, fullName, initials, toDate } from "@/lib/format";
+import { apiNow } from "@/lib/api";
+import { formatPhone, formatRelative, fullName, initials } from "@/lib/format";
 import { ContactStatusBadge } from "./contact-status-badge";
 import { TagBadge } from "./tag-badge";
 
@@ -163,7 +163,7 @@ export function buildContactColumns({
       cell: ({ row }) => {
         const at = row.original.lastActivityAt;
         return at ? (
-          formatDistanceToNow(toDate(at), { addSuffix: true })
+          formatRelative(at, apiNow())
         ) : (
           <span className="text-muted-foreground">—</span>
         );

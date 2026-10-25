@@ -11,8 +11,9 @@ import type {
   Task,
   User,
 } from "@/types";
+import { CHANNEL_LABELS } from "@/types";
 import { newId } from "../ids";
-import { chance, int, pick, refPlusDays } from "./rng";
+import { chance, int, pick, refPast, refPlusDays } from "./rng";
 
 const TASK_TITLES = [
   "Call to confirm budget",
@@ -53,8 +54,8 @@ export function seedTasks(
       contactId,
       opportunityId: opportunity?.id,
       priority: pick(["low", "medium", "medium", "high"]),
-      createdAt: refPlusDays(dueOffset - int(1, 10), int(8, 17)),
-      updatedAt: refPlusDays(Math.min(dueOffset, 0), int(8, 17)),
+      createdAt: refPast(Math.min(dueOffset, 0) - int(1, 10), int(8, 17)),
+      updatedAt: refPast(dueOffset, int(8, 17)),
     });
   }
   return tasks;
@@ -245,8 +246,8 @@ export function seedActivities(input: {
           message.channel === "call"
             ? "Call logged"
             : message.direction === "inbound"
-              ? `Received a ${message.channel} message`
-              : `Sent a ${message.channel} message`,
+              ? `${CHANNEL_LABELS[message.channel]} received`
+              : `${CHANNEL_LABELS[message.channel]} sent`,
       });
     }
   }

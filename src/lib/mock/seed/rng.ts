@@ -1,5 +1,7 @@
 import { faker } from "@faker-js/faker";
 
+import { addDays, zonedDay, type CalendarDay } from "../slots";
+
 /**
  * The world is anchored to a fixed instant, not to `Date.now()`.
  *
@@ -18,12 +20,37 @@ export function resetRng() {
 
 export { faker };
 
+/**
+ * REF_DATE's calendar date in `timeZone`, moved by `days` calendar days, as
+ * "YYYY-MM-DD". For times that are wall-clock hours somewhere (appointments),
+ * where `refPlusDays`'s UTC hours would be wrong. Makes no draws.
+ */
+export function refDay(days: number, timeZone: string): CalendarDay {
+  return addDays(zonedDay(REF_DATE.getTime(), timeZone), days);
+}
+
 /** Days offset from REF_DATE, as an ISO string. */
 export function refPlusDays(days: number, hour = 9, minute = 0): string {
   const d = new Date(REF_DATE);
   d.setUTCDate(d.getUTCDate() + days);
   d.setUTCHours(hour, minute, 0, 0);
   return d.toISOString();
+}
+
+/**
+ * `refPlusDays` for something that has already happened.
+ *
+ * REF_DATE is 09:00 UTC, so "0 days ago at 16:00" is seven hours in the
+ * future — past the demo clock's "now", where it sorts above everything that
+ * happens in the session. Offsets are capped at 0 and a day-0 time after the
+ * anchor rolls back a day. Makes no draws, so callers keep their stream.
+ */
+export function refPast(days: number, hour = 9, minute = 0): string {
+  const offset = Math.min(days, 0);
+  const iso = refPlusDays(offset, hour, minute);
+  return iso > REF_DATE.toISOString()
+    ? refPlusDays(offset - 1, hour, minute)
+    : iso;
 }
 
 export function refPlusMinutes(minutes: number): string {

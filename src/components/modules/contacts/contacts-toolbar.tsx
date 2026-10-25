@@ -39,6 +39,7 @@ export function ContactsToolbar({
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search contacts…"
+          aria-label="Search contacts"
           className="pl-8"
         />
       </div>
@@ -49,7 +50,7 @@ export function ContactsToolbar({
           onStatusChange(value as ContactStatus | "all")
         }
       >
-        <SelectTrigger className="w-40">
+        <SelectTrigger className="w-40" aria-label="Status">
           <SelectValue placeholder="Status">
             {(value: ContactStatus | "all") =>
               value === "all" ? "All statuses" : CONTACT_STATUS_LABELS[value]
@@ -67,7 +68,13 @@ export function ContactsToolbar({
       </Select>
 
       <div className="w-56">
-        <TagPicker value={tagIds} onChange={onTagIdsChange} />
+        <TagPicker
+          aria-label="Filter by tags"
+          // The contacts table's "Could not load tags" alert covers it.
+          inlineLoadError={false}
+          value={tagIds}
+          onChange={onTagIdsChange}
+        />
       </div>
 
       <Button className="ml-auto" onClick={onAddContact}>

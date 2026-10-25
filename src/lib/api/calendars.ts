@@ -1,8 +1,22 @@
 import type { Activity, Appointment, Calendar, ID, ISODate } from "@/types";
+import { isCalendarDay, parseInstant } from "@/lib/dates";
 import { db } from "@/lib/mock/db";
 import { newId } from "@/lib/mock/ids";
+import {
+  freeSlots,
+  hasRoomFor,
+  intervalOf,
+  liveBookings,
+  zonedDay,
+} from "@/lib/mock/slots";
+import { canMoveToStatus, hasEnded } from "@/lib/validation/appointment";
+import {
+  calendarSettingsSchema,
+  WEEKDAY_LABELS,
+} from "@/lib/validation/availability";
 import { invalidate } from "./cache";
-import { apiNowMs, notFound, nowIso, simulate } from "./http";
+import { ApiError, apiNowMs, notFound, nowIso, simulate } from "./http";
+import { withoutUndefined } from "./patch";
 
 export async function list(): Promise<Calendar[]> {
   return simulate(
@@ -21,13 +35,158 @@ export async function get(id: ID): Promise<Calendar> {
   );
 }
 
-export async function update(
-  id: ID,
-  patch: Partial<Calendar>,
-): Promise<Calendar> {
+/** The keys `update()` can change: the ones `calendarSettingsSchema` names. */
+type SettingKey = keyof typeof calendarSettingsSchema.shape;
+
+/**
+ * What `update()` takes: any of the calendar fields it lets a caller change
+ * (the keys `calendarSettingsSchema` names), plus `null` as the way to remove
+ * an optional one, the daily cap or the description (a calendar without one
+ * has no such key at all). `Pick` makes every schema key a `Calendar` key.
+ */
+export type CalendarPatch = Partial<
+  Pick<Calendar, Exclude<SettingKey, "maxBookingsPerDay" | "description">>
+> & {
+  maxBookingsPerDay?: number | null;
+  description?: string | null;
+};
+
+/**
+ * Each setting `calendarSettingsSchema` checks, in the availability editor's
+ * own words where it shows the setting, for a 422's message. Typed by the
+ * schema's keys, so a new setting cannot be added without a label.
+ */
+const SETTING_LABELS: Record<SettingKey, string> = {
+  availability: "Weekly hours",
+  slotDurationMin: "Slot duration",
+  slotIntervalMin: "Slot interval",
+  bufferBeforeMin: "Buffer before",
+  bufferAfterMin: "Buffer after",
+  minSchedulingNoticeHours: "Minimum notice",
+  dateRangeDays: "Booking range",
+  timezone: "Time zone",
+  maxBookingsPerDay: "Daily booking limit",
+  name: "Name",
+  description: "Description",
+  color: "Colour",
+  teamMemberIds: "Team members",
+  isActive: "Active",
+};
+
+/**
+ * The setting a validation issue at `path` is about, as the editor names it:
+ * "Tuesday, end of window 1" (the editor's "End of window 1" on Tuesday),
+ * "Tuesday hours" for anything else in Tuesday's rule, "Slot duration", and
+ * "Calendar settings" for an issue about no one setting (a patch that is not
+ * an object).
+ *
+ * `patch` is what was sent, read only for the weekday of `availability.<i>`.
+ * It is `unknown`: it may come from a JSON client in any shape, so every read
+ * is guarded and the error path itself can never throw.
+ *
+ * "Window N" counts windows in the order they were sent. The editor's
+ * `toAvailabilityPatch` sorts an enabled day's windows by start time before
+ * saving, so whoever wires `ApiError.field` into the form must map the window
+ * index back through that same order to mark the right row.
+ */
+function settingLabel(path: readonly PropertyKey[], patch: unknown): string {
+  const [key, ruleIndex, part, windowIndex, edge] = path;
+  if (
+    key === "availability" &&
+    typeof ruleIndex === "number" &&
+    typeof patch === "object" &&
+    patch !== null &&
+    "availability" in patch &&
+    Array.isArray(patch.availability)
+  ) {
+    const rule: unknown = patch.availability[ruleIndex];
+    const weekday =
+      typeof rule === "object" && rule !== null && "weekday" in rule
+        ? rule.weekday
+        : undefined;
+    const day =
+      typeof weekday === "number" ? WEEKDAY_LABELS[weekday] : undefined;
+    if (day) {
+      if (
+        part === "windows" &&
+        typeof windowIndex === "number" &&
+        (edge === "start" || edge === "end")
+      ) {
+        return `${day}, ${edge} of window ${windowIndex + 1}`;
+      }
+      return `${day} hours`;
+    }
+  }
+  return typeof key === "string" && Object.hasOwn(SETTING_LABELS, key)
+    ? SETTING_LABELS[key as SettingKey]
+    : "Calendar settings";
+}
+
+/**
+ * Applies `patch` to a calendar and returns the saved record.
+ *
+ * - Only the keys `calendarSettingsSchema` names can change: the booking
+ *   settings plus name, description, color, teamMemberIds and isActive. What
+ *   is saved is the schema's parsed output, never the patch itself, so every
+ *   other key (id, slug, type, createdAt, createdBy, updatedAt, a key the
+ *   API does not know, an extra key inside a rule or a window) is ignored.
+ *   createdAt is always the stored one, and a client that sends the whole
+ *   record back still saves.
+ * - A key whose value is `undefined` is ignored, the same as a missing key
+ *   (see `withoutUndefined`), so it never erases a stored value.
+ * - `null` removes an optional field, the daily cap (`maxBookingsPerDay`) or
+ *   the description: the key is deleted from the calendar, never stored as
+ *   null. A required field given `null` is a 422 like any other wrong type.
+ *   A number sets the cap, and must be 1 or more.
+ * - Every key must pass `calendarSettingsSchema`: the availability editor's
+ *   own rules ("HH:mm" windows that end after they start and do not overlap,
+ *   on an enabled day; one rule per weekday; whole numbers in range; a known
+ *   time zone), a name that is not blank (it is saved trimmed), a calendar
+ *   colour, a list of team member ids, a true/false active switch. Otherwise
+ *   the call is a 422 `INVALID_CALENDAR` about the first bad setting, and
+ *   nothing is saved. Its `message` is a plain sentence that names the
+ *   setting in the editor's words ("Tuesday, end of window 1: End time must
+ *   be after the start time."), ready for a toast; its `field` is where the
+ *   problem is, as a dotted path ("availability.2.windows.0.end").
+ * - A patch that is not an object (a JSON body of `null`) is a 422 too,
+ *   "Calendar settings: Not a valid value.", with `field` unset.
+ * - An unknown id is a 404.
+ */
+export async function update(id: ID, patch: CalendarPatch): Promise<Calendar> {
   const calendar = await simulate(() => {
     const prev = db.getState().calendars[id] ?? notFound("Calendar", id);
-    const next: Calendar = { ...prev, ...patch, id, updatedAt: nowIso() };
+    // A per-parse error map ranks below every message the schema sets
+    // itself, so this replaces only zod's built-in wording ("Invalid input:
+    // expected string, received number"), which a wrong type would show.
+    const checked = calendarSettingsSchema.safeParse(patch, {
+      error: () => "Not a valid value.",
+    });
+    if (!checked.success) {
+      const [issue] = checked.error.issues;
+      if (!issue) {
+        throw new ApiError(
+          "Those calendar settings are not valid.",
+          422,
+          "INVALID_CALENDAR",
+        );
+      }
+      throw new ApiError(
+        `${settingLabel(issue.path, patch)}: ${issue.message}`,
+        422,
+        "INVALID_CALENDAR",
+        issue.path.length > 0 ? issue.path.join(".") : undefined,
+      );
+    }
+    const { maxBookingsPerDay, description, ...rest } = withoutUndefined(
+      checked.data,
+    );
+    const next: Calendar = { ...prev, ...rest, id, updatedAt: nowIso() };
+    if (maxBookingsPerDay === null) delete next.maxBookingsPerDay;
+    else if (maxBookingsPerDay !== undefined) {
+      next.maxBookingsPerDay = maxBookingsPerDay;
+    }
+    if (description === null) delete next.description;
+    else if (description !== undefined) next.description = description;
     db.setState((s) => ({ calendars: { ...s.calendars, [id]: next } }));
     return next;
   });
@@ -81,7 +240,9 @@ export async function listAppointments(range: {
 export async function listUpcoming(limit = 6): Promise<AppointmentRow[]> {
   return simulate(
     () => {
-      const from = nowIso();
+      // `apiNowMs`, not `nowIso`: a read must not advance the clock's
+      // persisted high-water mark.
+      const from = new Date(apiNowMs()).toISOString();
       const rows = Object.values(db.getState().appointments)
         .filter((a) => a.startAt >= from && a.status === "confirmed")
         .sort((a, b) => a.startAt.localeCompare(b.startAt))
@@ -104,9 +265,50 @@ export async function listForContact(contactId: ID): Promise<AppointmentRow[]> {
   );
 }
 
-export type AppointmentDraft = Partial<Appointment> &
-  Pick<Appointment, "calendarId" | "contactId" | "startAt">;
+/**
+ * What a caller supplies to book a slot. The rest is derived: a booking always
+ * lasts the calendar's slot length, in the calendar's zone, and starts out
+ * confirmed. `source` is an enum value and stays one; a booking made by an
+ * automation says `"workflow"` and carries no reference to the workflow.
+ */
+export type AppointmentDraft = Pick<
+  Appointment,
+  "calendarId" | "contactId" | "startAt"
+> &
+  Partial<
+    Pick<
+      Appointment,
+      "title" | "notes" | "location" | "assignedUserId" | "source"
+    >
+  >;
 
+/** A 409 unless `calendar` is active: an inactive one neither offers nor books. */
+function assertTakesBookings(calendar: Calendar): void {
+  if (!calendar.isActive) {
+    throw new ApiError(
+      "This calendar is not taking bookings.",
+      409,
+      "CALENDAR_INACTIVE",
+    );
+  }
+}
+
+/**
+ * Books one of the calendar's free slots. `startAt` must be exactly one of
+ * the instants `availableSlots()` offers for that day (any ISO spelling of
+ * it, with `Z` or an offset). With the matching check in `setStatus()`, a
+ * double booking cannot happen through the API, and neither can a booking
+ * inside another's buffers, in whichever order the two were made.
+ *
+ * Errors, checked in this order, and nothing is written on any of them:
+ * - 404 `NOT_FOUND`: no such calendar;
+ * - 422 `INVALID_START`: `startAt` is not an instant (`parseInstant` in
+ *   `@/lib/dates`), or the day it falls on in the calendar's zone is outside
+ *   0100-9999 (the days the slot engine reads);
+ * - 404 `NOT_FOUND`: no such contact;
+ * - 409 `CALENDAR_INACTIVE`: the calendar is not taking bookings;
+ * - 409 `SLOT_UNAVAILABLE`: `startAt` is not an open slot.
+ */
 export async function book(draft: AppointmentDraft): Promise<Appointment> {
   const appointment = await simulate(
     () => {
@@ -114,28 +316,75 @@ export async function book(draft: AppointmentDraft): Promise<Appointment> {
       const calendar =
         state.calendars[draft.calendarId] ??
         notFound("Calendar", draft.calendarId);
-      const contact = state.contacts[draft.contactId];
+
+      const startMs = parseInstant(draft.startAt);
+      if (startMs === null) {
+        throw new ApiError(
+          `"${draft.startAt}" is not a date and time with a time zone (end it with Z or an offset such as -07:00).`,
+          422,
+          "INVALID_START",
+        );
+      }
+      // The slot engine reads the booking's day in the calendar's zone with
+      // `parseCalendarDay`, which takes only 0100-9999, so the start must fall
+      // on such a day there. Near either end the string's own date can differ.
+      const day = zonedDay(startMs, calendar.timezone);
+      if (!isCalendarDay(day)) {
+        throw new ApiError(
+          `"${draft.startAt}" falls on ${day} in ${calendar.timezone}, outside the years 0100-9999 this calendar can book.`,
+          422,
+          "INVALID_START",
+        );
+      }
+      const startAt = new Date(startMs).toISOString();
+
+      const contact =
+        state.contacts[draft.contactId] ?? notFound("Contact", draft.contactId);
+
+      assertTakesBookings(calendar);
+
+      // The check and the write below run in one synchronous block, so two
+      // bookings racing for the same slot cannot both pass it.
+      const offered = freeSlots({
+        calendar,
+        day,
+        appointments: Object.values(state.appointments),
+        nowMs: apiNowMs(),
+      });
+      if (!offered.includes(startAt)) {
+        throw new ApiError(
+          "That time is not an open slot on this calendar. Pick another one.",
+          409,
+          "SLOT_UNAVAILABLE",
+        );
+      }
+
       const at = nowIso();
 
-      const endAt =
-        draft.endAt ??
-        new Date(
-          new Date(draft.startAt).getTime() + calendar.slotDurationMin * 60_000,
-        ).toISOString();
-
+      // Field by field, never a spread of the draft: a caller must not be able
+      // to set the id, the status or the end time.
       const record: Appointment = {
         id: newId("appt"),
+        calendarId: calendar.id,
+        contactId: draft.contactId,
+        assignedUserId:
+          draft.assignedUserId ??
+          calendar.teamMemberIds[0] ??
+          state.currentUserId,
         title:
           draft.title ??
-          `${calendar.name} - ${contact?.firstName ?? ""} ${contact?.lastName ?? ""}`.trim(),
+          `${calendar.name} - ${contact.firstName} ${contact.lastName}`.trim(),
+        ...(draft.notes ? { notes: draft.notes } : {}),
+        startAt,
+        endAt: new Date(
+          startMs + calendar.slotDurationMin * 60_000,
+        ).toISOString(),
         timezone: calendar.timezone,
         status: "confirmed",
-        source: "manual",
-        assignedUserId: calendar.teamMemberIds[0] ?? state.currentUserId,
+        ...(draft.location ? { location: draft.location } : {}),
+        source: draft.source ?? "manual",
         createdAt: at,
         updatedAt: at,
-        ...draft,
-        endAt,
       };
 
       const activity: Activity = {
@@ -162,12 +411,69 @@ export async function book(draft: AppointmentDraft): Promise<Appointment> {
   return appointment;
 }
 
+/**
+ * Moves an appointment to `status`.
+ *
+ * Once an appointment has ended (its end is before the demo's now), it can
+ * only be marked Showed or No Show (P7-H3, see `canMoveToStatus`): confirming
+ * or cancelling it is a 422. Until then any status is allowed.
+ *
+ * Moving a cancelled one to any other status takes its time back, so it is a
+ * 409 if another booking has taken that time (or filled that day) since: the
+ * collision and daily-cap rules `book()` applies. Its hours, notice and
+ * booking range are not rechecked. Until it has ended, the message says to
+ * book a new slot. Once it has ended (an ended Cancelled appointment can still
+ * be marked Showed or No Show, P7-H4, and only those reach this check), it
+ * says another booking now holds the time, so it cannot be marked Showed or
+ * No Show.
+ *
+ * Errors, checked in this order, and nothing is written on any of them:
+ * - 404 `NOT_FOUND`: no such appointment;
+ * - 422 `PAST_APPOINTMENT`: it has ended and `status` is not Showed or No Show;
+ * - 409 `SLOT_UNAVAILABLE`: it is cancelled and its time is no longer free
+ *   (worded for an ended appointment when it has ended).
+ */
 export async function setStatus(
   id: ID,
   status: Appointment["status"],
 ): Promise<Appointment> {
   const appointment = await simulate(() => {
-    const prev = db.getState().appointments[id] ?? notFound("Appointment", id);
+    const state = db.getState();
+    const prev = state.appointments[id] ?? notFound("Appointment", id);
+
+    // These checks run in the same synchronous block as the write, as in
+    // `book()`. `apiNowMs`, not `nowIso`: a refused call must move nothing,
+    // not even the clock's saved high-water mark.
+    const nowMs = apiNowMs();
+    if (!canMoveToStatus(prev.endAt, status, nowMs)) {
+      throw new ApiError(
+        "This appointment has already ended, so it can only be marked Showed or No Show.",
+        422,
+        "PAST_APPOINTMENT",
+      );
+    }
+
+    if (prev.status === "cancelled" && status !== "cancelled") {
+      const calendar =
+        state.calendars[prev.calendarId] ??
+        notFound("Calendar", prev.calendarId);
+      const booked = liveBookings(
+        calendar.id,
+        Object.values(state.appointments),
+      );
+      if (!hasRoomFor(calendar, intervalOf(prev), booked)) {
+        // Once it has ended only Showed or No Show get here (the 422 above),
+        // and "book a new slot" makes no sense for a past appointment (P7-H4).
+        throw new ApiError(
+          hasEnded(prev.endAt, nowMs)
+            ? "Another booking now holds this time, so this cancelled appointment cannot be marked Showed or No Show."
+            : "Another booking has taken this time since it was cancelled. Book a new slot instead.",
+          409,
+          "SLOT_UNAVAILABLE",
+        );
+      }
+    }
+
     const at = nowIso();
     const next: Appointment = { ...prev, status, updatedAt: at };
 
@@ -177,7 +483,7 @@ export async function setStatus(
       at,
       contactId: next.contactId,
       appointmentId: next.id,
-      actorId: db.getState().currentUserId,
+      actorId: state.currentUserId,
       summary: `Appointment marked ${status.replace("_", " ")}`,
     };
 
@@ -192,86 +498,56 @@ export async function setStatus(
   return appointment;
 }
 
+/**
+ * Cancels an appointment that has not ended. Once it has, this is a 422
+ * `PAST_APPOINTMENT`, as for any `setStatus()` move to cancelled.
+ */
 export async function cancel(id: ID): Promise<Appointment> {
   return setStatus(id, "cancelled");
 }
 
 /**
- * Free slots for one day: the calendar's availability windows for that weekday,
- * minus existing bookings, minus buffers, minus the minimum scheduling notice.
+ * The start times a calendar offers on one day, as ISO strings: its
+ * availability windows for that weekday, minus every slot that collides with
+ * a live booking (buffers apply both ways, so neighbours keep a gap of the
+ * larger buffer whichever was booked first), minus the minimum scheduling
+ * notice, and nothing beyond `dateRangeDays`. See `@/lib/mock/slots` for the
+ * time model.
+ *
+ * `day` is a calendar date, "YYYY-MM-DD", in the calendar's own timezone, not
+ * the viewer's: from Asia one local day spans two Los Angeles dates, so the
+ * caller maps the day it shows onto the calendar's dates.
+ *
+ * Errors, checked in this order: 404 `NOT_FOUND` for no such calendar; 422
+ * `INVALID_DAY` when `day` is not a real "YYYY-MM-DD" date; 409
+ * `CALENDAR_INACTIVE` when the calendar is not taking bookings, which
+ * `book()` refuses too, so the two still agree.
  */
 export async function availableSlots(
   calendarId: ID,
-  dayIso: ISODate,
+  day: string,
 ): Promise<string[]> {
   return simulate(
     () => {
       const state = db.getState();
       const calendar =
         state.calendars[calendarId] ?? notFound("Calendar", calendarId);
-
-      const day = new Date(dayIso);
-      day.setHours(0, 0, 0, 0);
-      const weekday = day.getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6;
-      const rule = calendar.availability.find((r) => r.weekday === weekday);
-      if (!rule?.enabled) return [];
-
-      const dayStart = day.getTime();
-      const dayEnd = dayStart + 86_400_000;
-      const taken = Object.values(state.appointments).filter(
-        (a) =>
-          a.calendarId === calendarId &&
-          a.status !== "cancelled" &&
-          new Date(a.startAt).getTime() < dayEnd &&
-          new Date(a.endAt).getTime() > dayStart,
-      );
-
-      if (
-        calendar.maxBookingsPerDay &&
-        taken.length >= calendar.maxBookingsPerDay
-      ) {
-        return [];
+      if (!isCalendarDay(day)) {
+        throw new ApiError(
+          `"${day}" is not a calendar day (expected YYYY-MM-DD).`,
+          422,
+          "INVALID_DAY",
+        );
       }
+      assertTakesBookings(calendar);
 
-      const notBefore =
-        apiNowMs() + calendar.minSchedulingNoticeHours * 3_600_000;
-      const slots: string[] = [];
-
-      for (const window of rule.windows) {
-        const [startHour = 9, startMinute = 0] = window.start
-          .split(":")
-          .map(Number);
-        const [endHour = 17, endMinute = 0] = window.end.split(":").map(Number);
-
-        let cursor = new Date(day);
-        cursor.setHours(startHour, startMinute, 0, 0);
-        const windowEnd = new Date(day);
-        windowEnd.setHours(endHour, endMinute, 0, 0);
-
-        while (
-          cursor.getTime() + calendar.slotDurationMin * 60_000 <=
-          windowEnd.getTime()
-        ) {
-          const slotStart = cursor.getTime();
-          const slotEnd = slotStart + calendar.slotDurationMin * 60_000;
-
-          const blocked = taken.some((a) => {
-            const bookedStart =
-              new Date(a.startAt).getTime() - calendar.bufferBeforeMin * 60_000;
-            const bookedEnd =
-              new Date(a.endAt).getTime() + calendar.bufferAfterMin * 60_000;
-            return slotStart < bookedEnd && slotEnd > bookedStart;
-          });
-
-          if (!blocked && slotStart >= notBefore) {
-            slots.push(new Date(slotStart).toISOString());
-          }
-
-          cursor = new Date(slotStart + calendar.slotIntervalMin * 60_000);
-        }
-      }
-
-      return slots;
+      return freeSlots({
+        calendar,
+        day,
+        appointments: Object.values(state.appointments),
+        // A read: `apiNowMs`, never `nowIso`, which advances the high-water mark.
+        nowMs: apiNowMs(),
+      });
     },
     { canFail: false },
   );

@@ -7,19 +7,34 @@ import { ArrowLeftIcon, UserXIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { useAction, useResource } from "@/lib/api";
+import { loadErrorOf, useAction, useResource } from "@/lib/api";
 import { EmptyState } from "@/components/common/empty-state";
+import { LoadError } from "@/components/common/load-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ContactFormSheet } from "../contact-form-sheet";
 import { DeleteContactDialog } from "../delete-contact-dialog";
 import { ContactActivityPanel } from "./contact-activity-panel";
+import { ContactAppointmentsPanel } from "./contact-appointments-panel";
 import { ContactHeader } from "./contact-header";
 import { ContactInfoPanel } from "./contact-info-panel";
 import { ContactNotesPanel } from "./contact-notes-panel";
 import { ContactOpportunitiesPanel } from "./contact-opportunities-panel";
 import { ContactTasksPanel } from "./contact-tasks-panel";
 
+/**
+ * One contact's page: header, details, opportunities and the activity tabs.
+ *
+ * - A missing contact (a 404) shows "Contact not found", on the first load
+ *   or a refetch.
+ * - Any other failed load, with no contact on screen, shows a `LoadError`
+ *   whose Retry calls `refetch()`. While a retry runs, the alert stays with
+ *   its button busy; it never turns into a skeleton.
+ * - A refetch that fails for any other reason with the contact on screen
+ *   keeps the contact: `useResource` holds the last good result for the
+ *   same id, so `loadErrorOf`, which needs `data` to be undefined, gives no
+ *   error.
+ */
 export function ContactDetail({ id }: { id: string }) {
   const router = useRouter();
   const contact = useResource("contacts", () => api.contacts.get(id), id);
@@ -65,6 +80,24 @@ export function ContactDetail({ id }: { id: string }) {
     );
   }
 
+  const loadError = loadErrorOf(contact);
+  if (loadError) {
+    return (
+      <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+        {backLink}
+        <LoadError
+          title="Could not load the contact"
+          message={loadError.message}
+          onRetry={contact.refetch}
+          retrying={contact.isRefreshing}
+        />
+      </div>
+    );
+  }
+
+  // `!contact.data` only narrows the type: a finished read has either data or
+  // an error, and the error case is handled above. While `isLoading` the
+  // error is null, so the first load still shows the skeleton.
   if (contact.isLoading || !contact.data) {
     return (
       <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
@@ -99,6 +132,7 @@ export function ContactDetail({ id }: { id: string }) {
               <TabsTrigger value="activity">Activity</TabsTrigger>
               <TabsTrigger value="notes">Notes</TabsTrigger>
               <TabsTrigger value="tasks">Tasks</TabsTrigger>
+              <TabsTrigger value="appointments">Appointments</TabsTrigger>
             </TabsList>
             <TabsContent value="activity">
               <ContactActivityPanel contactId={record.id} />
@@ -108,6 +142,9 @@ export function ContactDetail({ id }: { id: string }) {
             </TabsContent>
             <TabsContent value="tasks">
               <ContactTasksPanel contactId={record.id} />
+            </TabsContent>
+            <TabsContent value="appointments">
+              <ContactAppointmentsPanel contactId={record.id} />
             </TabsContent>
           </Tabs>
         </div>

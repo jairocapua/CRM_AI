@@ -26,7 +26,21 @@ export * as templates from "./templates";
 export * as users from "./users";
 export * as workflows from "./workflows";
 
-export type { StageRollup } from "./opportunities";
+export type {
+  DashboardSummary,
+  Kpi,
+  Period,
+  PipelineSummary,
+  SourceSlice,
+  WinRate,
+} from "./analytics";
+export type { ActivityRow } from "./activities";
+export type { AppointmentRow, CalendarPatch } from "./calendars";
+export type {
+  OpportunityDraft,
+  OpportunityPatch,
+  StageRollup,
+} from "./opportunities";
 export type {
   ChannelOption,
   ComposableChannel,
@@ -42,4 +56,4 @@ export type { ListQuery, Page, Tuning } from "./http";
 export { apiNow, nowIso } from "./http";
 export { invalidate, invalidateAll } from "./cache";
 export type { ResourceKey } from "./cache";
-export { useAction, useResource } from "./use-resource";
+export { loadErrorOf, useAction, useResource } from "./use-resource";

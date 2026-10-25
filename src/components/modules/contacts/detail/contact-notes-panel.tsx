@@ -1,16 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { useAction, useResource } from "@/lib/api";
+import { apiNow, useAction, useResource } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { toDate } from "@/lib/format";
+import { formatRelative } from "@/lib/format";
 
 export function ContactNotesPanel({ contactId }: { contactId: string }) {
   const notes = useResource(
@@ -57,9 +56,7 @@ export function ContactNotesPanel({ contactId }: { contactId: string }) {
               <CardContent className="flex flex-col gap-1 text-sm">
                 <p className="whitespace-pre-wrap">{note.body}</p>
                 <span className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(toDate(note.createdAt), {
-                    addSuffix: true,
-                  })}
+                  {formatRelative(note.createdAt, apiNow())}
                 </span>
               </CardContent>
             </Card>

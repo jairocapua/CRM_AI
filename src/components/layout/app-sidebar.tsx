@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useLeaveGuard } from "@/components/providers/unsaved-changes";
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +16,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import * as api from "@/lib/api";
 import { useResource } from "@/lib/api";
@@ -37,6 +39,13 @@ function UnreadBadge() {
 
 export function AppSidebar() {
   const pathname = usePathname();
+  // Each link asks first while a page has unsaved edits, and closes the
+  // phone Sheet once it really navigates (a clean click, or Discard changes;
+  // the question opens over the Sheet). On desktop the Sheet is already
+  // closed, so this does nothing.
+  const guardLeave = useLeaveGuard();
+  const { setOpenMobile } = useSidebar();
+  const leave = { onLeave: () => setOpenMobile(false) };
 
   return (
     <Sidebar collapsible="icon">
@@ -56,7 +65,12 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       isActive={isActive}
                       tooltip={item.title}
-                      render={<Link href={item.url} />}
+                      render={
+                        <Link
+                          href={item.url}
+                          onNavigate={guardLeave(item.url, leave)}
+                        />
+                      }
                     >
                       <item.icon />
                       <span>{item.title}</span>

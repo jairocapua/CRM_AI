@@ -11,7 +11,7 @@ import { Money } from "@/components/common/money";
 import { ContactStatusBadge } from "@/components/modules/contacts/contact-status-badge";
 import { ContactInfoPanel } from "@/components/modules/contacts/detail/contact-info-panel";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -76,15 +76,14 @@ export function ContactPanel({ conversationId }: { conversationId: string }) {
             ) : null}
             <ContactStatusBadge status={record.status} />
           </div>
-          <Button
+          <LinkButton
+            href={`/contacts/${record.id}`}
             variant="outline"
             size="sm"
-            render={<Link href={`/contacts/${record.id}`} />}
-            nativeButton={false}
           >
-            <ExternalLinkIcon />
+            <ExternalLinkIcon data-icon="inline-start" />
             View contact
-          </Button>
+          </LinkButton>
         </div>
 
         <NextAppointment contactId={record.id} />
