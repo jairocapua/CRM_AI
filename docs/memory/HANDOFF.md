@@ -6,7 +6,7 @@
 ## Now
 - **Phase:** P8 Automation — active (P7 merged to GitHub `master` via PR #2 on 2026-10-25; local `master` fast-forwarded to it).
 - **Branch:** `phase/p8-automation`, cut from `master` at `584f50e`.
-- **Status:** P8-T01 (authored types + automation registry) done under Autopilot.
+- **Status:** P8-T01 (authored types + automation registry) done under Autopilot (`fa0ff5e`).
 
 ## Last change
 - P8-T01: the 8 automations are hand-written modules in `src/lib/automations/` (`AUTOMATIONS` keyed by slug, ids `wf_*`, deep-frozen). `api.workflows` now exports only `list()`/`get()` and resolves tag names and user slugs to ids at read time. The `workflows` store table and `seedWorkflows` are gone; `SEED_VERSION` is 5. Users gained a required `slug`.
