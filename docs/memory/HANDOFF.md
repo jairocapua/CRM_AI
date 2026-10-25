@@ -6,7 +6,7 @@
 ## Now
 - **Phase:** P8 Automation — active, 7/8 tasks done (P7 merged to GitHub `master` via PR #2 on 2026-10-25; local `master` fast-forwarded to it).
 - **Branch:** `phase/p8-automation`, cut from `master` at `584f50e`. Nothing pushed.
-- **Status:** P8-T07 in review (Autopilot approves next).
+- **Status:** P8-T07 done (`e8b8c0e`) under Autopilot; P8-T08 next.
 
 ## Last change
 - P8-T07: `/automation/[id]` has a "Run history" table (10 a page, newest first; Started / Contact / Status / Duration) and a run sheet that reuses the step list with per-step statuses and notes ("SMS not delivered · Jul 19, 11:17 PM"). Contacts link to `/contacts/<id>`; a missing contact reads "Unknown contact". `listRuns` now returns `Page<WorkflowRunRow>` with a read-time `contactName`. Runs follow one fault, one alert. Drafts show "No runs yet". Seed copy: a run stopped at a fork says "the contact unsubscribed".
