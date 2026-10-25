@@ -7,7 +7,7 @@
 
 - **Phase:** P9 Settings — active, 3/7 tasks done.
 - **Branch:** `phase/p9-settings`, cut from `master` at `4d72e89`. Nothing pushed.
-- **Status:** P9-T03 approved (pending sha); P9-T04 Custom fields manager is next. Start it in a fresh session.
+- **Status:** P9-T03 approved (`e1b2560`); P9-T04 Custom fields manager is next. Start it in a fresh session.
 
 ## Last change
 
