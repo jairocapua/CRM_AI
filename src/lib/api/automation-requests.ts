@@ -20,10 +20,11 @@ import {
 
 /**
  * Requests for new automations (design "Phase 8b — API and UI"). Staff file
- * them with `create()`; the developer answers with `setStatus()`, which is
- * also where a shipped request names the automation it became. Shaped like
- * `smart-lists.ts`: reads never fail, mutations take longer, may fail, and
- * invalidate "automationRequests".
+ * them with `create()` and may take back their own with `withdraw()` while
+ * it is still "requested"; the developer answers with `setStatus()`, which
+ * is also where a shipped request names the automation it became. Shaped
+ * like `smart-lists.ts`: reads never fail, mutations take longer, may fail,
+ * and invalidate "automationRequests".
  */
 
 /** A request as listed: the stored record plus its automation's name. */
@@ -34,6 +35,12 @@ export interface AutomationRequestRow extends AutomationRequest {
    * shipped or the automation is gone.
    */
   shippedWorkflowName?: string;
+  /**
+   * Whether the current user may withdraw it now: they asked for it and it
+   * is still "requested". Worked out at read time by the same rule
+   * `withdraw()` enforces, so the UI never repeats the rule.
+   */
+  canWithdraw: boolean;
 }
 
 /** What staff fill in. Status, reply and who asked are not theirs to set. */
@@ -50,7 +57,11 @@ export interface AutomationRequestReply {
   shippedWorkflowId?: ID;
 }
 
-const STATUSES: readonly AutomationRequestStatus[] = [
+/**
+ * The statuses `setStatus()` may set: the developer's. "withdrawn" is not
+ * one of them; only the asker withdraws, through `withdraw()`.
+ */
+const DEVELOPER_STATUSES: readonly AutomationRequestStatus[] = [
   "requested",
   "in_review",
   "shipped",
@@ -79,9 +90,52 @@ const workflowName = (id: ID | undefined): string | undefined =>
     ? undefined
     : Object.values(AUTOMATIONS).find((d) => d.id === id)?.name;
 
-function toRow(request: AutomationRequest): AutomationRequestRow {
+/**
+ * Why `currentUserId` may not withdraw `request` now, or `undefined` when
+ * they may. The one place the rule lives: `withdraw()` throws it and
+ * `canWithdraw` on every row reads it. Not the asker (including a request
+ * with no asker) is a 403; a request already withdrawn, or one the developer
+ * has already moved on, is a 409, each with its own sentence.
+ */
+function withdrawRefusal(
+  request: AutomationRequest,
+  currentUserId: ID,
+): ApiError | undefined {
+  if (!request.createdBy || request.createdBy !== currentUserId) {
+    return new ApiError(
+      "Only the teammate who asked can withdraw this request.",
+      403,
+      "NOT_YOUR_REQUEST",
+    );
+  }
+  if (request.status === "withdrawn") {
+    return new ApiError(
+      "This request is already withdrawn.",
+      409,
+      "REQUEST_NOT_WITHDRAWABLE",
+    );
+  }
+  if (request.status !== "requested") {
+    return new ApiError(
+      "This request can no longer be withdrawn: your developer has already answered it.",
+      409,
+      "REQUEST_NOT_WITHDRAWABLE",
+    );
+  }
+  return undefined;
+}
+
+function toRow(
+  request: AutomationRequest,
+  currentUserId: ID,
+): AutomationRequestRow {
+  const row: AutomationRequestRow = {
+    ...request,
+    canWithdraw: withdrawRefusal(request, currentUserId) === undefined,
+  };
   const name = workflowName(request.shippedWorkflowId);
-  return name ? { ...request, shippedWorkflowName: name } : request;
+  if (name) row.shippedWorkflowName = name;
+  return row;
 }
 
 /** Every request, newest first unless `query.sort` says otherwise. */
@@ -90,15 +144,15 @@ export async function list(
 ): Promise<Page<AutomationRequestRow>> {
   return simulate(
     () => {
-      const page = applyQuery(
-        Object.values(db.getState().automationRequests),
-        query,
-        {
-          searchFields: ["title", "problem", "trigger", "outcome"],
-          defaultSort: [{ field: "createdAt", desc: true }],
-        },
-      );
-      return { ...page, rows: page.rows.map(toRow) };
+      const { automationRequests, currentUserId } = db.getState();
+      const page = applyQuery(Object.values(automationRequests), query, {
+        searchFields: ["title", "problem", "trigger", "outcome"],
+        defaultSort: [{ field: "createdAt", desc: true }],
+      });
+      return {
+        ...page,
+        rows: page.rows.map((row) => toRow(row, currentUserId)),
+      };
     },
     { canFail: false },
   );
@@ -106,11 +160,13 @@ export async function list(
 
 export async function get(id: ID): Promise<AutomationRequestRow> {
   return simulate(
-    () =>
-      toRow(
-        db.getState().automationRequests[id] ??
-          notFound("Automation request", id),
-      ),
+    () => {
+      const { automationRequests, currentUserId } = db.getState();
+      return toRow(
+        automationRequests[id] ?? notFound("Automation request", id),
+        currentUserId,
+      );
+    },
     { canFail: false },
   );
 }
@@ -163,7 +219,9 @@ export async function create(
 /**
  * The developer's move. Shipping needs `reply.shippedWorkflowId`, a real
  * registry automation; any other status refuses one and drops the one a
- * shipped request had.
+ * shipped request had. "withdrawn" is refused with a 422: withdrawing is
+ * the asker's move, through `withdraw()`. A request already withdrawn is
+ * final: any move on it is a 409, writing nothing.
  */
 export async function setStatus(
   id: ID,
@@ -175,7 +233,20 @@ export async function setStatus(
       const prev =
         db.getState().automationRequests[id] ??
         notFound("Automation request", id);
-      if (!STATUSES.includes(status)) {
+      if (prev.status === "withdrawn") {
+        throw new ApiError(
+          "This request was withdrawn by the teammate who asked.",
+          409,
+          "REQUEST_WITHDRAWN",
+        );
+      }
+      if (status === "withdrawn") {
+        invalid(
+          "Status: Only the teammate who asked can withdraw a request.",
+          "status",
+        );
+      }
+      if (!DEVELOPER_STATUSES.includes(status)) {
         invalid("Status: Not a status a request can have.", "status");
       }
       const { shippedWorkflowId } = reply;
@@ -217,6 +288,37 @@ export async function setStatus(
       return next;
     },
     { ms: 420 },
+  );
+  invalidate("automationRequests");
+  return request;
+}
+
+/**
+ * The asker takes their request back: it becomes "withdrawn" and stays
+ * listed, so its history is kept. Only the current user's own request, and
+ * only while it is "requested" (see `withdrawRefusal`: 403 / 409); 404 for
+ * an unknown id. May fail, writing nothing.
+ */
+export async function withdraw(id: ID): Promise<AutomationRequest> {
+  const request = await simulate(
+    () => {
+      const state = db.getState();
+      const prev =
+        state.automationRequests[id] ?? notFound("Automation request", id);
+      const refusal = withdrawRefusal(prev, state.currentUserId);
+      if (refusal) throw refusal;
+
+      const next: AutomationRequest = {
+        ...prev,
+        status: "withdrawn",
+        updatedAt: nowIso(),
+      };
+      db.setState((s) => ({
+        automationRequests: { ...s.automationRequests, [id]: next },
+      }));
+      return next;
+    },
+    { ms: 450 },
   );
   invalidate("automationRequests");
   return request;

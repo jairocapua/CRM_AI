@@ -340,6 +340,256 @@ describe("setStatus()", () => {
     await settle(api.setStatus(request.id, "declined", { notes: "No." }));
     expect(cache.revisionOf("automationRequests")).toBe(before + 1);
   });
+
+  it("refuses to withdraw: that is the asker's move, through withdraw()", async () => {
+    const { api, request, db } = await withRequest("requested");
+    await expect(
+      settle(api.setStatus(request.id, "withdrawn")),
+    ).rejects.toMatchObject({
+      status: 422,
+      code: "INVALID_AUTOMATION_REQUEST",
+      field: "status",
+      message: "Status: Only the teammate who asked can withdraw a request.",
+    });
+    expect(db.getState().automationRequests[request.id]).toEqual(request);
+  });
+
+  it.each([
+    ["requested", {}],
+    ["in_review", { notes: "Looking at it." }],
+    ["shipped", { shippedWorkflowId: "wf_speed_to_lead" }],
+    ["declined", { notes: "No." }],
+  ] as const)(
+    "refuses to move a withdrawn request to %s with a 409, writing nothing",
+    async (status, reply) => {
+      const w = await world();
+      const seeded = w.requests().find((r) => r.status === "requested")!;
+      const request: AutomationRequest = { ...seeded, status: "withdrawn" };
+      w.db.setState((s) => ({
+        automationRequests: { ...s.automationRequests, [request.id]: request },
+      }));
+      const before = w.cache.revisionOf("automationRequests");
+      await expect(
+        settle(w.api.setStatus(request.id, status, reply)),
+      ).rejects.toMatchObject({
+        name: "ApiError",
+        status: 409,
+        code: "REQUEST_WITHDRAWN",
+        message: "This request was withdrawn by the teammate who asked.",
+      });
+      expect(w.db.getState().automationRequests[request.id]).toEqual(request);
+      expect(w.cache.revisionOf("automationRequests")).toBe(before);
+    },
+  );
+});
+
+describe("withdraw()", () => {
+  /**
+   * A request in `status`, asked by `createdBy`: the current user,
+   * "usr_jordan", unless another id is given, or nobody for `null`.
+   */
+  async function withOwnRequest(
+    status: AutomationRequest["status"],
+    createdBy: string | null = "usr_jordan",
+  ) {
+    const w = await world();
+    expect(w.db.getState().currentUserId).toBe("usr_jordan");
+    const seeded = w.requests().find((r) => r.status === "requested")!;
+    const request: AutomationRequest = { ...seeded, status };
+    if (createdBy === null) delete request.createdBy;
+    else request.createdBy = createdBy;
+    w.db.setState((s) => ({
+      automationRequests: { ...s.automationRequests, [request.id]: request },
+    }));
+    return { ...w, request };
+  }
+
+  it("marks the asker's own requested request withdrawn, at the demo clock's now", async () => {
+    const { api, db, cache, request } = await withOwnRequest("requested");
+    const before = cache.revisionOf("automationRequests");
+    setDemoNow("2026-09-12T10:00:00.000Z");
+
+    const next = await settle(api.withdraw(request.id));
+
+    expect(next).toEqual({
+      ...request,
+      status: "withdrawn",
+      updatedAt: next.updatedAt,
+    });
+    expect(next.updatedAt >= "2026-09-12T10:00:00.000Z").toBe(true);
+    expect(next.updatedAt <= "2026-09-12T10:00:01.000Z").toBe(true);
+    // Kept, not deleted: history stays in the list.
+    expect(db.getState().automationRequests[request.id]).toEqual(next);
+    expect(cache.revisionOf("automationRequests")).toBe(before + 1);
+    const row = (await settle(api.list())).rows.find(
+      (r) => r.id === request.id,
+    )!;
+    expect(row.status).toBe("withdrawn");
+    expect(row.canWithdraw).toBe(false);
+  });
+
+  it("withdraws a seeded request the current user asked for", async () => {
+    const { api, requests } = await world();
+    const own = requests().find(
+      (r) => r.status === "requested" && r.createdBy === "usr_jordan",
+    )!;
+    expect(own).toBeDefined();
+    expect((await settle(api.withdraw(own.id))).status).toBe("withdrawn");
+  });
+
+  it.each([
+    ["another teammate", "usr_aiko"],
+    ["nobody known", null],
+  ] as const)(
+    "refuses a request asked by %s with a 403, writing nothing",
+    async (_who, createdBy) => {
+      const { api, db, cache, request } = await withOwnRequest(
+        "requested",
+        createdBy,
+      );
+      const before = cache.revisionOf("automationRequests");
+      await expect(settle(api.withdraw(request.id))).rejects.toMatchObject({
+        name: "ApiError",
+        status: 403,
+        code: "NOT_YOUR_REQUEST",
+      });
+      expect(db.getState().automationRequests[request.id]).toEqual(request);
+      expect(cache.revisionOf("automationRequests")).toBe(before);
+    },
+  );
+
+  it("refuses a request with no asker even when the current user is gone", async () => {
+    const { api, db, request } = await withOwnRequest("requested", null);
+    db.setState({ currentUserId: "" });
+    await expect(settle(api.withdraw(request.id))).rejects.toMatchObject({
+      status: 403,
+      code: "NOT_YOUR_REQUEST",
+    });
+  });
+
+  it.each(["in_review", "shipped", "declined", "withdrawn"] as const)(
+    "refuses the asker's own %s request with a 409, writing nothing",
+    async (status) => {
+      const { api, db, cache, request } = await withOwnRequest(status);
+      const before = cache.revisionOf("automationRequests");
+      await expect(settle(api.withdraw(request.id))).rejects.toMatchObject({
+        name: "ApiError",
+        status: 409,
+        code: "REQUEST_NOT_WITHDRAWABLE",
+      });
+      expect(db.getState().automationRequests[request.id]).toEqual(request);
+      expect(cache.revisionOf("automationRequests")).toBe(before);
+    },
+  );
+
+  it("says why in a sentence", async () => {
+    const other = await withOwnRequest("requested", "usr_aiko");
+    await expect(
+      settle(other.api.withdraw(other.request.id)),
+    ).rejects.toMatchObject({
+      message: "Only the teammate who asked can withdraw this request.",
+    });
+    const moved = await withOwnRequest("in_review");
+    await expect(
+      settle(moved.api.withdraw(moved.request.id)),
+    ).rejects.toMatchObject({
+      message:
+        "This request can no longer be withdrawn: your developer has already answered it.",
+    });
+    const withdrawn = await withOwnRequest("withdrawn");
+    await expect(
+      settle(withdrawn.api.withdraw(withdrawn.request.id)),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: "REQUEST_NOT_WITHDRAWABLE",
+      message: "This request is already withdrawn.",
+    });
+  });
+
+  it("is a 404 for an unknown id", async () => {
+    const { api, requests } = await world();
+    const before = requests();
+    await expect(settle(api.withdraw("req_nope"))).rejects.toMatchObject({
+      status: 404,
+      code: "NOT_FOUND",
+    });
+    expect(requests()).toEqual(before);
+  });
+
+  it("can fail like any mutation, writing nothing", async () => {
+    const { api, http, cache, requests, request } =
+      await withOwnRequest("requested");
+    const before = requests();
+    const revision = cache.revisionOf("automationRequests");
+    http.setTuning({ failureRate: 1 });
+    await expect(settle(api.withdraw(request.id))).rejects.toMatchObject({
+      status: 503,
+      code: "MOCK_FAILURE",
+    });
+    expect(requests()).toEqual(before);
+    expect(cache.revisionOf("automationRequests")).toBe(revision);
+  });
+
+  it("takes as long as the other request mutations", async () => {
+    const { api, http, request } = await withOwnRequest("requested");
+    http.setTuning({ latencyMs: 0, jitter: 0 });
+    const started = Date.now();
+    await settle(api.withdraw(request.id));
+    expect(Date.now() - started).toBeGreaterThanOrEqual(400);
+  });
+});
+
+describe("canWithdraw", () => {
+  it("is true only on the current user's own requests still requested", async () => {
+    const { api, db, requests } = await world();
+    const currentUserId = db.getState().currentUserId;
+    const { rows } = await settle(api.list());
+    expect(rows).toHaveLength(requests().length);
+    for (const row of rows) {
+      expect(row.canWithdraw, row.title).toBe(
+        row.status === "requested" && row.createdBy === currentUserId,
+      );
+    }
+    // Not vacuous: the seed has one of each kind of requested request.
+    const requested = rows.filter((r) => r.status === "requested");
+    expect(requested.map((r) => r.canWithdraw).sort()).toEqual([false, true]);
+    // And the asker's other requests, once answered, cannot be withdrawn.
+    expect(rows.some((r) => r.status !== "requested" && r.canWithdraw)).toBe(
+      false,
+    );
+  });
+
+  it("follows the status and the asker, and is false with no asker", async () => {
+    const { api, db, requests } = await world();
+    const own = requests().find(
+      (r) => r.status === "requested" && r.createdBy === "usr_jordan",
+    )!;
+    const rowOf = async () => settle(api.get(own.id));
+    expect((await rowOf()).canWithdraw).toBe(true);
+
+    for (const status of ["in_review", "shipped", "declined", "withdrawn"]) {
+      db.setState((s) => ({
+        automationRequests: {
+          ...s.automationRequests,
+          [own.id]: { ...own, status } as AutomationRequest,
+        },
+      }));
+      expect((await rowOf()).canWithdraw, status).toBe(false);
+    }
+
+    const noAsker: AutomationRequest = { ...own };
+    delete noAsker.createdBy;
+    db.setState((s) => ({
+      automationRequests: { ...s.automationRequests, [own.id]: noAsker },
+    }));
+    expect((await rowOf()).canWithdraw).toBe(false);
+
+    db.setState((s) => ({
+      automationRequests: { ...s.automationRequests, [own.id]: own },
+      currentUserId: "usr_aiko",
+    }));
+    expect((await rowOf()).canWithdraw).toBe(false);
+  });
 });
 
 describe("remove()", () => {

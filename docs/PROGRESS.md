@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 76/90 tasks done (84%) · **Current phase:** P9 · **Next agent task:** P9-T01 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+**Overall:** 76/91 tasks done (84%) · **Current phase:** P8 · **Next agent task:** — · **Awaiting review:** P8-T09 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -87,7 +87,7 @@ Status: done · Progress: 68/68 · Points: 7 (5 for Calendars + 2 for the test h
 | P7-T64 | Lost entry text and same-stage move status | agent | done | — | 6933a1b | 2026-10-25 | Same-stage move() is a pure reorder (keeps status/closedAt/lostReason); lost-stage entry appends the reason |
 
 ## P8 — Automation
-Status: done · Progress: 8/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md
+Status: active · Progress: 8/9 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8-automation · File: docs/phases/P8-automation.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -99,6 +99,7 @@ Status: done · Progress: 8/8 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8
 | P8-T06 | Run history data | agent | done | P8-T01 | 97e70cd | 2026-10-25 | Run history data: types, workflowRuns table + seeder (97 runs), cascade, cache key, 3 integrity lines, listRuns; fake stats deleted. check green (962), 38 e2e. |
 | P8-T07 | Run history UI | agent | done | P8-T04, P8-T06 | e8b8c0e | 2026-10-25 | Run history table + run sheet on /automation/[id]; contactName joined at read; one fix round (sort flip tested). check green (987), 46 e2e. |
 | P8-T08 | Automation requests | agent | done | P8-T03 | f5bfd5f | 2026-10-25 | Automation requests: type, table, seeder (6), api.automationRequests, integrity line, /automation/requests list + form. check green (1030), 48 e2e. |
+| P8-T09 | Withdraw an automation request | agent | review | P8-T08 |  | 2026-10-26 | Withdraw own requested request: fifth status, api withdraw() + canWithdraw, confirm UI; one fix round (focus on failure, withdrawn is final). check green (1051), full e2e 184/184. |
 
 ## P9 — Settings
 Status: todo · Progress: 0/7 · Points: 4 · Branch: phase/p9-settings · File: docs/phases/P9-settings.md

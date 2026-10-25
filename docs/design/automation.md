@@ -19,6 +19,9 @@
 > argument, `list` returns `Page<AutomationRequestRow>`, and requests are
 > seeded last. `SEED_VERSION` ended the phase at 7 (P8-T01 → 5, T06 → 6,
 > T08 → 7). See [P8-T02] and [P8-T08] in DECISIONS.md.
+> P8-T09 (owner decision): a fifth request status, `withdrawn`, which only
+> the asker can set while a request is still `requested`, so the "Four
+> statuses, not five" note below no longer holds. See [P8-T09] in DECISIONS.md.
 
 ## Context
 

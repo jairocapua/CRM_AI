@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useRef } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { MessageSquarePlusIcon } from "lucide-react";
@@ -27,19 +27,24 @@ import {
   askerName,
   requestStatusLabel,
 } from "./automation-request-copy";
+import { WithdrawRequestButton } from "./automation-request-withdraw";
 
 const STATUS_DOTS: Record<AutomationRequestStatus, string> = {
   requested: TAG_DOT_CLASSES.sky,
   in_review: TAG_DOT_CLASSES.amber,
   shipped: TAG_DOT_CLASSES.green,
   declined: TAG_DOT_CLASSES.slate,
+  // Hollow: set aside by the asker, not answered by the developer.
+  withdrawn: "border border-muted-foreground bg-transparent",
 };
 
 /**
  * Every automation request, newest first: title, status, priority, who
  * asked and when, what they asked for, the developer's reply, and for a
- * shipped one a link to the automation it became. Read-only: the developer
- * moves a request's status, so nothing here changes one.
+ * shipped one a link to the automation it became. The developer moves a
+ * request's status, so nothing here changes one, except Withdraw on the
+ * current user's own request while it is still "requested" (the row's
+ * read-time `canWithdraw`, the same rule `withdraw()` enforces).
  *
  * Who asked comes from the users read, by id. One fault, one alert
  * (DECISIONS P7-T47): the requests read failing shows only its alert, and
@@ -126,7 +131,13 @@ export function AutomationRequestList() {
 /** A request's status as a badge: copy, never a control. */
 function RequestStatusBadge({ status }: { status: AutomationRequestStatus }) {
   return (
-    <Badge variant="outline" className="shrink-0">
+    <Badge
+      variant="outline"
+      className={cn(
+        "shrink-0",
+        status === "withdrawn" && "text-muted-foreground",
+      )}
+    >
       <span
         aria-hidden
         className={cn("size-1.5 rounded-full", STATUS_DOTS[status])}
@@ -144,13 +155,20 @@ function RequestCard({
   usersById: ReadonlyMap<ID, User>;
 }) {
   const titleId = useId();
+  // Where focus goes once a withdraw succeeds and its button is gone.
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const askedAt = toDate(request.createdAt);
   return (
     <article aria-labelledby={titleId}>
       <Card size="sm">
         <CardContent className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-2">
-            <h3 id={titleId} className="text-sm leading-snug font-medium">
+            <h3
+              id={titleId}
+              ref={titleRef}
+              tabIndex={-1}
+              className="text-sm leading-snug font-medium outline-none"
+            >
               {request.title}
             </h3>
             <RequestStatusBadge status={request.status} />
@@ -180,6 +198,14 @@ function RequestCard({
               {request.status === "shipped" ? (
                 <ShippedAs request={request} />
               ) : null}
+            </div>
+          ) : null}
+          {request.canWithdraw ? (
+            <div className="flex justify-end">
+              <WithdrawRequestButton
+                request={request}
+                onWithdrawn={() => titleRef.current?.focus()}
+              />
             </div>
           ) : null}
         </CardContent>

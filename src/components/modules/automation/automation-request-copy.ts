@@ -7,7 +7,9 @@ import { fullName } from "@/lib/format";
 
 /**
  * Words for the automation requests page (`/automation/requests`). Status is
- * read-only copy: the developer moves a request, staff only see where it is.
+ * read-only copy: the developer moves a request, staff only see where it is,
+ * except that the asker may withdraw their own request while it is still
+ * "requested".
  */
 
 /** A request's status as a label. Exhaustive: a new status needs words. */
@@ -21,6 +23,8 @@ export function requestStatusLabel(status: AutomationRequestStatus): string {
       return "Shipped";
     case "declined":
       return "Declined";
+    case "withdrawn":
+      return "Withdrawn";
     default: {
       const unknown: never = status;
       throw new Error(`No label for request status "${String(unknown)}"`);

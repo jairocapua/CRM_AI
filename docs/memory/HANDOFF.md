@@ -4,7 +4,7 @@
 > Since 2026-10-25 the build may also run from Hermes Agent, which has no `Workflow` tool: the orchestrator follows `.claude/workflows/build-phase.js` step by step with helper agents (implementer, then verifier + reviewer in parallel, up to 2 fix rounds) and does the recorder steps itself.
 
 ## Now
-- **Phase:** P8 Automation — **gate passed**, 8/8 tasks done. Waiting on the owner to merge.
+- **Phase:** P8 Automation — active again: the owner added P8-T09 (withdraw a request) after the gate passed; the gate re-runs after it. **Do not merge yet.**
 - **Branch:** `phase/p8-automation`, cut from `master` at `584f50e`. Nothing pushed.
 - **Status:** P8 phase gate passed on 2026-10-25; next phase P9 Settings starts after the merge.
 
@@ -17,7 +17,7 @@
 - After the merge: cut `phase/p9-settings` from `master` (name in `docs/phases/P9-settings.md`), set P9 active, and start its first task in a fresh session: "Autopilot: continue the build per CLAUDE.md".
 
 ## Waiting on you (owner)
-- **Merge P8:** `phase/p8-automation` is pushed (8cbd834 and the CLAUDE.md wording fix); open a PR to `master` on GitHub (jairocapua/CRM_AI) and merge it, as for P7.
+- **Merge P8:** wait: P8-T09 and a gate re-run come first; the branch will be pushed again after.
 - **Human checks** (run `npm run dev`, open the app):
   1. Automation: 8 cards in 5 folder sections, each with a trigger, owner and plain-words status, no switches; a card's name opens its page.
   2. Speed to Lead on a wide window: the diagram forks into "Replied" / "No reply", each path ending in a small "End" pill; the mouse wheel scrolls the page, not the diagram; dark mode recolours nodes, lines and zoom buttons.

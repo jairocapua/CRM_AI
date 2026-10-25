@@ -15,6 +15,7 @@ describe("requestStatusLabel()", () => {
     ["in_review", "In review"],
     ["shipped", "Shipped"],
     ["declined", "Declined"],
+    ["withdrawn", "Withdrawn"],
   ] as const)("calls %s %s", (status, label) => {
     expect(requestStatusLabel(status)).toBe(label);
   });

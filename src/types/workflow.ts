@@ -272,11 +272,13 @@ export interface AutomationDefinition {
 
 /**
  * Where a request for a new automation stands (design "Phase 8b"). The
- * developer moves it; staff only read it. Four statuses, not five:
- * `in_review` and "building" would have no distinct UI.
+ * developer moves it between the first four (no separate "building":
+ * `in_review` covers it, with no distinct UI). "withdrawn" is the asker's
+ * own move (`api.automationRequests.withdraw`), only from "requested"; the
+ * request stays listed, so its history is kept.
  */
 export type AutomationRequestStatus =
-  "requested" | "in_review" | "shipped" | "declined";
+  "requested" | "in_review" | "shipped" | "declined" | "withdrawn";
 
 export type AutomationRequestPriority = "low" | "normal" | "high";
 

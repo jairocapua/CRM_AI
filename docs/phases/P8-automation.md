@@ -161,6 +161,13 @@ is one phase. If scope hurts, cut run history (T06–T07), not the request flow
   - [ ] Test: a request whose `shippedWorkflowId` points nowhere is reported.
 - **Refs:** design "Phase 8b — API and UI", `src/lib/api/smart-lists.ts`
 
+### P8-T09 — Withdraw an automation request
+- **Owner:** agent · **Depends:** P8-T08
+- **Scope:** Owner decision 2026-10-25: staff may withdraw their own request. New fifth AutomationRequestStatus "withdrawn" (kept in the list, history stays). api.automationRequests.withdraw(id): only while status is "requested" and only by the person who asked (createdBy = current user), else 422/403-style ApiError; may fail, invalidates. /automation/requests shows a Withdraw control (with confirm) only on the current user's own requested requests; the badge reads "Withdrawn".
+- **Acceptance:**
+  - [ ] e2e: submit a request, withdraw it, reload, it is listed as "Withdrawn" with no Withdraw control. Test: withdraw refuses another user's request and a request that is not "requested".
+- **Refs:** added by `progress.mjs add` on 2026-10-26
+
 ## Exit criteria (phase gate)
 - [ ] `/automation` shows 8 automations in 5 folders (e2e).
 - [ ] Speed to Lead renders with both branches, end pills and no overlapping
