@@ -6,7 +6,7 @@
 ## Now
 - **Phase:** P8 Automation — active, 6/8 tasks done (P7 merged to GitHub `master` via PR #2 on 2026-10-25; local `master` fast-forwarded to it).
 - **Branch:** `phase/p8-automation`, cut from `master` at `584f50e`. Nothing pushed.
-- **Status:** P8-T06 in review (Autopilot approves next).
+- **Status:** P8-T06 done (`97e70cd`) under Autopilot; P8-T07 next.
 
 ## Last change
 - P8-T06: run history data. `WorkflowRun` / `WorkflowRunStep` / `RunStatus` types (step status = `RunStepStatus`); a `workflowRuns` table filled by `seedWorkflowRuns`, appended last in `buildDb()` and walking the real registry layouts (97 runs; drafts none; all four statuses). `SEED_VERSION` 6. Contact delete sweeps runs; `"workflowRuns"` cache key in both places; three new integrity lines; `api.workflows.listRuns(workflowId, query)`. The fake `Workflow.stats` / `WorkflowNode.stats` counters are deleted.
