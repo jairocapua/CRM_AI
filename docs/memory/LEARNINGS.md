@@ -280,3 +280,26 @@
 - 2026-10-25 [P7-T64] Rewriting a repo file with Python open().write() on Windows turns LF into CRLF; normalise back or use a patch tool, or format:check fails.
 - 2026-10-25 [P7-T64] The deal-form e2e lost-stage specs count opportunity.lost entries by type, not text, so changing the lost-entry wording leaves them green.
 - 2026-10-25 [P7-T64] No e2e spec drags a deal card on the board; same-column reorder is proven at the API level only (move() renumbering tests).
+- 2026-10-25 [P8-T01] Seeded user ids are hand-written (`usr_jordan`), so only tag ids change between reseeds; proving users resolve by slug needs a test that re-keys the users.
+- 2026-10-25 [P8-T01] A compile-time type rule (StepList: branch only last) is tested with `@ts-expect-error` in a .test.ts; loosening the type makes tsc fail with TS2578 (unused directive), which `npm run check` catches.
+- 2026-10-25 [P8-T01] `vi.doMock()` is not undone by `vi.resetModules()`; pair it with `vi.doUnmock` (finally/afterEach) or keep it in the file's last test.
+- 2026-10-25 [P8-T01] To check CRLF, use `git ls-files --eol <files>` or `grep -l $'\r'`; `$'\r'` inside `printf "$(...)"` gets lost and counts every line.
+- 2026-10-25 [P8-T01] In bash, a heredoc body with an apostrophe fails with "unexpected EOF" unless the delimiter is quoted (<<'EOF'); writing a file with a tool or a node script avoids it.
+- 2026-10-25 [P8-T02] The automation registry is evaluated during `next build` (app-sidebar imports @/lib/api, whose barrel imports workflows → LAYOUTS), so a throw at module scope fails the build while prerendering any page.
+- 2026-10-25 [P8-T02] In git-bash, `$TMPDIR` may resolve to /tmp (C:\tmp), not the Hermes scratch dir; use the full scratch path for node scripts.
+- 2026-10-25 [P8-T02] A mutation that stays green (e.g. an overlap check ignoring height) usually means a missing case; add the case (reversed-order touching boxes) until the mutant goes red.
+- 2026-10-25 [P8-T03] On a Next 16 production build, a <Link> to a missing route logs a 404 for its ?_rsc prefetch as soon as it renders, which fails the e2e console fixture; give the target a placeholder page instead of prefetch={false}.
+- 2026-10-25 [P8-T03] On the mock, any read that resolves keys from another table (workflows.list → users, tags) fails whenever that table's fault is on; e2e fault scenarios must account for it.
+- 2026-10-25 [P8-T03] An e2e mutation run leaves the mutated build in .next; rebuild (or rerun the spec after restoring) before screenshots or the final e2e run.
+- 2026-10-25 [P8-T03] For screenshots of a UI task, run `npx next start -H 127.0.0.1 -p 3101` on the current build plus a throwaway Playwright script in the scratch dir; kill it with `taskkill /PID <n> /F /T` (single-slash flags in git-bash).
+- 2026-10-25 [P8-T04] A new `page.tsx` typed `PageProps<"/route/[id]">` fails `tsc` until `npx next typegen` runs, because check's typecheck runs before its build; run typegen once after adding a dynamic route.
+- 2026-10-25 [P8-T04] React Compiler lint rejects `const Icon = pick(); <Icon />` (a component created during render); read a module-level map inside a small component (`StepIcon`, like `ChannelIcon`).
+- 2026-10-25 [P8-T04] `getByRole("main")` includes the app header's buttons; a "no editor controls" e2e must scope to the page's own regions.
+- 2026-10-25 [P8-T04] To fail a detail page's reads in e2e, load the list page, turn the fault on, then click through: useResource reads on mount, so the detail page reads while the fault is on.
+- 2026-10-25 [P8-T05] In @xyflow/react 12, `nodesFocusable={false}` does not remove the keyboard hints: nodes keep `aria-describedby` and the live region (id `react-flow__aria-live-<rfId>`, no class) mounts until `disableKeyboardA11y` is set.
+- 2026-10-25 [P8-T05] Wait for React Flow's fitView in e2e by polling the `.react-flow__viewport` inline transform until two reads match and it is no longer the initial `translate(0px, 0px) scale(1)`; "scale is not 1" breaks whenever a graph fits at maxZoom 1.
+- 2026-10-25 [P8-T05] A React Flow node without `draggable` has no `nopan` class, so dragging on a node pans the canvas.
+- 2026-10-25 [P8-T05] Chromium reports computed colours for oklch tokens as `lab(...)`; compare against a probe element styled `color: var(--token)`, never a literal.
+- 2026-10-25 [P8-T05] To prove a lazily loaded library was not downloaded, match a string literal from its code in script response bodies (chunk names are hashed), and pair it with a positive-control test where it is loaded.
+- 2026-10-25 [P8-T05] `next dev` rewrites AGENTS.md; restore it afterwards. A component-folder unit test cannot import `@/lib/mock/testing` (API-seam lint); build fixtures from `LAYOUTS`.
+- 2026-10-25 [P8-T05] A useMemo keyed on an object rebuilt every render never hits; memoise the inputs (Maps built from `useResource` data) above the component's early returns.

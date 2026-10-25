@@ -589,7 +589,8 @@ export const timeRadio = (dialog: Locator, label: string) =>
   timeGroup(dialog).getByRole("radio", { name: label, exact: true });
 
 /** A store table whose reads `failReads` can make fail. */
-export type FaultTable = "appointments" | "calendars" | "contacts" | "tags";
+export type FaultTable =
+  "appointments" | "calendars" | "contacts" | "tags" | "users";
 
 /**
  * How `failReads` tells a table's records apart: every record of the table
@@ -597,10 +598,11 @@ export type FaultTable = "appointments" | "calendars" | "contacts" | "tags";
  * matches both. An appointment also has a `timezone`, so the calendar shape
  * needs more than that one key. No other record has `dnd` or `score`, and
  * users have no `tagIds`. A tag has `name`, `slug` and `color`, and so does a
- * calendar, the only other record with a `slug` (src/types), so the tag
- * shape also requires no `timezone`, which every calendar has. If another
- * record type gains `name`, `slug` and `color` without a `timezone`, the tags
- * fault catches it too.
+ * calendar; users have a `slug` too, but no `name` or `color` (src/types).
+ * So the tag shape also requires no `timezone`, which every calendar has. If
+ * another record type gains `name`, `slug` and `color` without a `timezone`,
+ * the tags fault catches it too. Only users have a `role`, and contacts, the
+ * other records with a `firstName`, have no `slug`.
  */
 const TABLE_SHAPES: Record<
   FaultTable,
@@ -610,15 +612,19 @@ const TABLE_SHAPES: Record<
   calendars: { has: ["availability", "slotDurationMin", "timezone"] },
   contacts: { has: ["firstName", "lastName", "tagIds", "dnd", "score"] },
   tags: { has: ["name", "slug", "color"], lacks: ["timezone"] },
+  users: { has: ["slug", "firstName", "role", "isActive"] },
 };
 
+/** One table's fault, as `failReads` hands it to the page. */
+interface ReadFault {
+  table: FaultTable;
+  has: readonly string[];
+  lacks: readonly string[];
+}
+
 interface ReadFaultWindow {
-  /** The table whose reads fail now, or null when none does. */
-  __e2eReadFault?: {
-    table: FaultTable;
-    has: readonly string[];
-    lacks: readonly string[];
-  } | null;
+  /** The tables whose reads fail now, or null when none does. */
+  __e2eReadFault?: readonly ReadFault[] | null;
   /** Set once `Object.values` has been wrapped in this document. */
   __e2eReadFaultInstalled?: boolean;
   /** How many reads the fault has failed in this document so far. */
@@ -626,8 +632,9 @@ interface ReadFaultWindow {
 }
 
 /**
- * Makes every read of one store table fail until `restoreReads`, so a spec can
- * drive a load error and its Retry.
+ * Makes every read of one or more store tables fail until `restoreReads`, so
+ * a spec can drive a load error and its Retry. Each call replaces the tables
+ * a previous call failed.
  *
  * Why: reads keep `canFail: false` (DECISIONS, P6; P10-T02 owns any change),
  * so the mock never fails a read, and there is no production fault switch.
@@ -637,7 +644,7 @@ interface ReadFaultWindow {
  * How: it wraps the page's built-in `Object.values`, which the API uses to
  * read a table (`Object.values(db.getState().appointments)`). The wrapper
  * calls the real one, then throws when the fault is on and the first value
- * holds every key of the table's record shape, so other objects pass
+ * holds every key of a failed table's record shape, so other objects pass
  * through. The throw happens inside `simulate()`, so the read rejects with a
  * plain Error, and `useResource` reports it as "Something went wrong.".
  *
@@ -662,30 +669,39 @@ interface ReadFaultWindow {
  * catches every read of the whole table: the contacts list, the tag counts
  * (`list()` in tags.ts), the dashboard's analytics (analytics.ts) and the
  * contacts CSV export (contacts.ts). Contact writes and `contacts.get` read
- * by key and are unaffected. For tags it catches only `list()` in tags.ts
- * (`Object.values(tags)`, after its loop over the contacts, which passes):
- * tag create, update and remove, `contacts.list` and
- * `contacts.addTags`/`removeTags` do not read the tags table that way, so
- * they keep working. Restore reads before a step that reaches them.
- * `readFaultThrows` counts the reads the fault has failed.
+ * by key and are unaffected. For tags it catches `list()` in tags.ts
+ * (`Object.values(tags)`, after its loop over the contacts, which passes),
+ * the automations' `list()` and `get()` in workflows.ts, which read every
+ * tag to resolve tag names, and the integrity check; tag create, update and
+ * remove, `contacts.list` and `contacts.addTags`/`removeTags` do not read the
+ * tags table that way, so they keep working. For users it catches
+ * `users.list`, `users.invite` (it reads every slug), the automations'
+ * `list()` and `get()` (they resolve owner slugs) and the integrity check;
+ * `users.me` and `users.get` read by key and keep working. Restore reads
+ * before a step that reaches them. `readFaultThrows` counts the reads the
+ * fault has failed.
  */
-export async function failReads(page: Page, table: FaultTable): Promise<void> {
+export async function failReads(
+  page: Page,
+  ...tables: [FaultTable, ...FaultTable[]]
+): Promise<void> {
   await page.evaluate(
-    ({ table, has, lacks }) => {
+    (faults) => {
       const w = window as unknown as ReadFaultWindow;
       if (!w.__e2eReadFaultInstalled) {
         const real = Object.values;
         Object.values = function values(o: object) {
           const result = real(o);
-          const fault = w.__e2eReadFault;
           const first: unknown = result[0];
-          if (
-            fault &&
-            typeof first === "object" &&
-            first !== null &&
-            fault.has.every((key) => key in first) &&
-            !fault.lacks.some((key) => key in first)
-          ) {
+          const fault =
+            typeof first === "object" && first !== null
+              ? w.__e2eReadFault?.find(
+                  ({ has, lacks }) =>
+                    has.every((key) => key in first) &&
+                    !lacks.some((key) => key in first),
+                )
+              : undefined;
+          if (fault) {
             w.__e2eReadFaultThrows = (w.__e2eReadFaultThrows ?? 0) + 1;
             throw new Error(`e2e: reading ${fault.table} failed`);
           }
@@ -693,13 +709,13 @@ export async function failReads(page: Page, table: FaultTable): Promise<void> {
         } as typeof Object.values;
         w.__e2eReadFaultInstalled = true;
       }
-      w.__e2eReadFault = { table, has, lacks };
+      w.__e2eReadFault = faults;
     },
-    {
+    tables.map((table): ReadFault => ({
       table,
       has: TABLE_SHAPES[table].has,
       lacks: TABLE_SHAPES[table].lacks ?? [],
-    },
+    })),
   );
 }
 
@@ -727,6 +743,64 @@ export async function readFaultThrows(page: Page): Promise<number> {
 export async function restoreReads(page: Page): Promise<void> {
   await page.evaluate(() => {
     (window as unknown as ReadFaultWindow).__e2eReadFault = null;
+  });
+}
+
+interface UserListFaultWindow {
+  /** While true, `users.list` fails. */
+  __e2eUserListFault?: boolean;
+  /** Set once `Object.values` has been wrapped for this fault. */
+  __e2eUserListFaultInstalled?: boolean;
+}
+
+/**
+ * Makes `users.list` fail, and only it, until `restoreUserList`: the case
+ * where the users read fails but the automations read, which also reads the
+ * users table to resolve owners, succeeds. With a `fetch()` backend those are
+ * two endpoints; on the mock both read `Object.values(users)`, so
+ * `failReads(page, "users")` fails both.
+ *
+ * How: it wraps `Object.values`, layered over whatever is there, as
+ * `failReads` does. While the fault is on, the users table's values come back
+ * as a real array whose `sort` throws: `users.list` sorts them by first name,
+ * while the automations' `lookups()` and the integrity check only `map` them.
+ * If `users.list` stops sorting, the owners error never appears and the spec
+ * fails loudly, never vacuously. Same limits as `failReads`: the current
+ * document only, so install it after `gotoApp` and reach the read by a
+ * client-side link.
+ */
+export async function failUserList(page: Page): Promise<void> {
+  await page.evaluate((has) => {
+    const w = window as unknown as UserListFaultWindow;
+    if (!w.__e2eUserListFaultInstalled) {
+      const real = Object.values;
+      Object.values = function values(o: object) {
+        const result = real(o);
+        const first: unknown = result[0];
+        if (
+          w.__e2eUserListFault &&
+          typeof first === "object" &&
+          first !== null &&
+          has.every((key) => key in first)
+        ) {
+          Object.defineProperty(result, "sort", {
+            value() {
+              throw new Error("e2e: listing users failed");
+            },
+          });
+        }
+        return result;
+      } as typeof Object.values;
+      w.__e2eUserListFaultInstalled = true;
+    }
+    w.__e2eUserListFault = true;
+  }, TABLE_SHAPES.users.has);
+}
+
+/** Ends the fault `failUserList` started; its wrapper stays, passing through. */
+export async function restoreUserList(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    (window as unknown as UserListFaultWindow).__e2eUserListFault = false;
   });
 }
 

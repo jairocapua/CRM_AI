@@ -4,25 +4,25 @@
 > Since 2026-10-25 the build may also run from Hermes Agent, which has no `Workflow` tool: the orchestrator follows `.claude/workflows/build-phase.js` step by step with helper agents (implementer, then verifier + reviewer in parallel, up to 2 fix rounds) and does the recorder steps itself.
 
 ## Now
-- **Phase:** P7 Calendars — **gate passed** on 2026-10-25 (re-run after the 2026-10-24 failure); phase `done`.
-- **Branch:** `phase/p7-calendars`. GitHub `master` already holds it up to `6f04958` (PR #1); the commits after that (P7-T64 and this gate record) still need merging.
-- **Status:** owner human check passed 2026-10-25 (Asia/Singapore: zone label, local times, now line, side-by-side overlap all correct); waiting on the owner to merge. Next phase: P8 Automation (branch `phase/p8-automation`, cut from `master` after the merge).
+- **Phase:** P8 Automation — active, 5/8 tasks done (P7 merged to GitHub `master` via PR #2 on 2026-10-25; local `master` fast-forwarded to it).
+- **Branch:** `phase/p8-automation`, cut from `master` at `584f50e`. Nothing pushed.
+- **Status:** P8-T01..T05 done under Autopilot in one session (registry, layout, list page, detail page, diagram). Session handed off for a fresh one.
 
 ## Last change
-- Gate verify: `npm run check` green (799 Vitest), `npm run e2e` 146 passed (no flakes), `@tanstack/react-table` 8.21.3, tracker OK. Exit criteria 1–4 proven by `calendars-booking.spec.ts:139`, `calendars.spec.ts:26`, `smoke.spec.ts` + the console-watching fixture.
-- Gate review: no must-fix; every earlier gate finding (P7-T57..T64) confirmed resolved in code. Four non-blocking suggestions went to `docs/BACKLOG.md`.
+- P8-T05: `/automation/[id]` shows a read-only React Flow diagram above the step list on screens 768px and wider (lazy-loaded; phones never download it). Wheel scrolls the page, no zoom-on-scroll; 9 nodes for Speed to Lead with no overlaps; follows dark mode through the `--xy-*` bridge in `globals.css`. Layout now rejects a repeated branch id within one fork.
+- One deep review round: `disableKeyboardA11y` (React Flow's "arrow keys to move / delete" screen-reader text was announced on a read-only diagram), memoised step names, a phone-never-downloads e2e, a closer skeleton height.
+- Verify: `npm run check` green (937 Vitest), 29 e2e passed (automation-diagram, -detail, -list, smoke), diagram spec stable over 3 repeats, react-table 8.21.3. Screenshots checked light and dark.
 
 ## Next up
-- After the merge: "Autopilot: continue the build per CLAUDE.md" starts P8 (`node scripts/progress.mjs next --phase P8`).
+- P8-T06 Run history data (deep review; `WorkflowRun` / `WorkflowRunStep` types, design "Phase 8b"). `WorkflowRunStep.status` must use the existing `RunStepStatus` (DECISIONS [P8-T04]). Then T07 run history UI (reuse `AutomationStepList`'s `statuses` prop) and T08 requests (replaces the placeholder `/automation/requests` page in place).
+- Start it in a fresh session: "Autopilot: continue the build per CLAUDE.md".
 
 ## Waiting on you (owner)
-- Merge P7 into `master`. Locally: `git switch master && git pull && git merge --no-ff phase/p7-calendars`. Or, since you used GitHub before: push the branch and open a second PR.
+- Nothing blocking. Optional: the fixed triggers/waits for four automations (DECISIONS [P8-T01], "Fixed choices") and the list's status wording ([P8-T03]); change either if you prefer.
 
 ## Open suggestions (non-blocking)
-- P7-T63: partial save if `setStatus()` fails after `update()` wrote the reason (only a concurrent delete's 404 can cause it).
-- P7-T60: statusBadge() locator is fragile; pickOpenSalesDeal should exclude isLost stages.
-- P7-T59: test create() with a missing stageId; map a `pipelineId` 422 onto the Pipeline field.
-- Gate review items are in `docs/BACKLOG.md` (doc-comment tidy, creation wording, move() stage check, create-then-setStatus e2e).
+- `docs/BACKLOG.md` holds P8-T01..T05 leftovers: unique slugs/tag names in the API, channel typing, detail page title, `next typegen` before `tsc` on a fresh clone, React Flow's hard-coded `role="application"`, small test/comment tidy-ups.
+- Calendar ids, pipeline/stage ids and `templateId` are still id-typed in authored configs; they need stable keys before any definition uses them.
 
 ## Blockers
 - None.

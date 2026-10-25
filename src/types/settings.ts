@@ -12,6 +12,11 @@ export type UserRole = "admin" | "user" | "agency_owner";
 
 export interface User extends Audited {
   id: ID;
+  /**
+   * Stable, human-readable key ("priya"). Automation definitions name users
+   * by slug because ids are not stable across workspaces or reseeds.
+   */
+  slug: string;
   firstName: string;
   lastName: string;
   email: string;

@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* React Flow's stylesheet is unlayered, and unlayered CSS beats every
+   Tailwind layer, so it would override the utilities on the diagram's custom
+   nodes. Inside `components` it sits below `utilities` (design §6). */
+@import "@xyflow/react/dist/style.css" layer(components);
 
 @custom-variant dark (&:is(.dark *));
 
@@ -206,31 +210,29 @@
 /* --------------------------------------------------------------------------
    React Flow bridge
    React Flow v12 themes itself from its own custom properties. Remapping them
-   once here makes the workflow canvas follow light/dark for free, instead of
-   overriding .react-flow__* classes piecemeal.
+   once here makes the automation diagram follow light/dark for free, instead
+   of overriding .react-flow__* classes piecemeal. Unlayered on purpose: it
+   must beat the defaults in the layered stylesheet imported above.
+
+   Only what the read-only diagram draws is bridged (design §6): its custom
+   nodes style themselves with Tailwind tokens, nothing is selectable or
+   connectable, and there is no MiniMap. Handles are invisible but keep their
+   colours. Edges use --muted-foreground, not --border: dark mode's --border
+   is 10% white, which leaves a 1.5px line all but invisible.
    -------------------------------------------------------------------------- */
 .react-flow {
   --xy-background-color: var(--background);
-  --xy-edge-stroke-default: var(--border);
+  --xy-background-pattern-dots-color-default: var(--border);
+  --xy-edge-stroke-default: var(--muted-foreground);
   --xy-edge-stroke-width-default: 1.5;
-  --xy-edge-stroke-selected-default: var(--brand);
-  --xy-connectionline-stroke-default: var(--brand);
+  --xy-edge-label-background-color-default: var(--background);
+  --xy-edge-label-color-default: var(--muted-foreground);
   --xy-handle-background-color-default: var(--brand);
   --xy-handle-border-color-default: var(--background);
-  --xy-node-border-default: 1px solid var(--border);
-  --xy-node-background-color-default: var(--card);
-  --xy-node-boxshadow-hover-default: 0 0 0 1px var(--brand);
-  --xy-node-boxshadow-selected-default: 0 0 0 2px var(--brand);
   --xy-controls-button-background-color-default: var(--card);
   --xy-controls-button-background-color-hover-default: var(--accent);
   --xy-controls-button-color-default: var(--foreground);
   --xy-controls-button-color-hover-default: var(--accent-foreground);
   --xy-controls-button-border-color-default: var(--border);
-  --xy-minimap-background-color-default: var(--card);
-  --xy-minimap-mask-background-color-default: color-mix(
-    in oklab,
-    var(--background) 70%,
-    transparent
-  );
   --xy-attribution-background-color-default: transparent;
 }
