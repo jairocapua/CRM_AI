@@ -7,7 +7,7 @@
 
 - **Phase:** P9 Settings — active, 7/7 tasks done; the phase gate is next.
 - **Branch:** `phase/p9-settings`, cut from `master` at `4d72e89`. Nothing pushed.
-- **Status:** P9-T07 in review.
+- **Status:** P9-T07 approved (`662dd84`); the P9 phase gate is next.
 
 ## Last change
 
