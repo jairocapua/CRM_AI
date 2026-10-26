@@ -26,7 +26,11 @@ import { Money } from "@/components/common/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { cn } from "@/lib/utils";
-import { stageIdFromDroppable } from "./board-dnd";
+import {
+  boardDragAnnouncements,
+  boardDropTarget,
+  DEAL_DRAG_INSTRUCTIONS,
+} from "./board-dnd";
 import { BoardColumn } from "./board-column";
 import { BoardToolbar } from "./board-toolbar";
 import { DealCardBody } from "./deal-card";
@@ -153,6 +157,17 @@ export function OpportunitiesBoard() {
   );
 
   const stages = useMemo(() => activePipeline?.stages ?? [], [activePipeline]);
+  // What a screen reader hears during a drag: the deal, the stage it is
+  // over and its position there among the cards shown (board-dnd.ts), so
+  // hidden lost deals and deals the search filters out are not counted.
+  // The drop itself (handleDragEnd) still computes against every deal.
+  const accessibility = useMemo(
+    () => ({
+      announcements: boardDragAnnouncements(visible, stages),
+      screenReaderInstructions: { draggable: DEAL_DRAG_INSTRUCTIONS },
+    }),
+    [visible, stages],
+  );
   const rollups = useMemo(
     () => api.opportunities.rollupByStage(live, stages),
     [live, stages],
@@ -191,25 +206,15 @@ export function OpportunitiesBoard() {
     const dragged = deals.find((d) => d.id === active.id);
     if (!dragged) return;
 
-    const overId = String(over.id);
-    const overDeal = deals.find((d) => d.id === overId);
-    const targetStageId = stageIdFromDroppable(overId) ?? overDeal?.stageId;
-    if (!targetStageId) return;
-
-    // Mirror `api.opportunities.move` exactly: it splices into the destination
-    // column with the dragged deal already removed, so compute the index the
-    // same way or the optimistic order and the stored order disagree.
+    // `index` is in `api.opportunities.move`'s terms: it splices into the
+    // destination column with the dragged deal already removed, so the
+    // optimistic order below is computed the same way.
+    const target = boardDropTarget(deals, dragged.id, String(over.id));
+    if (!target || target.inPlace) return;
+    const { stageId: targetStageId, index: insertAt } = target;
     const column = deals
       .filter((d) => d.stageId === targetStageId && d.id !== dragged.id)
       .sort((a, b) => a.position - b.position);
-    const overIndex = overDeal
-      ? column.findIndex((d) => d.id === overDeal.id)
-      : -1;
-    const insertAt = overIndex < 0 ? column.length : overIndex;
-
-    if (dragged.stageId === targetStageId && dragged.position === insertAt) {
-      return;
-    }
 
     const reordered = [...column];
     reordered.splice(insertAt, 0, { ...dragged, stageId: targetStageId });
@@ -335,6 +340,7 @@ export function OpportunitiesBoard() {
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
+          accessibility={accessibility}
           onDragStart={handleDragStart}
           onDragEnd={(event) => void handleDragEnd(event)}
           onDragCancel={() => setActiveId(null)}

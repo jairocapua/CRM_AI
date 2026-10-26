@@ -131,6 +131,7 @@ interface PersistedDb {
         status: string;
         pipelineId: string;
         stageId: string;
+        position: number;
         expectedCloseAt?: string;
         closedAt?: string;
         lostReason?: string;
@@ -240,6 +241,8 @@ export interface SeededDeal {
   status: string;
   pipelineId: string;
   stageId: string;
+  /** Its place in its stage's column (0-based, as stored). */
+  position: number;
   /** As stored: a UTC ISO instant, or null when the deal has no date. */
   expectedCloseAt: string | null;
   /** When the deal was won or lost, or null while it is open. */
@@ -257,6 +260,7 @@ export async function readDeals(page: Page): Promise<SeededDeal[]> {
     status: deal.status,
     pipelineId: deal.pipelineId,
     stageId: deal.stageId,
+    position: deal.position,
     expectedCloseAt: deal.expectedCloseAt ?? null,
     closedAt: deal.closedAt ?? null,
     lostReason: deal.lostReason ?? null,

@@ -371,3 +371,11 @@
 - 2026-10-27 [P10-T03] The DataTable card is `overflow-hidden`, so losing the table's `overflow-x-auto` clips columns without widening the page, and a page-overflow test cannot catch it. Scroll the container to its end and assert the last column header lands on screen.
 - 2026-10-27 [P10-T03] A "keep it open" mutant must really pass `true`: `setOpenMobile(Math.random() > 2)` is `setOpenMobile(false)` and stays green.
 - 2026-10-27 [P10-T03] The shadcn Separator's `data-vertical:self-stretch` plus a fixed `h-4` pins it to the top of a flex row; add `data-vertical:self-center`.
+- 2026-10-27 [P10-T04] axe on every route in both themes: set next-themes' `theme` key in localStorage with `addInitScript` before load, assert `html.dark`, then wait for skeletons, `[aria-busy=true]` and running animations to finish before scanning.
+- 2026-10-27 [P10-T04] Opacity on a card or chip (closed deals, cancelled appointments) takes its small text under 4.5:1; dim with a tint or a dashed border instead.
+- 2026-10-27 [P10-T04] Chromium tabs onto a date or time input's picker icon inside the browser's own shadow tree: the input stays `document.activeElement` but stops matching `:focus`, and the browser draws its own outline, so a computed-style focus-ring check sees nothing there.
+- 2026-10-27 [P10-T04] The recharts surface sets `outline-hidden`, which also sets `--tw-outline-style: none`; a focus-visible outline on it needs `outline-solid` too.
+- 2026-10-27 [P10-T04] A Playwright `click()` scrolls its target into view first, so a "keeps the row scrolled" test must navigate with `dispatchEvent("click")`.
+- 2026-10-27 [P10-T04] dnd-kit's `onDragStart` announcement is overwritten in the same render by the first `onDragOver` ("is over its own position"), so tests and screen readers only get the "is over" line.
+- 2026-10-27 [P10-T04] dnd-kit's KeyboardSensor attaches its keydown listener in a `setTimeout(0)` after the pick-up; a Space or Escape pressed right after the pick-up announcement can be lost. Await a page-side `setTimeout(0)` first (`keyboardSensorReady` in e2e/board-keyboard.spec.ts); arrows inside a `toPass` retry are safe.
+- 2026-10-27 [P10-T04] An e2e that only checks which stage a moved deal lands in cannot catch drop maths within one column; assert the column's card order, the stored order and the order after a reload.

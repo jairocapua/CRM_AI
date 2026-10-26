@@ -93,6 +93,9 @@ export function StatCard({
           >
             <AreaChart
               data={series}
+              // Decorative: recharts' accessibility layer would make the
+              // aria-hidden chart a tab stop.
+              accessibilityLayer={false}
               margin={{ top: 2, right: 0, bottom: 0, left: 0 }}
             >
               <Area

@@ -156,13 +156,14 @@ export function DemoDataPanel() {
         <CardContent className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="latency">Latency</Label>
+              <Label id="latency-label">Latency</Label>
               <span className="text-muted-foreground text-sm tabular-nums">
                 {latency} ms
               </span>
             </div>
             <Slider
               id="latency"
+              aria-labelledby="latency-label"
               value={[latency]}
               min={0}
               max={3000}
@@ -177,13 +178,14 @@ export function DemoDataPanel() {
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="failure">Failure rate</Label>
+              <Label id="failure-label">Failure rate</Label>
               <span className="text-muted-foreground text-sm tabular-nums">
                 {Math.round(failureRate * 100)}%
               </span>
             </div>
             <Slider
               id="failure"
+              aria-labelledby="failure-label"
               value={[failureRate]}
               min={0}
               max={1}

@@ -340,10 +340,7 @@ export function Composer({
 
       <div className="flex items-center gap-1">
         <Popover open={templatesOpen} onOpenChange={setTemplatesOpen}>
-          <PopoverTrigger
-            render={<Button variant="ghost" size="sm" />}
-            aria-label="Insert template"
-          >
+          <PopoverTrigger render={<Button variant="ghost" size="sm" />}>
             <FileTextIcon />
             Templates
           </PopoverTrigger>
@@ -373,10 +370,7 @@ export function Composer({
         </Popover>
 
         <Popover open={snippetsOpen} onOpenChange={setSnippetsOpen}>
-          <PopoverTrigger
-            render={<Button variant="ghost" size="sm" />}
-            aria-label="Insert snippet"
-          >
+          <PopoverTrigger render={<Button variant="ghost" size="sm" />}>
             <ZapIcon />
             Snippets
           </PopoverTrigger>

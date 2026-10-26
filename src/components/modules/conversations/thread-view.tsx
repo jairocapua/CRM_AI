@@ -372,12 +372,13 @@ function ThreadHeader({
         </AvatarFallback>
       </Avatar>
       <div className="flex min-w-0 flex-1 flex-col">
-        <Link
-          href={`/contacts/${contact.id}`}
-          className="truncate text-sm font-semibold hover:underline"
-        >
-          {fullName(contact)}
-        </Link>
+        {/* The thread's page heading (the inbox beside it has its own on
+            wide screens; on a phone this is the only one). */}
+        <h1 className="truncate text-sm font-semibold">
+          <Link href={`/contacts/${contact.id}`} className="hover:underline">
+            {fullName(contact)}
+          </Link>
+        </h1>
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           {conversation.channels.map((channel) => (
             <span
