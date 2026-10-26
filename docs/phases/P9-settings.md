@@ -157,6 +157,7 @@ management notes).
 ### P9-T08 — Gate fix: tags.merge honours the Demo Data latency
 - **Owner:** agent · **Depends:** P9-T06
 - **Scope:** tags.merge pinned simulate({ ms: 400 }), which ignores the Demo Data latency slider, so the 'a failed merge keeps the dialog open' e2e had a ~0.2-0.6s pending window and failed once in the gate's full run (Cancel already re-enabled). Merge uses the shared latency like every other write; tidy the stale settings-sections.ts placeholder comment.
+  - From the gate re-run: `users.invite` (`ms: 420`) failed the same way ("the invite dialog cannot close while the invite is on its way"), and about 20 calls pin `ms`. Fixed for the class in `simulate()`: a pinned `ms` yields to a slider latency above the default (`Math.max(ms, latencyMs)`); at or below the default, and in unit tests (latency 0), a pin keeps its own value. `src/lib/api/http.test.ts` covers it.
 - **Acceptance:**
   - [ ] tags.merge has no fixed ms; tags unit tests green (merge+remove lost-update pair now overlaps); settings-tags.spec.ts green with --repeat-each=5; full npm run e2e green.
 - **Refs:** added by `progress.mjs add` on 2026-10-26

@@ -263,7 +263,8 @@ export async function merge(sourceId: ID, targetId: ID): Promise<TagWithCount> {
       if (renameRefusal) row.renameRefusal = renameRefusal.message;
       return row;
     },
-    { ms: 400 },
+    // No fixed `ms`: the merge takes the Demo Data latency like every other
+    // write, so a slowed demo (and the e2e pending checks) slows it too.
   );
   invalidate("tags", "contacts", "opportunities");
   return merged;

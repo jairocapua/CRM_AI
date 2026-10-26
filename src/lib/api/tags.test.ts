@@ -503,6 +503,9 @@ describe("tags.merge()", () => {
   it("moves the source's contacts and deals to the target and deletes the source; the preview counted it", async () => {
     const w = await world();
     const { a, b } = mergePair(w);
+    // The merge takes the test latency (0ms), so move the clock on for its
+    // `updatedAt` bump to show.
+    setDemoNow(new Date(Date.parse(b.updatedAt) + 60_000).toISOString());
     const contactsBefore = w.contacts();
     const dealsBefore = w.deals();
     const aContacts = w.taggedContacts(a.id).map((c) => c.id);
@@ -687,10 +690,8 @@ describe("tags.merge()", () => {
  * starts from a copy read before the first one landed. Both calls' sleeps are
  * queued before either runs, so a read made before the sleep and a write
  * made after it would interleave here and lose one of the changes; only the
- * call sent second loses to a stale read, hence both orders. The merge and
- * removal pair proves only `merge`: the removal's 0ms sleep ends, and it
- * writes, before the merge's 400ms one does, so the removal never runs on a
- * stale copy.
+ * call sent second loses to a stale read, hence both orders. Every tag write
+ * takes the shared latency (no fixed `ms`), so each pair really overlaps.
  */
 describe("tag writes sent at once", () => {
   const ORDERS = ["sent as listed", "sent reversed"] as const;
