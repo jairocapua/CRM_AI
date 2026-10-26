@@ -126,6 +126,7 @@ management notes).
     `nowIso()` (days-in-stage), with a test. The board copes with its
     selected pipeline being deleted. The remove-stage confirm says won
     deals stay won.
+  - From the P9-T04 review: a whole-table `Object.values` read inside a write (e.g. renumbering stages) trips e2e `failReads` for that table; if stages get keyboard Move up/down besides the drag, reuse the custom fields list's wait-for-refetch rule (a second optimistic move before the first refetch jumps back).
 - **Acceptance:**
   - [ ] e2e (the phase exit check): add a stage, open the board, and the new
         column is there.
@@ -147,8 +148,9 @@ management notes).
 ### P9-T07 — e2e: create required custom fields via settings UI
 - **Owner:** agent · **Depends:** P9-T04
 - **Scope:** After P9-T04 lands, replace addRequiredCustomFields/DB_KEY in e2e/deal-form.spec.ts with the custom fields manager UI.
+  - From the P9-T04 review: move the helpers in `e2e/settings-custom-fields.spec.ts` (`addField`, `choose`, `storedFieldLabels`, `formFieldLabels`) to a shared `e2e/settings-helpers.ts` and teach them Required and options (controls: checkbox "Required", combobox "Type", inputs "Option N", button "Add option"). A checkbox field cannot be required ([P9-T04]).
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] deal-form.spec.ts creates its required custom fields through /settings/custom-fields; `grep -n "addRequiredCustomFields\|DB_KEY" e2e/deal-form.spec.ts` finds no field injection left, and the spec stays green.
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
 ## Exit criteria (phase gate)

@@ -334,3 +334,10 @@
 - 2026-10-26 [P9-T03] One e2e build can red-proof several UI tests at once when each broken line targets a different test.
 - 2026-10-26 [P9-T03] `failReads(page, "contacts")` fails a count-based preview (removalPreview) in e2e.
 - 2026-10-26 [P9-T03] On Windows a 16-worker Playwright run can fail once with `net::ERR_NO_BUFFER_SPACE`; rerun the spec alone before suspecting the change.
+- 2026-10-26 [P9-T04] e2e `failReads` patches `Object.values`; a new whole-table `Object.values` read in a write path (a cascade renumber) makes that write fail in every spec that faults the table. Read through `Object.entries` in writes, or expect it.
+- 2026-10-26 [P9-T04] Chromium keeps focus on a node React moves with `insertBefore`, so a "restore focus after reorder" effect cannot go red in Playwright; the real focus loss comes from a natively disabled button (use `focusableWhenDisabled`).
+- 2026-10-26 [P9-T04] zod 4 skips an object-level `superRefine` after an aborting issue; a `{ abort: true }` on one field hides the cross-field errors.
+- 2026-10-26 [P9-T04] The contact and deal forms save `null` for every empty custom field, so `key in customFields` is not "holds a value"; use `holdsCustomFieldValue`.
+- 2026-10-26 [P9-T04] A second optimistic move made before the first move's refetch lands jumps back when that refetch arrives; block moves until it does.
+- 2026-10-26 [P9-T04] While a modal dialog is open, `getByRole` cannot see the page behind it (aria-hidden); close the dialog before asserting on the list.
+- 2026-10-26 [P9-T04] A position computed as "count of siblings" lands mid-list after a removal unless removal renumbers; renumber in the cascade and use max + 1.

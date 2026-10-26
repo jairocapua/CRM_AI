@@ -44,6 +44,11 @@ export type {
 } from "./automation-requests";
 export type { AppointmentRow, CalendarPatch } from "./calendars";
 export type {
+  CustomFieldDraft,
+  CustomFieldPatch,
+  CustomFieldRemovalPreview,
+} from "./custom-fields";
+export type {
   InviteDraft,
   RemovalPreview,
   TeamMember,

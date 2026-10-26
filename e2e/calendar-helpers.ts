@@ -594,6 +594,7 @@ export type FaultTable =
   | "automationRequests"
   | "calendars"
   | "contacts"
+  | "customFields"
   | "tags"
   | "users"
   | "workflowRuns";
@@ -610,7 +611,9 @@ export type FaultTable =
  * the tags fault catches it too. Only users have a `role`, and contacts, the
  * other records with a `firstName`, have no `slug`. Only automation runs have
  * a `workflowId` and `steps`. Only automation requests have a `problem`
- * and an `outcome`.
+ * and an `outcome`. Only custom field definitions have a `key`, `label`,
+ * `objectType`, `required` and `position` (smart lists have an
+ * `objectType`, nothing else of it).
  */
 const TABLE_SHAPES: Record<
   FaultTable,
@@ -619,6 +622,7 @@ const TABLE_SHAPES: Record<
   appointments: { has: ["calendarId", "contactId", "startAt", "endAt"] },
   calendars: { has: ["availability", "slotDurationMin", "timezone"] },
   contacts: { has: ["firstName", "lastName", "tagIds", "dnd", "score"] },
+  customFields: { has: ["key", "label", "objectType", "required", "position"] },
   tags: { has: ["name", "slug", "color"], lacks: ["timezone"] },
   users: { has: ["slug", "firstName", "role", "isActive"] },
   workflowRuns: { has: ["workflowId", "contactId", "steps", "startedAt"] },
@@ -693,7 +697,13 @@ interface ReadFaultWindow {
  * check; `listRuns` names contacts by key, so a contacts fault leaves it
  * alone. For automationRequests it catches `automationRequests.list()` and
  * the integrity check; `create()` writes without reading the table, so it
- * keeps working. Restore reads
+ * keeps working. For customFields it catches `customFields.list()` (the
+ * custom fields page, the contact and deal forms, the contact info panel and
+ * the deal page), `create()` and `reorder()` (they read the object type's
+ * fields) and the integrity check; `update()`, `remove()` and
+ * `removalPreview()` read the field by key and keep working (`remove()`
+ * renumbers the fields left through `Object.entries`, which the fault does
+ * not patch). Restore reads
  * before a step that reaches them. `readFaultThrows` counts the reads the
  * fault has failed.
  */

@@ -1,4 +1,4 @@
-import type { ID } from "@/types";
+import type { CustomField, ID } from "@/types";
 import type { DbState } from "./db-state";
 
 /**
@@ -272,9 +272,50 @@ export function countUserReferences(
 }
 
 /**
+ * Whether a record's custom values hold a value for `key` that the contact
+ * and deal pages show: anything but absent, `null`, "" or an empty list
+ * (`false` is a value: the page shows "No"). The contact and deal forms save
+ * `null` for every custom field left empty, so a key can be stored with no
+ * value in it.
+ */
+export function holdsCustomFieldValue(
+  values: Record<string, unknown>,
+  key: string,
+): boolean {
+  const value = values[key];
+  return (
+    value !== undefined &&
+    value !== null &&
+    value !== "" &&
+    !(Array.isArray(value) && value.length === 0)
+  );
+}
+
+/**
+ * How many records of `field`'s object type hold a value for it
+ * (`holdsCustomFieldValue`): the values `cascadeCustomFieldDelete` deletes.
+ * It also deletes the key where it holds no value, which no one loses, so
+ * those are not counted.
+ */
+export function countCustomFieldValues(
+  state: DbState,
+  field: CustomField,
+): number {
+  const table: Record<ID, { customFields: Record<string, unknown> }> =
+    field.objectType === "contact" ? state.contacts : state.opportunities;
+  return Object.values(table).filter((row) =>
+    holdsCustomFieldValue(row.customFields, field.key),
+  ).length;
+}
+
+/**
  * Deleting a custom field deletes the values stored under its key, on the
  * records of its own object type only: a contact field and a deal field may
- * share a key.
+ * share a key. The key goes wherever it is stored, value or not
+ * (`countCustomFieldValues` counts the values), so no record is left holding
+ * a key for a field that is gone. The fields of its object type left are
+ * renumbered 0..n-1 in their order, so the next one added goes last; the
+ * other type's fields are untouched. Timestamps are kept.
  */
 export function cascadeCustomFieldDelete(
   state: DbState,
@@ -283,6 +324,14 @@ export function cascadeCustomFieldDelete(
   const field = state.customFields[id];
   const customFields = omitBy(state.customFields, (_, key) => key === id);
   if (!field) return { customFields };
+
+  Object.entries(customFields)
+    .map(([, f]) => f)
+    .filter((f) => f.objectType === field.objectType)
+    .sort((a, b) => a.position - b.position)
+    .forEach((f, position) => {
+      if (f.position !== position) customFields[f.id] = { ...f, position };
+    });
 
   const strip = <T extends { customFields: Record<string, unknown> }>(
     table: Record<ID, T>,
