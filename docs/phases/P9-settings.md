@@ -154,6 +154,13 @@ management notes).
   - [ ] deal-form.spec.ts creates its required custom fields through /settings/custom-fields; `grep -n "addRequiredCustomFields\|DB_KEY" e2e/deal-form.spec.ts` finds no field injection left, and the spec stays green.
 - **Refs:** added by `progress.mjs add` on 2026-10-24
 
+### P9-T08 — Gate fix: tags.merge honours the Demo Data latency
+- **Owner:** agent · **Depends:** P9-T06
+- **Scope:** tags.merge pinned simulate({ ms: 400 }), which ignores the Demo Data latency slider, so the 'a failed merge keeps the dialog open' e2e had a ~0.2-0.6s pending window and failed once in the gate's full run (Cancel already re-enabled). Merge uses the shared latency like every other write; tidy the stale settings-sections.ts placeholder comment.
+- **Acceptance:**
+  - [ ] tags.merge has no fixed ms; tags unit tests green (merge+remove lost-update pair now overlaps); settings-tags.spec.ts green with --repeat-each=5; full npm run e2e green.
+- **Refs:** added by `progress.mjs add` on 2026-10-26
+
 ## Exit criteria (phase gate)
 - [ ] Add a stage → the board shows the column (e2e).
 - [ ] The integrity report is clean after each destructive settings action.

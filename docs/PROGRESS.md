@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 84/91 tasks done (92%) · **Current phase:** P9 · **Next agent task:** — · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+**Overall:** 84/92 tasks done (91%) · **Current phase:** P9 · **Next agent task:** P9-T08 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -102,7 +102,7 @@ Status: done · Progress: 9/9 · Points: 9 (was 8a 5 + 8b 4) · Branch: phase/p8
 | P8-T09 | Withdraw an automation request | agent | done | P8-T08 | 6c44c2e | 2026-10-26 | Withdraw own requested request: fifth status, api withdraw() + canWithdraw, confirm UI; one fix round (focus on failure, withdrawn is final). check green (1051), full e2e 184/184. |
 
 ## P9 — Settings
-Status: active · Progress: 7/7 · Points: 4 · Branch: phase/p9-settings · File: docs/phases/P9-settings.md
+Status: active · Progress: 7/8 · Points: 4 · Branch: phase/p9-settings · File: docs/phases/P9-settings.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
@@ -113,6 +113,7 @@ Status: active · Progress: 7/7 · Points: 4 · Branch: phase/p9-settings · Fil
 | P9-T05 | Pipelines and stages manager | agent | done | P9-T01, P9-T02 | 4fa93a3 | 2026-10-26 | Pipelines and stages manager: picker, rename/delete pipeline with deal-count preview, stage add/edit/remove (count + neighbour preview), dnd-kit reorder; one-write stage mutations, allow-lists, NAME_TAKEN/STAGE_NAME_TAKEN, INVALID_ORDER. One fix round. |
 | P9-T06 | Tags manager with merge | agent | done | P9-T02 | 45ec20b | 2026-10-26 | Tags manager: table with contact counts, New/Edit (rename, recolour), Merge and Remove dialogs with previews; automation-named tags refused for rename/remove/merge-away; remove/merge now sweep deals too; integrity lines for missing tags. One fix round. check 1372/1372; 16 specs 180/180; settings-tag |
 | P9-T07 | e2e: create required custom fields via settings UI | agent | done | P9-T04 | 662dd84 | 2026-10-26 | deal-form.spec.ts creates its four required deal fields through /settings/custom-fields (addField in e2e/settings-helpers.ts, Required + options); only the lost-stage injection remains. check 1372/1372; 5 specs 60/60. |
+| P9-T08 | Gate fix: tags.merge honours the Demo Data latency | agent | todo | P9-T06 |  |  |  |
 
 ## P10 — Polish
 Status: todo · Progress: 0/7 · Points: 5 · Branch: phase/p10-polish · File: docs/phases/P10-polish.md
