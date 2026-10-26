@@ -6,7 +6,7 @@
 ## Now
 
 - **Phase:** P9 Settings — gate passed, 8/8 tasks done. Waiting on the owner to merge.
-- **Branch:** `phase/p9-settings`, cut from `master` at `4d72e89`. `origin/phase/p9-settings` is at `7747e65` (P9-T05); the later commits are not pushed yet.
+- **Branch:** `phase/p9-settings`, cut from `master` at `4d72e89`. Pushed at `54c61e6`; PR #5 merged up to P9-T03, PR #6 (https://github.com/jairocapua/CRM_AI/pull/6) holds P9-T04..T08 and the gate.
 - **Status:** P9 phase gate passed. Next: the owner pushes/merges, then P10 Polish starts on `phase/p10-polish` in a fresh session.
 
 ## Last change
@@ -23,7 +23,7 @@
 
 ## Waiting on you (owner)
 
-1. REQUIRED: push `phase/p9-settings` (or say "push" and the agent does it) and merge it into `master` through a GitHub PR on jairocapua/CRM_AI.
+1. REQUIRED: merge PR #6 (https://github.com/jairocapua/CRM_AI/pull/6) into `master` on GitHub.
 2. OPTIONAL: stop the `sequoya-onboarding` server on port 3100 before running `npm run e2e` in the CRM, or the run times out.
 3. OPTIONAL human checks (every criterion is already proven by named tests): `npm run dev`, open http://localhost:3000, then
    - Settings › Pipelines → Add stage "Demo" to Sales Pipeline → Opportunities: a Demo column sits before Closed Won.
