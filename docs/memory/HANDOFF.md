@@ -7,7 +7,7 @@
 
 - **Phase:** P10 Polish — active, 1/7 tasks done.
 - **Branch:** `phase/p10-polish`, cut from `master` at `72f8362` (P9 merged as PR #6).
-- **Status:** P10-T01 approved. Next: P10-T02 Loading and error audit.
+- **Status:** P10-T01 approved (`3092a10`). Next: P10-T02 Loading and error audit.
 
 ## Last change
 
