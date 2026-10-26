@@ -477,3 +477,114 @@ export function cascadeCustomFieldDelete(
     ? { customFields, contacts: strip(state.contacts) }
     : { customFields, opportunities: strip(state.opportunities) };
 }
+
+/** Whether a contact or deal carries the tag `tagId`. */
+export function holdsTag(
+  record: { tagIds: readonly ID[] },
+  tagId: ID,
+): boolean {
+  return record.tagIds.includes(tagId);
+}
+
+/**
+ * The contacts and deals tagged `tagId` (`holdsTag`): the records
+ * `cascadeTagDelete` strips it from, and the ones `cascadeTagMerge` moves
+ * to the target. A count for a preview, so it reads the tables with
+ * `Object.values`: an e2e contacts or deals fault fails it.
+ */
+export function countTaggedRecords(
+  state: DbState,
+  tagId: ID,
+): { contacts: number; deals: number } {
+  return {
+    contacts: Object.values(state.contacts).filter((c) => holdsTag(c, tagId))
+      .length,
+    deals: Object.values(state.opportunities).filter((o) => holdsTag(o, tagId))
+      .length,
+  };
+}
+
+/**
+ * How many contacts carry `targetId` once `sourceId` is merged into it: the
+ * ones tagged with either, each counted once (`cascadeTagMerge`). Reads the
+ * contacts with `Object.values`, as `countTaggedRecords`.
+ */
+export function countContactsAfterMerge(
+  state: DbState,
+  sourceId: ID,
+  targetId: ID,
+): number {
+  return Object.values(state.contacts).filter(
+    (c) => holdsTag(c, sourceId) || holdsTag(c, targetId),
+  ).length;
+}
+
+/**
+ * `tagIds` with `sourceId` replaced by `targetId` in its place, or simply
+ * dropped when `targetId` is already there: no tag is listed twice and the
+ * rest keep their order.
+ */
+export function mergedTagIds(
+  tagIds: readonly ID[],
+  sourceId: ID,
+  targetId: ID,
+): ID[] {
+  const out: ID[] = [];
+  for (const id of tagIds) {
+    const next = id === sourceId ? targetId : id;
+    if (!out.includes(next)) out.push(next);
+  }
+  return out;
+}
+
+/** `table` with `change` applied to every row tagged `tagId`; the rest kept. */
+function retag<T extends { tagIds: ID[] }>(
+  table: Record<ID, T>,
+  tagId: ID,
+  change: (tagIds: ID[]) => ID[],
+): Record<ID, T> {
+  const out: Record<ID, T> = {};
+  for (const [key, row] of Object.entries(table)) {
+    out[key] = holdsTag(row, tagId)
+      ? { ...row, tagIds: change(row.tagIds) }
+      : row;
+  }
+  return out;
+}
+
+/**
+ * Deleting a tag takes it off every contact and deal that carries it, so
+ * none is left tagged with a tag that is gone. Their timestamps are kept
+ * (as `reassignUserReferences`): the records' own details did not change.
+ * Reads every table through `Object.entries`, so an e2e read fault leaves
+ * the write alone.
+ */
+export function cascadeTagDelete(state: DbState, id: ID): Partial<DbState> {
+  return {
+    tags: omitBy(state.tags, (_, key) => key === id),
+    contacts: retag(state.contacts, id, (ids) => ids.filter((t) => t !== id)),
+    opportunities: retag(state.opportunities, id, (ids) =>
+      ids.filter((t) => t !== id),
+    ),
+  };
+}
+
+/**
+ * Merging `sourceId` into `targetId`: every contact and deal tagged with the
+ * source carries the target instead (`mergedTagIds`: in the source's place,
+ * or nowhere new when it already has the target), then the source is
+ * deleted. Record timestamps are kept, as `cascadeTagDelete`. The caller
+ * checks both tags exist and differ.
+ */
+export function cascadeTagMerge(
+  state: DbState,
+  sourceId: ID,
+  targetId: ID,
+): Partial<DbState> {
+  const change = (ids: ID[]) => mergedTagIds(ids, sourceId, targetId);
+  return {
+    tags: omitBy(state.tags, (_, key) => key === sourceId),
+    contacts: retag(state.contacts, sourceId, change),
+    opportunities: retag(state.opportunities, sourceId, change),
+  };
+}

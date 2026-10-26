@@ -694,9 +694,15 @@ interface ReadFaultWindow {
  * by key and are unaffected. For tags it catches `list()` in tags.ts
  * (`Object.values(tags)`, after its loop over the contacts, which passes),
  * the automations' `list()` and `get()` in workflows.ts, which read every
- * tag to resolve tag names, and the integrity check; tag create, update and
- * remove, `contacts.list` and `contacts.addTags`/`removeTags` do not read the
- * tags table that way, so they keep working. For users it catches
+ * tag to resolve tag names, and the integrity check; tag create, update,
+ * remove and merge (they check names through `Object.entries` and read tags
+ * by key), the removal and merge previews (they read the tag by key),
+ * `contacts.list` and `contacts.addTags`/`removeTags` do not read the tags
+ * table that way, so they keep working. The tags manager's previews
+ * (`removalPreview`, `mergePreview`) count contacts and deals through
+ * `Object.values`, so a contacts or opportunities fault fails them, while
+ * `tags.remove` and `tags.merge` sweep both through `Object.entries` and
+ * keep working (`cascadeTagDelete` / `cascadeTagMerge`). For users it catches
  * `users.list`, `users.invite` (it reads every slug), the automations'
  * `list()` and `get()` (they resolve owner slugs) and the integrity check;
  * `users.me` and `users.get` read by key and keep working. For workflowRuns

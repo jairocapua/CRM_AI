@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 82/91 tasks done (90%) · **Current phase:** P9 · **Next agent task:** P9-T06 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+**Overall:** 82/91 tasks done (90%) · **Current phase:** P9 · **Next agent task:** P9-T07 · **Awaiting review:** P9-T06 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -111,7 +111,7 @@ Status: active · Progress: 5/7 · Points: 4 · Branch: phase/p9-settings · Fil
 | P9-T03 | Team and invites | agent | done | P9-T01, P9-T02 | e1b2560 | 2026-10-26 | Team list, invite, role change, remove with reassign preview; one fix round (done-flag e2e + 6 small fixes) |
 | P9-T04 | Custom fields manager | agent | done | P9-T01, P9-T02 | ac13fa5 | 2026-10-26 | Custom fields manager: tabs, add/edit dialog, move up/down, remove with value count; API allow-list, KEY_TAKEN, reorder 422, removalPreview, renumber on remove. One fix round. |
 | P9-T05 | Pipelines and stages manager | agent | done | P9-T01, P9-T02 | 4fa93a3 | 2026-10-26 | Pipelines and stages manager: picker, rename/delete pipeline with deal-count preview, stage add/edit/remove (count + neighbour preview), dnd-kit reorder; one-write stage mutations, allow-lists, NAME_TAKEN/STAGE_NAME_TAKEN, INVALID_ORDER. One fix round. |
-| P9-T06 | Tags manager with merge | agent | todo | P9-T02 |  |  |  |
+| P9-T06 | Tags manager with merge | agent | review | P9-T02 |  | 2026-10-26 | Tags manager: table with contact counts, New/Edit (rename, recolour), Merge and Remove dialogs with previews; automation-named tags refused for rename/remove/merge-away; remove/merge now sweep deals too; integrity lines for missing tags. One fix round. check 1372/1372; 16 specs 180/180; settings-tag |
 | P9-T07 | e2e: create required custom fields via settings UI | agent | todo | P9-T04 |  |  |  |
 
 ## P10 — Polish

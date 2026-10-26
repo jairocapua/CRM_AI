@@ -57,7 +57,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   {
     title: "Tags",
     href: "/settings/tags",
-    description: "The tags that sort your contacts.",
+    description: "The tags on contacts and deals, and merging them.",
     icon: TagIcon,
   },
   {

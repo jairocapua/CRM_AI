@@ -58,6 +58,13 @@ export function pluralize(n: number, one: string, many = `${one}s`): string {
   return `${formatNumber(n)} ${n === 1 ? one : many}`;
 }
 
+/** "A", "A and B", "A, B and C". */
+export function listNames(names: readonly string[]): string {
+  return names.length <= 1
+    ? (names[0] ?? "")
+    : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
 /** Dates are stored as ISO strings; parse only at the render edge. */
 export function toDate(iso: ISODate): Date {
   return new Date(iso);

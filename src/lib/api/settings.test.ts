@@ -135,8 +135,14 @@ describe("automations on the Demo Data page", () => {
     const { db } = await seededWorld();
     const settings = await import("./settings");
     db.setState((s) => ({
+      // Newsletter is renamed: its contacts still resolve the tag by id, so
+      // the only line is the automation's. (Deleting it outright would also
+      // leave contacts tagged with a missing tag.)
       tags: Object.fromEntries(
-        Object.entries(s.tags).filter(([, t]) => t.name !== "Newsletter"),
+        Object.entries(s.tags).map(([id, t]) => [
+          id,
+          t.name === "Newsletter" ? { ...t, name: "Newsletters" } : t,
+        ]),
       ),
       // Priya's slug changes: her records still resolve by id, so the only
       // line is the automation's. (Deleting her outright would also orphan
@@ -367,6 +373,10 @@ describe("teammates and custom fields on the Demo Data page", () => {
     expect(
       Object.values(s.smartLists).filter((l) => l.ownerId).length,
     ).toBeGreaterThan(0);
+    expect(contacts.filter((c) => c.tagIds.length).length).toBeGreaterThan(0);
+    expect(
+      Object.values(s.opportunities).filter((o) => o.tagIds.length).length,
+    ).toBeGreaterThan(0);
     expect(await settle(settings.integrityReport())).toEqual([]);
   });
 
@@ -410,6 +420,18 @@ describe("teammates and custom fields on the Demo Data page", () => {
     {
       line: "1 smart lists are owned by a missing user",
       run: () => reportWith("smartLists", () => ({ ownerId: "usr_gone" })),
+    },
+    {
+      line: "1 contacts are tagged with a missing tag",
+      run: () =>
+        reportWith("contacts", (c) => ({ tagIds: [...c.tagIds, "tag_gone"] })),
+    },
+    {
+      line: "1 opportunities are tagged with a missing tag",
+      run: () =>
+        reportWith("opportunities", (o) => ({
+          tagIds: ["tag_gone", ...o.tagIds],
+        })),
     },
     {
       line: "1 contacts hold a value for a missing custom field",

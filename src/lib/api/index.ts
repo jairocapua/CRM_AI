@@ -71,6 +71,14 @@ export type {
   StageRemovalPreview,
 } from "./pipelines";
 export type {
+  TagChange,
+  TagDraft,
+  TagMergePreview,
+  TagPatch,
+  TagRemovalPreview,
+  TagWithCount,
+} from "./tags";
+export type {
   ChannelOption,
   ComposableChannel,
   ConversationRow,

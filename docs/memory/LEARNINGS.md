@@ -348,3 +348,8 @@
 - 2026-10-26 [P9-T05] A lost-update test must send the two calls in both orders: only the call sent second loses to a stale read.
 - 2026-10-26 [P9-T05] The e2e `stored()` helper reads localStorage through `Object.values`, which `failReads` breaks; call `restoreReads` before reading stored state.
 - 2026-10-26 [P9-T05] On Windows, back-to-back Playwright runs can hit `net::ERR_NO_BUFFER_SPACE` (sockets exhausted); pause ~60-90s or use fewer workers before suspecting the change.
+- 2026-10-26 [P9-T06] A lost-update test on an updater-style write (`setState((s) => ({ t: { ...s.t, [id]: next } }))`) cannot go red when its two calls edit different records; send two edits to the SAME record.
+- 2026-10-26 [P9-T06] A lost-update pair needs calls with the same simulated latency: `merge` sleeps 400ms, so a 0ms `remove` sent alongside writes first and the pair proves only `merge`.
+- 2026-10-26 [P9-T06] Picking an item in a Base UI multi-select Combobox while a filter is typed closes the list and clears the input itself; to keep the text after a pseudo-item such as "Create", call `eventDetails.cancel()` in `onValueChange`.
+- 2026-10-26 [P9-T06] A tsc error inside a mutated build shows up as "no tests ran" in Playwright, not as a red test; type-check e2e mutants first.
+- 2026-10-26 [P9-T06] Another project's server can hold port 3100 (0.0.0.0) and Playwright's webServer then times out against its 404; never kill it, run with a copy of the config on another port (`-c` a scratch config with `testDir` and `webServer.cwd` set to the repo).
