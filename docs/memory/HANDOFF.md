@@ -7,7 +7,7 @@
 
 - **Phase:** P10 Polish — active, 2/7 tasks done.
 - **Branch:** `phase/p10-polish`, cut from `master` at `72f8362` (P9 merged as PR #6). Not pushed yet.
-- **Status:** P10-T02 approved. Next: P10-T03 Responsive pass at 375px. Start it in a fresh session.
+- **Status:** P10-T02 approved (`ee76c44`). Next: P10-T03 Responsive pass at 375px. Start it in a fresh session.
 
 ## Last change
 
