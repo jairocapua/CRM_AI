@@ -5,31 +5,36 @@
 
 ## Now
 
-- **Phase:** P9 Settings — active, 7/7 tasks done; the phase gate is next.
-- **Branch:** `phase/p9-settings`, cut from `master` at `4d72e89`. Nothing pushed.
-- **Status:** P9-T07 approved (`662dd84`); the P9 phase gate is next.
+- **Phase:** P9 Settings — gate passed, 8/8 tasks done. Waiting on the owner to merge.
+- **Branch:** `phase/p9-settings`, cut from `master` at `4d72e89`. `origin/phase/p9-settings` is at `7747e65` (P9-T05); the later commits are not pushed yet.
+- **Status:** P9 phase gate passed. Next: the owner pushes/merges, then P10 Polish starts on `phase/p10-polish` in a fresh session.
 
 ## Last change
 
-- P9-T07: `e2e/deal-form.spec.ts` creates its four required deal fields (Dropdown, Multi-select, Long text, Date) through /settings/custom-fields with the shared `addField` helper in `e2e/settings-helpers.ts` (tab, type, options, Required; it throws on a required Checkbox). The custom-field localStorage injection is gone; only the lost-stage injection stays, since no screen makes a lost stage.
-- P9-T06 (`45ec20b`): `/settings/tags` tags manager with merge; remove/merge now sweep deals as well as contacts; automation-named tags can only be recoloured.
-- `npm run check` green (1372 Vitest); deal-form, settings-custom-fields, settings-shell, smoke, fixture 60/60.
+- P9 gate: `npm run check` green (1379 Vitest); full e2e 281/282, the one failure a boot-wait load flake in `link-buttons.spec.ts` that passed 15/15 alone (BACKLOG); the six settings specs 249/249 over 3 repeats; react-table 8.21.3. The gate review found no blocking defects.
+- Exit criteria: add a stage → board column (`e2e/settings-pipelines.spec.ts:246`); integrity report clean after every destructive settings action (unit tests in users/custom-fields/pipelines/tags tests, plus Demo Data e2e checks); check and e2e green.
+- P9-T08 gate fix (`993f558`): `simulate()` lets a slowed demo (Demo Data latency above the default) slow calls that pin their own `ms`; the gate's full runs had failed once each on the tags merge and team invite "cannot close while saving" checks.
+- P9-T07 (`662dd84`): deal-form e2e creates its required fields through Settings › Custom fields. P9-T06 (`45ec20b`): tags manager with merge.
 - e2e ran on port 3102 through a scratch config: another project's server (sequoya-onboarding) held port 3100.
 
 ## Next up
 
-- The P9 phase gate (`progress.mjs phase P9 gate`; exit criteria at the end of `docs/phases/P9-settings.md`). Gate reviewer: confirm the board copes with its selected pipeline being deleted (per-mount fallback), and grep for any new whole-table `Object.values` inside a write (it trips the e2e faults).
+- After the merge: `git switch master && git merge --ff-only origin/master && git switch -c phase/p10-polish`, `progress.mjs phase P10 active`, then P10-T01 Command palette (⌘K).
 
 ## Waiting on you (owner)
 
-- Nothing blocking.
-- Port 3100 is used by the CRM's e2e tests. A `sequoya-onboarding` server was listening on it during this session; stop it before running `npm run e2e` in the CRM, or the run times out.
-- Optional, reversible ([P9-T06]): tag names unique ignoring case, 40 characters max; automation-named tags can only be recoloured; smart-list tag filters are not rewritten on merge/remove (none exist yet). Earlier ones: see DECISIONS [P9-T01]..[P9-T05].
-- Optional click-through: `npm run dev`, open http://localhost:3000/settings/tags → Merge on "Cold" → pick "Warm" → the dialog says how many contacts and deals move and Warm's new count → Merge tags → Cold is gone and Warm shows the new count → Edit "Newsletter": the name is locked with the reason.
+1. REQUIRED: push `phase/p9-settings` (or say "push" and the agent does it) and merge it into `master` through a GitHub PR on jairocapua/CRM_AI.
+2. OPTIONAL: stop the `sequoya-onboarding` server on port 3100 before running `npm run e2e` in the CRM, or the run times out.
+3. OPTIONAL human checks (every criterion is already proven by named tests): `npm run dev`, open http://localhost:3000, then
+   - Settings › Pipelines → Add stage "Demo" to Sales Pipeline → Opportunities: a Demo column sits before Closed Won.
+   - Settings › Tags → Merge on "Cold" → pick "Warm" → the dialog gives the counts → Merge tags → Cold is gone, Warm shows the new count; Edit "Newsletter": the name is locked with the reason.
+   - Settings › Team → Invite a teammate → they show as Pending; Remove them → the dialog says where their records go.
+   - After each, Settings › Demo data → the integrity report says everything is consistent.
+4. OPTIONAL, reversible product choices: see DECISIONS [P9-T01]..[P9-T08] (e.g. tag names unique ignoring case, automation-named tags only recolourable, new stages go before Won, field types fixed once added).
 
 ## Open suggestions (non-blocking)
 
-- `docs/BACKLOG.md` holds P8 leftovers and the P9-T01..T06 review leftovers (unknown tag ids accepted by contact/deal writes, smart-list filters not swept, select fields show raw option values, no set-default pipeline, last-admin guard).
+- `docs/BACKLOG.md` holds the P8 leftovers, the P9-T01..T06 review leftovers and the P9 gate suggestions (more integrity checks: one default pipeline, positions, unique tag names/slugs; unknown tag ids accepted by contact/deal writes; smart-list filters not swept).
 - Calendar ids, pipeline/stage ids and `templateId` are still id-typed in authored configs; they need stable keys before any definition uses them.
 
 ## Blockers
