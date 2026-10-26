@@ -106,6 +106,17 @@ export function stubLocalStorage() {
 
 type Outcome<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
+/** Captured before any test installs fake timers. */
+const realSetTimeout = globalThis.setTimeout;
+const realNow = Date.now.bind(Date);
+const IDLE_WAIT_MS = 5;
+/**
+ * Real time `settle()` waits, in total, for calls with no timer pending
+ * before it gives up. A deadline, not a count: on Windows a 5 ms timer
+ * takes 15-30 ms, so a count of waits ran to ~10 s under load.
+ */
+const IDLE_BUDGET_MS = 1000;
+
 /**
  * Awaits an API call while advancing the fake clock.
  *
@@ -128,8 +139,21 @@ export async function settle<T>(
     },
   );
 
-  for (let i = 0; i < maxTimers && !outcome; i++) {
-    await vi.advanceTimersToNextTimerAsync();
+  let deadline: number | null = null;
+  for (let i = 0; i < maxTimers && !outcome;) {
+    if (vi.getTimerCount() > 0) {
+      await vi.advanceTimersToNextTimerAsync();
+      i++;
+      continue;
+    }
+    // A continuation can need a few microtask hops before it queues a timer.
+    for (let hop = 0; hop < 10 && !outcome; hop++) await Promise.resolve();
+    if (outcome || vi.getTimerCount() > 0) continue;
+    // No timer to run: the call is on real I/O, such as the seed's lazy
+    // `import()` (P10-T06). Fake timers cannot advance that; wait for it.
+    deadline ??= realNow() + IDLE_BUDGET_MS;
+    if (realNow() > deadline) break;
+    await new Promise((resolve) => realSetTimeout(resolve, IDLE_WAIT_MS));
   }
   // The last timer's continuation can need a few more microtask hops.
   for (let i = 0; i < 10 && !outcome; i++) await Promise.resolve();
@@ -138,7 +162,7 @@ export async function settle<T>(
   const result = outcome as Outcome<T> | null;
   if (!result) {
     throw new Error(
-      `settle(): the promise was still pending after ${maxTimers} timers`,
+      `settle(): the promise was still pending after ${maxTimers} timers and ${IDLE_BUDGET_MS} ms of real waiting`,
     );
   }
   if (!result.ok) throw result.error;

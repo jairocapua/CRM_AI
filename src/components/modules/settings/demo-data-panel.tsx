@@ -11,7 +11,7 @@ import {
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { loadErrorOf, useAction, useResource } from "@/lib/api";
+import { errorMessage, loadErrorOf, useAction, useResource } from "@/lib/api";
 import { LoadError } from "@/components/common/load-error";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,7 +49,12 @@ export function DemoDataPanel() {
   );
 
   const [reseed, isReseeding] = useAction(async () => {
-    await api.settings.reseed();
+    try {
+      await api.settings.reseed();
+    } catch (error) {
+      toast.error(errorMessage(error, "Could not reseed the workspace."));
+      return;
+    }
     toast.success("Workspace reseeded", {
       description: "All demo data has been regenerated from the fixed seed.",
     });

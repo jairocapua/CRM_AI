@@ -69,6 +69,10 @@ export const db = createStore<DbState>()(
   }),
 );
 
-export function resetDb() {
-  db.setState(EMPTY_DB, true);
+/**
+ * Empties the store. Used by Settings → Demo Data; it lives here, not with
+ * the seed, so clearing never loads the seed chunk.
+ */
+export function clearDatabase() {
+  db.setState({ ...EMPTY_DB }, true);
 }

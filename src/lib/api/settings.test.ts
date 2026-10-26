@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AutomationRequest, WorkflowRun } from "@/types";
 import { SEED_VERSION } from "@/lib/mock/db-state";
@@ -98,6 +98,84 @@ describe("reseed()", () => {
     expect(Object.keys(state.appointments)).toHaveLength(120);
     expect(state.appointments[booked.id]).toBeUndefined();
     expect(state.seededAt).toBe(ANCHOR);
+  });
+});
+
+describe("loading the seed (P10-T06)", () => {
+  // `doMock` outlives `vi.resetModules()`; later tests need the real module.
+  afterEach(() => {
+    vi.doUnmock("@/lib/mock/seed");
+  });
+
+  /**
+   * The seed module stands in for a lazily loaded chunk: its factory runs
+   * the first time anything imports it, so a static import from settings.ts
+   * (the old code) shows up as a load before any call.
+   */
+  async function withSeedSpy(savedVersion?: number) {
+    await freshModules();
+    const storage = stubLocalStorage();
+    if (savedVersion !== undefined) {
+      storage.setItem(STORE_KEY, savedStore(savedVersion));
+    }
+    const loads = vi.fn();
+    vi.doMock("@/lib/mock/seed", async (importOriginal) => {
+      loads();
+      return importOriginal();
+    });
+    const { db } = await import("@/lib/mock/db");
+    const settings = await import("./settings");
+    return { db, settings, loads };
+  }
+
+  it("is not loaded by importing the settings API", async () => {
+    const { loads } = await withSeedSpy();
+    expect(loads).not.toHaveBeenCalled();
+  });
+
+  it("loads on a first run and seeds", async () => {
+    const { db, settings, loads } = await withSeedSpy();
+    await settle(settings.bootstrap());
+    expect(loads).toHaveBeenCalledTimes(1);
+    expect(Object.keys(db.getState().contacts)).toHaveLength(240);
+  });
+
+  it("stays unloaded when a seeded workspace boots", async () => {
+    const { db, settings, loads } = await withSeedSpy(SEED_VERSION);
+    await settle(settings.bootstrap());
+    expect(db.getState().contacts.marker?.firstName).toBe("Saved");
+    expect(loads).not.toHaveBeenCalled();
+  });
+
+  it("clears without loading it, and loads it to reseed", async () => {
+    const { db, settings, loads } = await withSeedSpy();
+    db.setState({ seededAt: ANCHOR });
+    await settle(settings.clear());
+    expect(db.getState().seededAt).toBeUndefined();
+    expect(loads).not.toHaveBeenCalled();
+
+    await settle(settings.reseed());
+    expect(loads).toHaveBeenCalledTimes(1);
+    expect(Object.keys(db.getState().contacts)).toHaveLength(240);
+    expect(db.getState().seededAt).toBe(ANCHOR);
+  });
+
+  it("refuses a reseed whose seed chunk cannot load, writing nothing", async () => {
+    await freshModules();
+    stubLocalStorage();
+    vi.doMock("@/lib/mock/seed", () => {
+      throw new Error("ChunkLoadError: Failed to load chunk");
+    });
+    const { db } = await import("@/lib/mock/db");
+    const settings = await import("./settings");
+    const before = db.getState();
+
+    await expect(settle(settings.reseed())).rejects.toMatchObject({
+      status: 503,
+      code: "SEED_UNAVAILABLE",
+      message: settings.SEED_UNAVAILABLE_MESSAGE,
+    });
+    expect(db.getState()).toBe(before);
   });
 });
 

@@ -5,18 +5,19 @@
 
 ## Now
 
-- **Phase:** P10 Polish — active, 5/7 tasks done.
-- **Branch:** `phase/p10-polish`, cut from `master` at `72f8362` (P9 merged as PR #6). Pushed to `origin/phase/p10-polish` up to P10-T04; P10-T05 is local only. No PR yet: open it after the P10 gate. Merge after the P10 gate.
-- **Status:** P10-T05 approved (`fdb2de6`). Next: P10-T06 Load the seed lazily.
+- **Phase:** P10 Polish — active, 6/7 tasks done.
+- **Branch:** `phase/p10-polish`, cut from `master` at `72f8362` (P9 merged as PR #6). Pushed to `origin/phase/p10-polish` up to P10-T04; P10-T05 and P10-T06 are local only. No PR yet: open it after the P10 gate. Merge after the P10 gate.
+- **Status:** P10-T06 in review. Next: P10-T07 README, then the P10 gate. Start it in a fresh session.
 
 ## Last change
 
-- P10-T05 Cleanup from the Phase 5 review (no behaviour change): conversation star/archive go through one `setFlag` in `src/lib/api/conversations.ts`, and the thread header's toggles share `saveFlag`; the conversation-then-contact reads are one hook, `useConversationContact`, used by the thread pane and the contact panel; a call entry's icon/label/duration come from the pure `callKind()` (`call-kind.ts`); the unused inbox `assigneeId` filter is gone.
-- Verify: `npm run check` green (1471 Vitest, 13 new characterisation tests that also pass on the old code); conversation-touching e2e plus smoke, a11y, keyboard, palette 190/190, no e2e file changed. Review: approved, no must-fixes.
+- P10-T06 Load the seed lazily: the seed builder and faker are their own chunk, fetched only on a boot with no seeded workspace (first run, or the first load after a clear) and on reseed. `/dashboard` JS (Next 16's build no longer prints sizes, so summed from the browser on `next start`): 2401.9 KiB (782.9 gzip) before, 1945.3 KiB (614.8 gzip) on a seeded load after; a first run still fetches the ~458 KiB seed chunk while booting. A reseed whose chunk cannot load now toasts "Could not load the demo data. Check your connection and try again." and keeps the data. The test helper `settle()` also waits out real I/O, with a 1 s real-time deadline.
+- Verify: `npm run check` green (1477 Vitest); full e2e 436/436; new `e2e/seed-lifecycle.spec.ts` (first run, reload, reseed, clear, reseed failure) 9/9 over 3 repeats. Review: two must-fixes (settle's wait budget, the silent reseed failure), fixed in one round with red-proven tests.
+- P10-T05 (`fdb2de6`): Conversations cleanup from the Phase 5 review, no behaviour change.
 
 ## Next up
 
-- P10-T06 Load the seed lazily (measure `/dashboard` first-load JS before and after), P10-T07 README, then the P10 gate.
+- P10-T07 README, then the P10 gate (full check + full e2e + gate review against local `master`).
 
 ## Waiting on you (owner)
 
@@ -25,7 +26,7 @@
 
 ## Open suggestions (non-blocking)
 
-- `docs/BACKLOG.md` holds the P8/P9 leftovers and the P10-T01..T05 review leftovers (P10-T05: no test covers the thread header's Archive toast/Undo flow).
+- `docs/BACKLOG.md` holds the P8/P9 leftovers and the P10-T01..T06 review leftovers (P10-T06: no e2e for a seed chunk failing at boot; two full-run socket flakes).
 - Calendar ids, pipeline/stage ids and `templateId` are still id-typed in authored configs.
 
 ## Blockers

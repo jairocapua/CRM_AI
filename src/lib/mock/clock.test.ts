@@ -79,9 +79,28 @@ describe("settle()", () => {
     await expect(settle(failing)).rejects.toThrow("boom");
   });
 
-  it("fails loudly instead of hanging on a promise that never settles", async () => {
-    await expect(settle(new Promise<never>(() => {}))).rejects.toThrow(
-      /still pending/,
-    );
+  // Within the real-time budget (~1s), well inside Vitest's 5s timeout: a
+  // hang must read as "still pending", not as a test timeout, even under load.
+  it(
+    "fails loudly instead of hanging on a promise that never settles",
+    {
+      timeout: 3000,
+    },
+    async () => {
+      await expect(settle(new Promise<never>(() => {}))).rejects.toThrow(
+        /still pending/,
+      );
+    },
+  );
+
+  it("waits out real I/O with no timer pending, then runs the timers after it", async () => {
+    // A lazy `import()` (the seed since P10-T06) loads on real I/O, which
+    // the fake clock cannot advance; a call after it still sleeps on a timer.
+    const { simulate } = await loadHttp();
+    const call = (async () => {
+      const { formatDuration } = await import("@/lib/format");
+      return simulate(() => formatDuration(65), { ms: 700 });
+    })();
+    await expect(settle(call)).resolves.toBe("1m 05s");
   });
 });
