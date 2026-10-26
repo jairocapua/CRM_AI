@@ -359,3 +359,11 @@
 - 2026-10-26 [P10-T01] A Base UI dialog that closes because a pick opens another dialog needs `finalFocus={false}`; otherwise it returns focus to its opener after the exit animation and steals it from the new dialog.
 - 2026-10-26 [P10-T01] An e2e proving a list stays usable after a failed search must wait for the error before picking; picking while the search is pending passes even when the error hides the list.
 - 2026-10-26 [P10-T01] Fields behind an open palette are outside Playwright's accessibility tree; assert on them after Escape, which also proves focus came back.
+- 2026-10-26 [P10-T02] A layout-effect cleanup runs while the unmounting node is still in the document, so it can test `document.activeElement === button`; a queued microtask then sees the replacing content committed.
+- 2026-10-26 [P10-T02] A region that waits on a dependent read (thread → contact) mounts after a skeleton, not in the commit that removes the alert; focus-after-Retry has to keep looking for it.
+- 2026-10-26 [P10-T02] Playwright `getByText("New contacts")` is a case-insensitive substring match ("32 new contacts"); pass `{ exact: true }`.
+- 2026-10-26 [P10-T02] Seeded task titles repeat; count same-named checkboxes (before − 1) instead of expecting zero.
+- 2026-10-26 [P10-T02] e2e: to fault a thread's by-key read, `armRecordFault`, switch inbox tabs (a list read arms it), then fail the read; after faulting the inbox too, leave by a sidebar link and `page.goBack()` to remount `/conversations/[id]` in the same document.
+- 2026-10-26 [P10-T02] A UI mutant `{err ? (` → `{false ? (` fails tsc (TS18047) and Playwright then reports no tests; use `{err && Math.random() > 2 ? (`.
+- 2026-10-26 [P10-T02] The contact page's tasks and appointments tabs read only when clicked: turn the fault on after the page loads and before the click. The opportunities panel reads on mount: turn the fault on first and open the contact by its link from a search-filtered list.
+- 2026-10-26 [P10-T02] A form sheet that `form.reset`s whenever a read it depends on lands (custom fields) wipes text typed before it; at 2000 ms latency and under load that fails e2e every time. Reset with `{ keepDirtyValues: true }` when reseeding the same record, and fully on open.

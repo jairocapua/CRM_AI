@@ -4,7 +4,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { apiNow, useAction, useResource } from "@/lib/api";
+import {
+  apiNow,
+  errorMessage,
+  loadErrorOf,
+  useAction,
+  useResource,
+} from "@/lib/api";
+import { LoadError } from "@/components/common/load-error";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,7 +29,13 @@ export function ContactNotesPanel({ contactId }: { contactId: string }) {
   const [addNote, isAdding] = useAction(async () => {
     const text = body.trim();
     if (!text) return;
-    await api.contacts.addNote(contactId, text);
+    try {
+      await api.contacts.addNote(contactId, text);
+    } catch (error) {
+      // The note stays in the box, to send again.
+      toast.error(errorMessage(error, "Could not add the note."));
+      return;
+    }
     setBody("");
     toast.success("Note added");
   });
@@ -47,6 +60,13 @@ export function ContactNotesPanel({ contactId }: { contactId: string }) {
 
       {notes.isLoading ? (
         <Skeleton className="h-16 w-full" />
+      ) : loadErrorOf(notes) ? (
+        <LoadError
+          title="Could not load notes"
+          message={loadErrorOf(notes)?.message ?? ""}
+          onRetry={notes.refetch}
+          retrying={notes.isRefreshing}
+        />
       ) : (notes.data ?? []).length === 0 ? (
         <p className="text-sm text-muted-foreground">No notes yet.</p>
       ) : (

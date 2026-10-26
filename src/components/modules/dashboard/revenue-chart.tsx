@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatMoney } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { REGION_FOCUS, useCardRegion } from "./card-region";
 
 const CONFIG = {
   total: { label: "Won to date", color: "var(--chart-1)" },
@@ -85,19 +87,25 @@ export function RevenueChart({
   revenue,
   period,
   isLoading,
+  failed = false,
 }: {
   revenue: Kpi | undefined;
   period: number;
   isLoading: boolean;
+  /** The summary read failed: its alert is in the figures above. */
+  failed?: boolean;
 }) {
   const points = useMemo(() => accumulate(revenue?.series ?? []), [revenue]);
+  const region = useCardRegion();
 
   return (
-    <Card className="lg:col-span-2">
+    <Card {...region.regionProps} className={cn("lg:col-span-2", REGION_FOCUS)}>
       <CardHeader>
-        <CardTitle>Won revenue</CardTitle>
+        <CardTitle id={region.titleId}>Won revenue</CardTitle>
         <CardDescription>
-          {isLoading || !revenue ? (
+          {failed ? (
+            "Won revenue across the period."
+          ) : isLoading || !revenue ? (
             <Skeleton className="h-4 w-40" />
           ) : (
             <>
@@ -107,7 +115,11 @@ export function RevenueChart({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {isLoading || !revenue ? (
+        {failed ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Shows once the summary above loads.
+          </p>
+        ) : isLoading || !revenue ? (
           <Skeleton className="h-60 w-full" />
         ) : (
           <ChartContainer config={CONFIG} className="aspect-auto h-60 w-full">

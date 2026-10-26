@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Controller, useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -13,7 +13,7 @@ import {
   type User,
 } from "@/types";
 import * as api from "@/lib/api";
-import { useAction, useResource } from "@/lib/api";
+import { errorMessage, useAction, useResource } from "@/lib/api";
 import {
   buildOpportunityFormSchema,
   centsToInput,
@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/sheet";
 import { fullName } from "@/lib/format";
 import { ContactPicker } from "./contact-picker";
+import { saveOpportunity } from "./save-opportunity";
 
 function emptyValues(
   pipelines: Pipeline[],
@@ -126,10 +127,20 @@ export function OpportunityFormSheet({
     defaultValues: emptyValues(pipelines, defaultPipelineId, {}),
   });
 
+  // Which deal (and default pipeline) the form was last seeded for while
+  // open. A reseed for the same one (the custom fields read landing, or a
+  // refetch) keeps what the user already typed; opening starts fresh.
+  const seededFor = useRef<string | null>(null);
   useEffect(() => {
     // The schema is rebuilt from `fields` every render (it's data-driven, not
     // static), so defaultValues must be reseeded here alongside it.
-    if (!open) return;
+    if (!open) {
+      seededFor.current = null;
+      return;
+    }
+    const key = `${opportunity?.id ?? "new"}|${defaultPipelineId}`;
+    const sameRecord = seededFor.current === key;
+    seededFor.current = key;
     const customFieldsDefault = fromCustomFieldsValue(
       opportunity?.customFields,
       fields,
@@ -138,6 +149,7 @@ export function OpportunityFormSheet({
       opportunity
         ? valuesFromOpportunity(opportunity, customFieldsDefault)
         : emptyValues(pipelines, defaultPipelineId, customFieldsDefault),
+      { keepDirtyValues: sameRecord },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, opportunity, customFields.data, defaultPipelineId]);
@@ -171,53 +183,24 @@ export function OpportunityFormSheet({
       customFields: toCustomFieldsPatch(values.customFields, fields),
     };
 
-    /**
-     * `status` is not in that patch: `setStatus()` owns it, with `closedAt`
-     * and the won/lost activity, so a status change goes through it below.
-     * `update()` reads `stageId` only when the pipeline changes: it then moves
-     * the deal to that stage of the new pipeline in the same write, with the
-     * status that stage gives (as `move()` does). `create()` also takes the
-     * status from the new deal's stage. A stage change inside the same
-     * pipeline goes through `move()`, which owns column `position` and
-     * `stageEnteredAt` there. Each keeps `lostReason` only when it leaves the
-     * deal in a lost stage.
-     */
-    const record = opportunity
-      ? await api.opportunities.update(opportunity.id, patch)
-      : await api.opportunities.create(patch);
+    // A failed first write throws, and the sheet stays open (see onSubmit).
+    const result = await saveOpportunity(api.opportunities, {
+      opportunity,
+      patch,
+      status: values.status,
+      lostReason,
+      stages: selectedPipeline?.stages ?? [],
+    });
 
-    const pipelineChanged =
-      opportunity && opportunity.pipelineId !== values.pipelineId;
-    const stageChanged =
-      opportunity && !pipelineChanged && opportunity.stageId !== values.stageId;
-    if (stageChanged) {
-      const column = await api.opportunities.listForBoard(values.pipelineId);
-      const appendAt = column.filter(
-        (d) => d.stageId === values.stageId,
-      ).length;
-      await api.opportunities.move(record.id, {
-        stageId: values.stageId,
-        position: appendAt,
+    if (result.kind === "createdWithoutStatus") {
+      // The deal exists: close the sheet so a second Save cannot create a
+      // duplicate. It keeps the status its stage gave it; Edit sets another.
+      toast.error("Deal created, but its status could not be saved.", {
+        description: `${errorMessage(result.error, "Something went wrong.")} Edit the deal to set its status.`,
       });
+      onOpenChange(false);
+      return;
     }
-
-    // `create()`, `move()` and `update()`'s pipeline move all derive the
-    // status from the destination stage: `record.status` is what `create()`
-    // or the pipeline move left, and `stageStatus()` predicts what `move()`
-    // leaves. An explicit choice is applied after any of them and wins, so a
-    // new deal in a Won stage saved as Open is reopened here.
-    const statusAfterMove = stageChanged
-      ? api.opportunities.stageStatus(
-          selectedPipeline?.stages.find((s) => s.id === values.stageId),
-        )
-      : (record.status ?? "open");
-    // Only a status the save did not already leave needs `setStatus()`: the
-    // reason is already stored, so calling it for the reason alone would log
-    // a second Lost entry.
-    if (values.status !== statusAfterMove) {
-      await api.opportunities.setStatus(record.id, values.status, lostReason);
-    }
-
     toast.success(opportunity ? "Deal updated" : "Deal created");
     onOpenChange(false);
   });
@@ -232,7 +215,19 @@ export function OpportunityFormSheet({
         <form
           id="opportunity-form"
           className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4"
-          onSubmit={form.handleSubmit((values) => void save(values))}
+          onSubmit={form.handleSubmit((values) =>
+            // A failed write keeps the sheet open with the values as typed.
+            save(values).catch((error: unknown) => {
+              toast.error(
+                errorMessage(
+                  error,
+                  opportunity
+                    ? "Could not save the deal."
+                    : "Could not create the deal.",
+                ),
+              );
+            }),
+          )}
         >
           <FieldGroup>
             <Field data-invalid={Boolean(form.formState.errors.name)}>

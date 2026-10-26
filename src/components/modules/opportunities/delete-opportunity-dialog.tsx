@@ -3,7 +3,7 @@
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { useAction } from "@/lib/api";
+import { errorMessage, useAction } from "@/lib/api";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,9 +30,16 @@ export function DeleteOpportunityDialog({
   const [remove, isDeleting] = useAction(async () => {
     // `opportunities.remove` resolves to void, unlike `contacts.remove`, so the
     // toast counts what was asked for rather than what came back.
-    await api.opportunities.remove(opportunityIds);
+    try {
+      await api.opportunities.remove(opportunityIds);
+    } catch (error) {
+      // The dialog stays open, to try again or cancel.
+      toast.error(errorMessage(error, "Could not delete the deals."));
+      return;
+    }
     toast.success(`${pluralize(opportunityIds.length, "deal")} deleted`);
     onDeleted?.();
+    onOpenChange(false);
   });
 
   return (
@@ -52,7 +59,9 @@ export function DeleteOpportunityDialog({
           <AlertDialogAction
             variant="destructive"
             disabled={isDeleting}
-            onClick={() => void remove().then(() => onOpenChange(false))}
+            focusableWhenDisabled
+            className="data-disabled:opacity-50"
+            onClick={() => void remove()}
           >
             {isDeleting ? "Deleting…" : "Delete"}
           </AlertDialogAction>

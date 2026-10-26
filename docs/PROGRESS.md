@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 86/92 tasks done (93%) · **Current phase:** P10 · **Next agent task:** P10-T02 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+**Overall:** 86/92 tasks done (93%) · **Current phase:** P10 · **Next agent task:** P10-T03 · **Awaiting review:** P10-T02 · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -121,7 +121,7 @@ Status: active · Progress: 1/7 · Points: 5 · Branch: phase/p10-polish · File
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
 | P10-T01 | Command palette (⌘K) | agent | done | P9 | 3092a10 | 2026-10-26 | Palette with nav, contact/deal search, quick actions; review pass, 4 small fixes folded in |
-| P10-T02 | Loading and error audit | agent | todo | P9 |  |  |  |
+| P10-T02 | Loading and error audit | agent | review | P9 |  | 2026-10-26 | Audit: dashboard/conversations/board/contact panels alerts, route boundaries, mutation toasts, LoadError focus+announce; 1 fix round |
 | P10-T03 | Responsive pass at 375px | agent | todo | P9 |  |  |  |
 | P10-T04 | Keyboard and accessibility | agent | todo | P9 |  |  |  |
 | P10-T05 | Cleanup from the Phase 5 review | agent | todo | P9 |  |  |  |

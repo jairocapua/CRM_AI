@@ -11,7 +11,8 @@ import {
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { useAction, useResource } from "@/lib/api";
+import { loadErrorOf, useAction, useResource } from "@/lib/api";
+import { LoadError } from "@/components/common/load-error";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -63,6 +64,7 @@ export function DemoDataPanel() {
 
   const counts = stats.data?.counts ?? {};
   const problems = integrity.data ?? [];
+  const integrityError = loadErrorOf(integrity);
 
   return (
     <div className="flex flex-col gap-4">
@@ -107,7 +109,7 @@ export function DemoDataPanel() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            {problems.length === 0 ? (
+            {integrityError ? null : problems.length === 0 ? (
               <CheckCircle2Icon className="text-status-good size-4" />
             ) : (
               <AlertTriangleIcon className="text-status-critical size-4" />
@@ -122,6 +124,13 @@ export function DemoDataPanel() {
         <CardContent>
           {integrity.isLoading ? (
             <Skeleton className="h-5 w-64" />
+          ) : integrityError ? (
+            <LoadError
+              title="Could not run the check"
+              message={integrityError.message}
+              onRetry={integrity.refetch}
+              retrying={integrity.isRefreshing}
+            />
           ) : problems.length === 0 ? (
             <p className="text-sm">
               No problems found — every reference resolves.
@@ -186,8 +195,8 @@ export function DemoDataPanel() {
               }}
             />
             <p className="text-muted-foreground text-xs">
-              Reads that back a whole screen are exempt, so the app stays
-              navigable at 100%; mutations and detail loads will fail.
+              Reads are exempt, so every screen still loads at 100%; saves,
+              sends and deletes fail with an error message.
             </p>
           </div>
         </CardContent>

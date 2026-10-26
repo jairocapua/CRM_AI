@@ -5,7 +5,14 @@ import { PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { apiNow, useAction, useResource } from "@/lib/api";
+import {
+  apiNow,
+  errorMessage,
+  loadErrorOf,
+  useAction,
+  useResource,
+} from "@/lib/api";
+import { LoadError } from "@/components/common/load-error";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -24,17 +31,32 @@ export function ContactTasksPanel({ contactId }: { contactId: string }) {
   const [createTask, isCreating] = useAction(async () => {
     const text = title.trim();
     if (!text) return;
-    await api.tasks.create({ title: text, contactId });
+    try {
+      await api.tasks.create({ title: text, contactId });
+    } catch (error) {
+      // The title stays in the box, to add again.
+      toast.error(errorMessage(error, "Could not add the task."));
+      return;
+    }
     setTitle("");
     toast.success("Task added");
   });
 
   const [toggleTask] = useAction(async (id: string, done: boolean) => {
-    await api.tasks.setCompleted(id, done);
+    try {
+      await api.tasks.setCompleted(id, done);
+    } catch (error) {
+      toast.error(errorMessage(error, "Could not update the task."));
+    }
   });
 
   const [deleteTask] = useAction(async (id: string) => {
-    await api.tasks.remove(id);
+    try {
+      await api.tasks.remove(id);
+    } catch (error) {
+      toast.error(errorMessage(error, "Could not delete the task."));
+      return;
+    }
     toast.success("Task deleted");
   });
 
@@ -64,6 +86,13 @@ export function ContactTasksPanel({ contactId }: { contactId: string }) {
 
       {tasks.isLoading ? (
         <Skeleton className="h-16 w-full" />
+      ) : loadErrorOf(tasks) ? (
+        <LoadError
+          title="Could not load tasks"
+          message={loadErrorOf(tasks)?.message ?? ""}
+          onRetry={tasks.refetch}
+          retrying={tasks.isRefreshing}
+        />
       ) : (tasks.data ?? []).length === 0 ? (
         <p className="text-sm text-muted-foreground">No tasks yet.</p>
       ) : (

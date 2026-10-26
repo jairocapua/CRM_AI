@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import Link from "next/link";
 import {
   ArchiveIcon,
@@ -14,9 +14,10 @@ import { toast } from "sonner";
 
 import type { Contact, Conversation, Message, User } from "@/types";
 import * as api from "@/lib/api";
-import { apiNow, useResource } from "@/lib/api";
+import { apiNow, invalidate, loadErrorOf, useResource } from "@/lib/api";
 import { ChannelIcon, CHANNEL_LABELS } from "@/components/common/channel-icon";
 import { EmptyState } from "@/components/common/empty-state";
+import { LoadError } from "@/components/common/load-error";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, LinkButton } from "@/components/ui/button";
 import {
@@ -59,6 +60,12 @@ export function ThreadView({ id }: { id: string }) {
   );
   const users = useResource("users", () => api.users.list());
   const me = useResource("users", () => api.users.me(), "me");
+  const { inboxFailed } = useInbox();
+  const pane = useRef<HTMLDivElement>(null);
+  // The contact's read only counts once the conversation named it.
+  const loadError =
+    loadErrorOf(conversation) ??
+    (conversation.data ? loadErrorOf(contact) : null);
 
   // Viewing is reading. Keyed on "has unread" rather than the count, so the
   // invalidation markRead itself causes cannot re-trigger it.
@@ -79,6 +86,29 @@ export function ThreadView({ id }: { id: string }) {
               Back to inbox
             </LinkButton>
           }
+        />
+      </div>
+    );
+  }
+
+  if (loadError && !conversation.isLoading && !contact.isLoading) {
+    // One fault, one alert: while the inbox shows its alert, its Retry
+    // re-reads this pane too.
+    if (inboxFailed) {
+      return (
+        <p className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
+          Use Retry in the inbox to load this conversation.
+        </p>
+      );
+    }
+    return (
+      <div className="p-4">
+        <LoadError
+          title="Could not load the conversation"
+          message={loadError.message}
+          onRetry={() => invalidate("conversations", "contacts")}
+          retrying={conversation.isRefreshing || contact.isRefreshing}
+          focusTarget={pane}
         />
       </div>
     );
@@ -112,6 +142,10 @@ export function ThreadView({ id }: { id: string }) {
         contact={contact.data}
         messages={messages.data}
         messagesLoading={messages.isLoading}
+        messagesError={loadErrorOf(messages)}
+        onRetryMessages={messages.refetch}
+        messagesRetrying={messages.isRefreshing}
+        paneRef={pane}
         users={users.data ?? []}
         meId={me.data?.id}
       />
@@ -124,6 +158,10 @@ function Thread({
   contact,
   messages,
   messagesLoading,
+  messagesError,
+  onRetryMessages,
+  messagesRetrying,
+  paneRef,
   users,
   meId,
 }: {
@@ -131,6 +169,11 @@ function Thread({
   contact: Contact;
   messages: Message[] | undefined;
   messagesLoading: boolean;
+  messagesError: api.ApiError | null;
+  onRetryMessages: () => void;
+  messagesRetrying: boolean;
+  /** The pane, focused after a Retry of the conversation that worked. */
+  paneRef: RefObject<HTMLDivElement | null>;
   users: User[];
   meId: string | undefined;
 }) {
@@ -214,7 +257,13 @@ function Thread({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div
+      ref={paneRef}
+      role="region"
+      aria-label={`Conversation with ${fullName(contact)}`}
+      tabIndex={-1}
+      className="flex h-full min-h-0 flex-col outline-none"
+    >
       <ThreadHeader conversation={conversation} contact={contact} />
 
       <div className="relative min-h-0 flex-1">
@@ -222,6 +271,15 @@ function Thread({
           <div className="flex flex-col gap-3 p-4">
             <Skeleton className="h-12 w-2/3" />
             <Skeleton className="ml-auto h-12 w-1/2" />
+          </div>
+        ) : messagesError ? (
+          <div className="p-4">
+            <LoadError
+              title="Could not load messages"
+              message={messagesError.message}
+              onRetry={onRetryMessages}
+              retrying={messagesRetrying}
+            />
           </div>
         ) : entries.length === 0 ? (
           <div className="flex h-full items-center justify-center p-6">

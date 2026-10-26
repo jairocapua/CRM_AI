@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm, type Resolver } from "react-hook-form";
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { useAction, useResource } from "@/lib/api";
+import { errorMessage, useAction, useResource } from "@/lib/api";
 import {
   CONTACT_STATUS_LABELS,
   LEAD_SOURCE_LABELS,
@@ -133,11 +133,21 @@ export function ContactFormSheet({
     defaultValues: emptyValues({}),
   });
 
+  // Which record the form was last seeded for while open. A reseed for the
+  // same record (the custom fields read landing, or a refetch) keeps what
+  // the user already typed; opening, or switching record, starts fresh.
+  const seededFor = useRef<string | null>(null);
   useEffect(() => {
     // The form's schema is rebuilt from `fields` every render (it's
     // data-driven, not static), so defaultValues must be reseeded here
     // alongside it rather than once on mount.
-    if (!open) return;
+    if (!open) {
+      seededFor.current = null;
+      return;
+    }
+    const key = contact?.id ?? "new";
+    const sameRecord = seededFor.current === key;
+    seededFor.current = key;
     const customFieldsDefault = fromCustomFieldsValue(
       contact?.customFields,
       fields,
@@ -146,6 +156,7 @@ export function ContactFormSheet({
       contact
         ? valuesFromContact(contact, customFieldsDefault)
         : emptyValues(customFieldsDefault),
+      { keepDirtyValues: sameRecord },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, contact, customFields.data]);
@@ -170,13 +181,27 @@ export function ContactFormSheet({
       customFields: toCustomFieldsPatch(values.customFields, fields),
     };
 
-    if (contact) {
-      await api.contacts.update(contact.id, patch);
-      toast.success(`${values.firstName} ${values.lastName} updated`);
-    } else {
-      await api.contacts.create(patch);
-      toast.success(`${values.firstName} ${values.lastName} added`);
+    try {
+      if (contact) {
+        await api.contacts.update(contact.id, patch);
+      } else {
+        await api.contacts.create(patch);
+      }
+    } catch (error) {
+      // The sheet stays open with every value as typed, to save again.
+      toast.error(
+        errorMessage(
+          error,
+          contact
+            ? "Could not save the contact."
+            : "Could not add the contact.",
+        ),
+      );
+      return;
     }
+    toast.success(
+      `${values.firstName} ${values.lastName} ${contact ? "updated" : "added"}`,
+    );
     onOpenChange(false);
   });
 

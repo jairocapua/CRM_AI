@@ -4,7 +4,8 @@ import { useState } from "react";
 import { ArrowRightIcon } from "lucide-react";
 
 import * as api from "@/lib/api";
-import { useResource } from "@/lib/api";
+import { loadErrorOf, useResource } from "@/lib/api";
+import { LoadError } from "@/components/common/load-error";
 import { Money } from "@/components/common/money";
 import { LinkButton } from "@/components/ui/button";
 import {
@@ -28,6 +29,7 @@ import { TAG_DOT_CLASSES } from "@/lib/constants";
 import { pluralize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { BarList } from "./bar-list";
+import { REGION_FOCUS, useCardRegion } from "./card-region";
 
 /**
  * Live deals by stage for one pipeline. The figures are the board's own —
@@ -53,15 +55,24 @@ export function PipelineCard() {
   );
 
   const data = summary.data;
+  // Two reads, one card, one alert: the pipelines list first (without it
+  // there is no pipeline to sum), then the selected pipeline's summary.
+  const pipelinesError = loadErrorOf(pipelines);
+  const loadError = pipelinesError ?? loadErrorOf(summary);
+  const loading =
+    pipelines.isLoading || summary.isLoading || (!data && !loadError);
+  const region = useCardRegion();
   const widest = Math.max(1, ...(data?.stages ?? []).map((s) => s.total));
 
   return (
-    <Card className="lg:col-span-2">
+    <Card {...region.regionProps} className={cn("lg:col-span-2", REGION_FOCUS)}>
       <CardHeader>
-        <CardTitle>Deals by stage</CardTitle>
+        <CardTitle id={region.titleId}>Deals by stage</CardTitle>
         <CardDescription>
-          {summary.isLoading || !data ? (
+          {loading ? (
             <Skeleton className="h-4 w-64" />
+          ) : loadError || !data ? (
+            "Live deals in each stage."
           ) : (
             <>
               {pluralize(data.liveCount, "live deal")} ·{" "}
@@ -106,8 +117,16 @@ export function PipelineCard() {
         </CardAction>
       </CardHeader>
       <CardContent>
-        {summary.isLoading || !data ? (
+        {loading ? (
           <Skeleton className="h-52 w-full" />
+        ) : loadError || !data ? (
+          <LoadError
+            title="Could not load the pipeline"
+            message={loadError?.message ?? ""}
+            onRetry={pipelinesError ? pipelines.refetch : summary.refetch}
+            retrying={pipelines.isRefreshing || summary.isRefreshing}
+            focusTarget={region.ref}
+          />
         ) : (
           <BarList
             items={data.stages.map((stage) => ({

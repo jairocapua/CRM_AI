@@ -3,7 +3,8 @@
 import Link from "next/link";
 
 import * as api from "@/lib/api";
-import { useResource } from "@/lib/api";
+import { loadErrorOf, useResource } from "@/lib/api";
+import { LoadError } from "@/components/common/load-error";
 import { Money } from "@/components/common/money";
 import { OpportunityStatusBadge } from "@/components/modules/opportunities/opportunity-status-badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +26,18 @@ export function ContactOpportunitiesPanel({
 
   if (opportunities.isLoading) {
     return <Skeleton className="h-20 w-full" />;
+  }
+
+  const loadError = loadErrorOf(opportunities);
+  if (loadError) {
+    return (
+      <LoadError
+        title="Could not load opportunities"
+        message={loadError.message}
+        onRetry={opportunities.refetch}
+        retrying={opportunities.isRefreshing}
+      />
+    );
   }
 
   const rows = opportunities.data ?? [];

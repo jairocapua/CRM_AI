@@ -21,11 +21,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { loadErrorOf } from "@/lib/api";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ContactPanel } from "./contact-panel";
 import {
   DEFAULT_INBOX_FILTERS,
   InboxList,
+  useInboxRows,
   type InboxFilters,
 } from "./inbox-list";
 
@@ -33,6 +35,12 @@ interface InboxContextValue {
   isMobile: boolean;
   detailsOpen: boolean;
   toggleDetails: () => void;
+  /**
+   * The inbox list's load error is on screen. One fault, one alert
+   * ([P7-T47]): the thread and contact panes then show no alert of their
+   * own, since the inbox's Retry re-reads theirs too (`retryInbox`).
+   */
+  inboxFailed: boolean;
 }
 
 const InboxContext = createContext<InboxContextValue | null>(null);
@@ -65,6 +73,12 @@ export function InboxShell({ children }: { children: React.ReactNode }) {
   const selectedId = typeof params.id === "string" ? params.id : undefined;
   const isMobile = useIsMobile();
   const [filters, setFilters] = useState<InboxFilters>(DEFAULT_INBOX_FILTERS);
+  const inbox = useInboxRows(filters, selectedId);
+  // On mobile a thread hides the list, and with it the list's alert.
+  const inboxFailed =
+    loadErrorOf(inbox) !== null &&
+    !inbox.isLoading &&
+    !(isMobile && selectedId);
 
   // Unset until toggled: open beside the thread on desktop, closed on mobile
   // (where it is a sheet that would otherwise cover the thread on arrival).
@@ -81,8 +95,8 @@ export function InboxShell({ children }: { children: React.ReactNode }) {
   const layout = useDefaultLayout({ id: "nimbus-inbox", panelIds });
 
   const context = useMemo(
-    () => ({ isMobile, detailsOpen, toggleDetails }),
-    [isMobile, detailsOpen, toggleDetails],
+    () => ({ isMobile, detailsOpen, toggleDetails, inboxFailed }),
+    [isMobile, detailsOpen, toggleDetails, inboxFailed],
   );
 
   if (isMobile) {
@@ -96,6 +110,7 @@ export function InboxShell({ children }: { children: React.ReactNode }) {
               selectedId={undefined}
               filters={filters}
               onFiltersChange={setFilters}
+              inbox={inbox}
             />
           )}
         </div>
@@ -135,6 +150,7 @@ export function InboxShell({ children }: { children: React.ReactNode }) {
               selectedId={selectedId}
               filters={filters}
               onFiltersChange={setFilters}
+              inbox={inbox}
             />
           </ResizablePanel>
           <ResizableHandle />

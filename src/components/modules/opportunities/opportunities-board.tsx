@@ -19,7 +19,7 @@ import { toast } from "sonner";
 
 import type { Contact, Opportunity, User } from "@/types";
 import * as api from "@/lib/api";
-import { invalidate, loadErrorOf, useResource } from "@/lib/api";
+import { errorMessage, invalidate, loadErrorOf, useResource } from "@/lib/api";
 import { EmptyState } from "@/components/common/empty-state";
 import { LoadError } from "@/components/common/load-error";
 import { Money } from "@/components/common/money";
@@ -93,6 +93,8 @@ export function OpportunitiesBoard() {
   const users = useResource("users", () => api.users.list());
   const tags = useResource("tags", () => api.tags.list());
   const tagsError = loadErrorOf(tags);
+  const pipelinesError = loadErrorOf(pipelines);
+  const boardError = loadErrorOf(board);
 
   const contactsById = useMemo(
     () => new Map((contacts.data?.rows ?? []).map((c) => [c.id, c])),
@@ -232,10 +234,23 @@ export function OpportunitiesBoard() {
         stageId: targetStageId,
         position: insertAt,
       });
-    } catch {
+    } catch (error) {
       setOverride(null);
-      toast.error("Could not move that deal. Put it back where it was.");
+      toast.error("Could not move that deal. Put it back where it was.", {
+        description: errorMessage(error, "Please try again."),
+      });
     }
+  }
+
+  if (pipelinesError && !pipelines.isLoading) {
+    return (
+      <LoadError
+        title="Could not load pipelines"
+        message={pipelinesError.message}
+        onRetry={pipelines.refetch}
+        retrying={pipelines.isRefreshing}
+      />
+    );
   }
 
   if (pipelines.isLoading || !pipelines.data) {
@@ -269,24 +284,30 @@ export function OpportunitiesBoard() {
       />
 
       <p className="text-sm text-muted-foreground">
-        {live.length} live deals ·{" "}
-        <Money
-          cents={boardTotal.total}
-          currency={activePipeline.currency}
-          className="font-medium text-foreground"
-        />{" "}
-        pipeline value ·{" "}
-        <Money
-          cents={boardTotal.weighted}
-          currency={activePipeline.currency}
-          className="font-medium text-foreground"
-        />{" "}
-        weighted forecast
+        {boardError ? (
+          "Live deals and their value show once the deals load."
+        ) : (
+          <>
+            {live.length} live deals ·{" "}
+            <Money
+              cents={boardTotal.total}
+              currency={activePipeline.currency}
+              className="font-medium text-foreground"
+            />{" "}
+            pipeline value ·{" "}
+            <Money
+              cents={boardTotal.weighted}
+              currency={activePipeline.currency}
+              className="font-medium text-foreground"
+            />{" "}
+            weighted forecast
+          </>
+        )}
       </p>
 
       {/* The contacts table's rule: only once the board is on screen, never
           above its skeleton. The columns and cards stay, without tags. */}
-      {!board.isLoading && tagsError ? (
+      {!board.isLoading && !boardError && tagsError ? (
         <LoadError
           title="Could not load tags"
           message={tagsError.message}
@@ -297,6 +318,18 @@ export function OpportunitiesBoard() {
 
       {board.isLoading ? (
         <Skeleton className="h-96 w-full" />
+      ) : boardError ? (
+        <LoadError
+          title="Could not load deals"
+          message={boardError.message}
+          onRetry={() => {
+            board.refetch();
+            // One fault, one alert: the tags alert is hidden while this
+            // one shows, so re-read the tags too if they failed.
+            if (tagsError) invalidate("tags");
+          }}
+          retrying={board.isRefreshing}
+        />
       ) : (
         <DndContext
           sensors={sensors}

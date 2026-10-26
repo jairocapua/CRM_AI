@@ -5,29 +5,29 @@
 
 ## Now
 
-- **Phase:** P10 Polish — active, 1/7 tasks done.
-- **Branch:** `phase/p10-polish`, cut from `master` at `72f8362` (P9 merged as PR #6).
-- **Status:** P10-T01 approved (`3092a10`). Next: P10-T02 Loading and error audit.
+- **Phase:** P10 Polish — active, 2/7 tasks done.
+- **Branch:** `phase/p10-polish`, cut from `master` at `72f8362` (P9 merged as PR #6). Not pushed yet.
+- **Status:** P10-T02 approved. Next: P10-T03 Responsive pass at 375px. Start it in a fresh session.
 
 ## Last change
 
-- P10-T01 Command palette: Ctrl+K / ⌘K (or the header Search button) opens `src/components/layout/command-palette.tsx`: modules, quick actions (New contact → `/contacts?new=1`, Book appointment → `/calendars?book=1`), and live contact/deal search (5 each). Picks go through the new `useGuardedNavigate()`, so a dirty form asks first; Ctrl+K does nothing over another open dialog or sheet.
-- Verify: `npm run check` green (1387 Vitest); palette, smoke, settings-profile, booking-dialog, fixture specs 44/44; palette spec 27/27 over 3 repeats; react-table 8.21.3. Review passed with no must-fixes; four cheap suggestions folded in.
+- P10-T02 Loading and error audit: Dashboard cards and Conversations (inbox, thread, contact panel) now show `LoadError` alerts with Retry ("one fault, one alert"); the Opportunities board alerts instead of an endless skeleton or empty board; contact page panels alert instead of "No tasks yet."; failed contact/deal saves, deletes and bulk actions toast `errorMessage(...)` and keep input; route error boundaries `(app)/error.tsx` + `global-error.tsx`. `LoadError` moves focus to the loaded region after a Retry that works and announces "Still could not load after N tries." after one that fails. The contact and deal sheets keep typed values when their custom fields load late (`keepDirtyValues`). Reads keep `canFail: false`.
+- Verify: `npm run check` green (1409 Vitest); full e2e 326/327 (the one failure `ERR_NO_BUFFER_SPACE` in settings-shell, 30/30 alone); `loading-error-audit.spec.ts` 108/108 over 3 repeats. Review: three missing error-path e2e tests and three small fixes, all done in one fix round.
+- P10-T01 (`3092a10`): command palette (Ctrl+K / ⌘K).
 
 ## Next up
 
-- P10-T02 Loading and error audit (deep): error state with Retry at failure 1.0, skeletons at 2000 ms latency, route error boundaries, `ApiError` toasts; reuse `load-error.tsx`.
-- From the P10-T01 review, for P10-T02: the palette's failed-search line has no Retry (P10-T02 may add one); keep results visible while the next query is pending (BACKLOG).
+- P10-T03 Responsive pass at 375px (sidebar→Sheet, panes stack, board scroll-snaps). The header Search button is `hidden sm:flex` (P10-T01 left mobile to this task): give phones a way to open the palette.
 
 ## Waiting on you (owner)
 
-1. OPTIONAL, reversible: the palette action reads "New contact" while the contacts page button reads "Add contact". Say if you want one name.
-2. OPTIONAL: try it — `npm run dev`, open http://localhost:3000, press Ctrl+K, type part of a contact's name, Enter.
+1. OPTIONAL, reversible: the palette action reads "New contact" while the contacts page says "Add contact".
+2. OPTIONAL try-out: `npm run dev`, open http://localhost:3000 → Settings › Demo data → raise latency to see skeletons, or failure rate to 100% and save a contact to see the error toast (your typing stays).
 
 ## Open suggestions (non-blocking)
 
-- `docs/BACKLOG.md` holds the P8/P9 leftovers, the P9 gate suggestions and the P10-T01 review leftovers.
-- Calendar ids, pipeline/stage ids and `templateId` are still id-typed in authored configs; they need stable keys before any definition uses them.
+- `docs/BACKLOG.md` holds the P8/P9 leftovers and the P10-T01/T02 review leftovers (contact/deal delete dialogs have no close guard; inline `instanceof ApiError` sites to migrate to `errorMessage`; a `waitForTimeout` in the audit spec).
+- Calendar ids, pipeline/stage ids and `templateId` are still id-typed in authored configs.
 
 ## Blockers
 
