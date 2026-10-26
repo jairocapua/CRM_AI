@@ -594,6 +594,9 @@ export type FaultTable =
   | "automationRequests"
   | "calendars"
   | "contacts"
+  | "customFields"
+  | "opportunities"
+  | "pipelines"
   | "tags"
   | "users"
   | "workflowRuns";
@@ -610,7 +613,12 @@ export type FaultTable =
  * the tags fault catches it too. Only users have a `role`, and contacts, the
  * other records with a `firstName`, have no `slug`. Only automation runs have
  * a `workflowId` and `steps`. Only automation requests have a `problem`
- * and an `outcome`.
+ * and an `outcome`. Only custom field definitions have a `key`, `label`,
+ * `objectType`, `required` and `position` (smart lists have an
+ * `objectType`, nothing else of it). Only deals have a `pipelineId`,
+ * `stageId`, `contactId` and `value` (an automation trigger names a
+ * `pipelineId` and `stageId` but is not a store record). Only pipelines
+ * have `stages` and `isDefault` (a location has a `currency`, not those).
  */
 const TABLE_SHAPES: Record<
   FaultTable,
@@ -619,6 +627,9 @@ const TABLE_SHAPES: Record<
   appointments: { has: ["calendarId", "contactId", "startAt", "endAt"] },
   calendars: { has: ["availability", "slotDurationMin", "timezone"] },
   contacts: { has: ["firstName", "lastName", "tagIds", "dnd", "score"] },
+  customFields: { has: ["key", "label", "objectType", "required", "position"] },
+  opportunities: { has: ["pipelineId", "stageId", "contactId", "value"] },
+  pipelines: { has: ["stages", "isDefault", "currency", "position"] },
   tags: { has: ["name", "slug", "color"], lacks: ["timezone"] },
   users: { has: ["slug", "firstName", "role", "isActive"] },
   workflowRuns: { has: ["workflowId", "contactId", "steps", "startedAt"] },
@@ -683,9 +694,15 @@ interface ReadFaultWindow {
  * by key and are unaffected. For tags it catches `list()` in tags.ts
  * (`Object.values(tags)`, after its loop over the contacts, which passes),
  * the automations' `list()` and `get()` in workflows.ts, which read every
- * tag to resolve tag names, and the integrity check; tag create, update and
- * remove, `contacts.list` and `contacts.addTags`/`removeTags` do not read the
- * tags table that way, so they keep working. For users it catches
+ * tag to resolve tag names, and the integrity check; tag create, update,
+ * remove and merge (they check names through `Object.entries` and read tags
+ * by key), the removal and merge previews (they read the tag by key),
+ * `contacts.list` and `contacts.addTags`/`removeTags` do not read the tags
+ * table that way, so they keep working. The tags manager's previews
+ * (`removalPreview`, `mergePreview`) count contacts and deals through
+ * `Object.values`, so a contacts or opportunities fault fails them, while
+ * `tags.remove` and `tags.merge` sweep both through `Object.entries` and
+ * keep working (`cascadeTagDelete` / `cascadeTagMerge`). For users it catches
  * `users.list`, `users.invite` (it reads every slug), the automations'
  * `list()` and `get()` (they resolve owner slugs) and the integrity check;
  * `users.me` and `users.get` read by key and keep working. For workflowRuns
@@ -693,7 +710,26 @@ interface ReadFaultWindow {
  * check; `listRuns` names contacts by key, so a contacts fault leaves it
  * alone. For automationRequests it catches `automationRequests.list()` and
  * the integrity check; `create()` writes without reading the table, so it
- * keeps working. Restore reads
+ * keeps working. For customFields it catches `customFields.list()` (the
+ * custom fields page, the contact and deal forms, the contact info panel and
+ * the deal page), `create()` and `reorder()` (they read the object type's
+ * fields) and the integrity check; `update()`, `remove()` and
+ * `removalPreview()` read the field by key and keep working (`remove()`
+ * renumbers the fields left through `Object.entries`, which the fault does
+ * not patch). For opportunities it catches every read of the whole deals
+ * table: the board, the deals list, the dashboard's analytics, the
+ * integrity check, the pipelines manager's removal counts
+ * (`stageRemovalPreview` and `removalPreview` in pipelines.ts, through
+ * `countStageDeals` / `countPipelineDeals` in cascade.ts) and deal writes
+ * that read a column (`opportunities.create`, `update` on a stage change
+ * and `move`); `removeStage()`
+ * and `pipelines.remove()` read the deals through `Object.entries` and keep
+ * working. For pipelines it catches `pipelines.list()` (the pipelines
+ * manager, the board, the deal forms, the dashboard's pipeline card) and the
+ * dashboard's analytics; every pipelines.ts write reads pipelines by key or
+ * through `Object.entries` (`create`/`update` check names that way,
+ * `remove()` renumbers that way), so a spec can fail only the list read
+ * after a write. Restore reads
  * before a step that reaches them. `readFaultThrows` counts the reads the
  * fault has failed.
  */

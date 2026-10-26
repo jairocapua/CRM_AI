@@ -247,7 +247,7 @@ export function OpportunitiesBoard() {
       <EmptyState
         icon={TargetIcon}
         title="No pipelines yet"
-        description="Pipeline management isn't built yet — the seeded workspace ships with three."
+        description="Create one in Settings, under Pipelines."
       />
     );
   }

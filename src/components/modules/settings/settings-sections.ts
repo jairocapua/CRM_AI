@@ -20,8 +20,7 @@ export interface SettingsSection {
 /**
  * The settings sections, in order: the section nav in the settings layout
  * and the `/settings` overview both read this list, so a section is never
- * named twice. Each `href` is a real page (a placeholder until its task
- * lands: custom fields P9-T04, pipelines P9-T05, tags P9-T06, team P9-T03).
+ * named twice. Each `href` is a real page.
  */
 export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   {
@@ -57,7 +56,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   {
     title: "Tags",
     href: "/settings/tags",
-    description: "The tags that sort your contacts.",
+    description: "The tags on contacts and deals, and merging them.",
     icon: TagIcon,
   },
   {

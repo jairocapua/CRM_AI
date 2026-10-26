@@ -314,6 +314,20 @@ export async function integrityReport(): Promise<string[]> {
         Object.values(s.smartLists).filter((l) => gone(l.ownerId)).length,
       );
 
+      // Tags are looked up by key, never listed: `tags.remove()` and
+      // `tags.merge()` sweep them off contacts and deals
+      // (`cascadeTagDelete`, `cascadeTagMerge`).
+      const tagGone = (tagId: ID) => !s.tags[tagId];
+      missing(
+        "contacts are tagged with a missing tag",
+        contacts.filter((c) => c.tagIds.some(tagGone)).length,
+      );
+      missing(
+        "opportunities are tagged with a missing tag",
+        Object.values(s.opportunities).filter((o) => o.tagIds.some(tagGone))
+          .length,
+      );
+
       // Custom values are keyed by their field's `key`, per object type, and
       // `customFields.remove()` sweeps them (`cascadeCustomFieldDelete`).
       const fieldKeys = new Set(

@@ -44,8 +44,11 @@ function OptionalMark() {
   return <span className="text-muted-foreground font-normal">(optional)</span>;
 }
 
-/** A text input for `name`, with its label, error and optional hint. */
-export function TextField<T extends FieldValues>({
+/**
+ * A text input for `name`, with its label, error and optional hint. `TOut`
+ * is the form's submitted shape, when its resolver transforms the values.
+ */
+export function TextField<T extends FieldValues, TOut extends FieldValues = T>({
   form,
   name,
   label,
@@ -53,7 +56,7 @@ export function TextField<T extends FieldValues>({
   description,
   ...input
 }: {
-  form: UseFormReturn<T>;
+  form: UseFormReturn<T, unknown, TOut>;
   name: Path<T>;
   label: string;
   optional?: boolean;

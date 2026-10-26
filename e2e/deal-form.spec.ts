@@ -10,6 +10,7 @@ import {
   uniquelyNamedContact,
 } from "./calendar-helpers";
 import { expect, test } from "./fixtures";
+import { addField, openFieldsPage } from "./settings-helpers";
 
 /**
  * The deal sheet's Expected close field. A day is valid by the one shared rule
@@ -26,9 +27,9 @@ import { expect, test } from "./fixtures";
  *
  * The custom-field tests cover aria-invalid on each control type: the seeded
  * Monthly Retainer (a currency input), plus required select, multiselect,
- * textarea and date fields the spec adds to the persisted store itself
- * (`addRequiredCustomFields`), since no settings screen for custom fields
- * exists before P9-T04.
+ * textarea and date fields each test first adds on the Deals tab of
+ * Settings › Custom fields (`addRequiredDealFields`, P9-T07), as a user
+ * would.
  *
  * The won-stage create test covers the form's create path since P7-T62:
  * `create()` takes the status from the stage, so a new deal in Closed Won
@@ -76,63 +77,20 @@ async function monthlyRetainer(page: Page, dialog: Locator) {
   return { input, field };
 }
 
-/** The mock database's localStorage key (src/lib/mock/db.ts). */
-const DB_KEY = "nimbus-crm-db";
-
 /**
- * One required opportunity custom field per control type that P7-T52 gave
- * aria-invalid. The labels are unique so no locator can match a seeded field.
+ * One required deal custom field per control type that P7-T52 gave
+ * aria-invalid, as the field dialog words its type. The labels are unique so
+ * no locator can match a seeded field.
  */
 const REQUIRED_FIELDS = Object.freeze([
+  { label: "E2E Tier", type: "Dropdown", options: ["Gold", "Silver"] },
   {
-    id: "cf_e2e_tier",
-    key: "e2e_tier",
-    label: "E2E Tier",
-    type: "select",
-    objectType: "opportunity",
-    group: "Deal",
-    required: true,
-    options: [
-      { value: "gold", label: "Gold" },
-      { value: "silver", label: "Silver" },
-    ],
-    position: 10,
-  },
-  {
-    id: "cf_e2e_channels",
-    key: "e2e_channels",
     label: "E2E Channels",
-    type: "multiselect",
-    objectType: "opportunity",
-    group: "Deal",
-    required: true,
-    options: [
-      { value: "email", label: "Email" },
-      { value: "sms", label: "SMS" },
-      { value: "ads", label: "Ads" },
-    ],
-    position: 11,
+    type: "Multi-select",
+    options: ["Email", "SMS", "Ads"],
   },
-  {
-    id: "cf_e2e_brief",
-    key: "e2e_brief",
-    label: "E2E Brief",
-    type: "textarea",
-    objectType: "opportunity",
-    group: "Deal",
-    required: true,
-    position: 12,
-  },
-  {
-    id: "cf_e2e_kickoff",
-    key: "e2e_kickoff",
-    label: "E2E Kickoff",
-    type: "date",
-    objectType: "opportunity",
-    group: "Deal",
-    required: true,
-    position: 13,
-  },
+  { label: "E2E Brief", type: "Long text", options: [] },
+  { label: "E2E Kickoff", type: "Date", options: [] },
 ] as const);
 
 const TIER = REQUIRED_FIELDS[0].label;
@@ -141,53 +99,25 @@ const BRIEF = REQUIRED_FIELDS[2].label;
 const KICKOFF = REQUIRED_FIELDS[3].label;
 
 /**
- * Adds REQUIRED_FIELDS to the persisted mock database. It stands in for the
- * custom fields manager in settings, which arrives in P9-T04; once it does,
- * this spec should create the fields through that screen instead.
- *
- * The first load writes the seed. The fields then go in through an init
- * script on the next navigation (the caller's `openNewDeal`): by then the old
- * page's pagehide has flushed the app's debounced (250ms) persist write, so
- * that write cannot overwrite the injection, which writing from
- * `page.evaluate` on the live page could. `version` stays as it is, so persist
- * does not reseed, and `createdAt` is the seed's anchor, so no record lands
- * after REF_DATE. A sessionStorage flag makes it one-shot per tab, like the
- * fixture's storage clearing (whose own flag keeps it from wiping this data).
+ * Adds REQUIRED_FIELDS, each ticked Required, on the Deals tab of
+ * /settings/custom-fields. The caller's `openNewDeal` then loads
+ * /opportunities afresh; the old page's pagehide flushes the debounced
+ * persist write, so the new deal sheet reads the four fields.
  */
-async function addRequiredCustomFields(
+async function addRequiredDealFields(
   page: Page,
   gotoApp: (path: string) => Promise<void>,
 ) {
-  await gotoApp("/opportunities");
-  await expect
-    .poll(() => page.evaluate((key) => localStorage.getItem(key), DB_KEY))
-    .not.toBeNull();
-  await page.addInitScript(
-    ({ key, fields }) => {
-      if (!location.protocol.startsWith("http")) return;
-      const FLAG = "e2e-custom-fields-added";
-      if (sessionStorage.getItem(FLAG)) return;
-      const raw = localStorage.getItem(key);
-      if (!raw) return;
-      const persisted = JSON.parse(raw) as {
-        state: {
-          seededAt: string;
-          customFields: Record<string, unknown>;
-        };
-      };
-      const at = persisted.state.seededAt;
-      for (const field of fields) {
-        persisted.state.customFields[field.id] = {
-          ...field,
-          createdAt: at,
-          updatedAt: at,
-        };
-      }
-      localStorage.setItem(key, JSON.stringify(persisted));
-      sessionStorage.setItem(FLAG, "1");
-    },
-    { key: DB_KEY, fields: REQUIRED_FIELDS },
-  );
+  await gotoApp("/settings/custom-fields");
+  await openFieldsPage(page);
+  for (const { label, type, options } of REQUIRED_FIELDS) {
+    await addField(page, label, {
+      objectType: "opportunity",
+      type,
+      required: true,
+      options,
+    });
+  }
 }
 
 /**
@@ -205,7 +135,7 @@ async function requiredField(page: Page, dialog: Locator, label: string) {
   return field;
 }
 
-/** The four injected fields' Fields and controls in the open deal sheet. */
+/** The four required fields' Fields and controls in the open deal sheet. */
 async function requiredControls(page: Page, dialog: Locator) {
   const tier = await requiredField(page, dialog, TIER);
   const channels = await requiredField(page, dialog, CHANNELS);
@@ -231,7 +161,7 @@ test("Required custom fields left empty mark every control type aria-invalid", a
   page,
   gotoApp,
 }) => {
-  await addRequiredCustomFields(page, gotoApp);
+  await addRequiredDealFields(page, gotoApp);
   const { dialog } = await openNewDeal(page, gotoApp);
   const { fields, select, checkboxes, textarea, date } = await requiredControls(
     page,
@@ -260,7 +190,7 @@ test("Filled required custom fields of every control type stay unmarked", async 
   page,
   gotoApp,
 }) => {
-  await addRequiredCustomFields(page, gotoApp);
+  await addRequiredDealFields(page, gotoApp);
   const { dialog } = await openNewDeal(page, gotoApp);
   const { fields, select, checkboxes, textarea, date } = await requiredControls(
     page,
@@ -440,6 +370,10 @@ test("New deal in a Won stage with Status Open saves it Open", async ({
     });
 });
 
+/** The mock database's localStorage key (src/lib/mock/db.ts), for the
+ *  lost-stage injection below. */
+const DB_KEY = "nimbus-crm-db";
+
 /** The injected lost stage (no seeded stage is isLost). */
 const LOST_STAGE = Object.freeze({
   id: "stg_e2e_lost",
@@ -451,9 +385,19 @@ const LOST_STAGE = Object.freeze({
 });
 
 /**
- * Appends LOST_STAGE to the Sales Pipeline in the persisted mock database,
- * the same way and for the same reasons as `addRequiredCustomFields`: an init
- * script on the next navigation, one-shot per tab, `version` kept.
+ * Appends LOST_STAGE to the Sales Pipeline in the persisted mock database.
+ * This stays an injection: no screen can make a lost stage. The pipelines
+ * manager adds open stages only and cannot edit a stage's won/lost flags
+ * ([P9-T05]), and no seeded stage is lost.
+ *
+ * The first load writes the seed. The stage then goes in through an init
+ * script on the next navigation (the caller's `openNewDeal` or
+ * `gotoApp`): by then the old page's pagehide has flushed the app's
+ * debounced (250ms) persist write, so that write cannot overwrite the
+ * injection, which writing from `page.evaluate` on the live page could.
+ * `version` stays as it is, so persist does not reseed. A sessionStorage flag
+ * makes it one-shot per tab, like the fixture's storage clearing (whose own
+ * flag keeps it from wiping this data).
  */
 async function addLostStage(
   page: Page,

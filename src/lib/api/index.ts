@@ -44,6 +44,11 @@ export type {
 } from "./automation-requests";
 export type { AppointmentRow, CalendarPatch } from "./calendars";
 export type {
+  CustomFieldDraft,
+  CustomFieldPatch,
+  CustomFieldRemovalPreview,
+} from "./custom-fields";
+export type {
   InviteDraft,
   RemovalPreview,
   TeamMember,
@@ -56,6 +61,23 @@ export type {
   OpportunityPatch,
   StageRollup,
 } from "./opportunities";
+export type {
+  ClosedDealCounts,
+  PipelineDraft,
+  PipelinePatch,
+  PipelineRemovalPreview,
+  StageDraft,
+  StagePatch,
+  StageRemovalPreview,
+} from "./pipelines";
+export type {
+  TagChange,
+  TagDraft,
+  TagMergePreview,
+  TagPatch,
+  TagRemovalPreview,
+  TagWithCount,
+} from "./tags";
 export type {
   ChannelOption,
   ComposableChannel,

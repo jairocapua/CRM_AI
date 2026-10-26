@@ -76,7 +76,15 @@ export async function simulate<T>(
   opts: { ms?: number; canFail?: boolean } = {},
 ): Promise<T> {
   const { latencyMs, jitter, failureRate } = tuning;
-  const base = opts.ms ?? latencyMs;
+  // A pinned `ms` sets the call's own round trip, but a demo slowed past the
+  // default latency (the Demo Data slider) slows every call, pinned ones
+  // too, so a pending state lasts as long as the slider says.
+  const base =
+    opts.ms === undefined
+      ? latencyMs
+      : latencyMs > DEFAULT_TUNING.latencyMs
+        ? Math.max(opts.ms, latencyMs)
+        : opts.ms;
   await sleep(base * (1 - jitter / 2 + Math.random() * jitter));
 
   if (

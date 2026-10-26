@@ -1,4 +1,11 @@
-import type { ID } from "@/types";
+import type {
+  CustomField,
+  ID,
+  ISODate,
+  Opportunity,
+  Pipeline,
+  PipelineStage,
+} from "@/types";
 import type { DbState } from "./db-state";
 
 /**
@@ -105,37 +112,144 @@ export function cascadeOpportunityDelete(
 }
 
 /**
+ * A table's rows, read through `Object.entries`. The writes below read whole
+ * tables this way, not with `Object.values`: the e2e read fault
+ * (`failReads` in e2e/calendar-helpers.ts) patches `Object.values` to fail a
+ * table's list reads, and a write must survive it so a spec can fail only
+ * the refetch after it.
+ */
+function rowsOf<T>(table: Record<ID, T>): T[] {
+  return Object.entries(table).map(([, row]) => row);
+}
+
+/** Whether `deal` belongs to the pipeline `pipelineId`. */
+export function dealInPipeline(deal: Opportunity, pipelineId: ID): boolean {
+  return deal.pipelineId === pipelineId;
+}
+
+/** Whether `deal` sits in the stage `stageId` of the pipeline `pipelineId`. */
+export function dealInStage(
+  deal: Opportunity,
+  pipelineId: ID,
+  stageId: ID,
+): boolean {
+  return dealInPipeline(deal, pipelineId) && deal.stageId === stageId;
+}
+
+/** The pipelines left once `id` goes, in position order. */
+function pipelinesLeft(state: DbState, id: ID): Pipeline[] {
+  return rowsOf(state.pipelines)
+    .filter((p) => p.id !== id)
+    .sort((a, b) => a.position - b.position);
+}
+
+/**
+ * The pipeline that becomes the default when `id` is deleted: the first one
+ * left, when `id` was the only default; otherwise none.
+ */
+export function nextDefaultPipeline(
+  state: DbState,
+  id: ID,
+): Pipeline | undefined {
+  const left = pipelinesLeft(state, id);
+  return left.some((p) => p.isDefault) ? undefined : left[0];
+}
+
+/**
+ * How many deals deleting the pipeline `id` deletes with it
+ * (`cascadePipelineDelete`, same test). A count for a preview, so it reads
+ * the deals with `Object.values`: an e2e deals fault fails it.
+ */
+export function countPipelineDeals(state: DbState, id: ID): number {
+  return Object.values(state.opportunities).filter((o) => dealInPipeline(o, id))
+    .length;
+}
+
+/**
  * Deleting a pipeline deletes its deals through `cascadeOpportunityDelete`,
  * renumbers the pipelines left 0..n-1 and, when the default went, makes the
- * first of them the default. The caller refuses to delete the last one.
+ * first of them the default (`nextDefaultPipeline`). The caller refuses to
+ * delete the last one.
  */
 export function cascadePipelineDelete(
   state: DbState,
   id: ID,
 ): Partial<DbState> {
-  const left = Object.values(state.pipelines)
-    .filter((p) => p.id !== id)
-    .sort((a, b) => a.position - b.position);
-  const needsDefault = !left.some((p) => p.isDefault);
+  const nextDefault = nextDefaultPipeline(state, id);
   const pipelines: DbState["pipelines"] = {};
-  left.forEach((p, position) => {
+  pipelinesLeft(state, id).forEach((p, position) => {
     pipelines[p.id] = {
       ...p,
       position,
-      isDefault: p.isDefault || (needsDefault && position === 0),
+      isDefault: p.isDefault || p.id === nextDefault?.id,
     };
   });
 
-  const deals = Object.values(state.opportunities)
-    .filter((o) => o.pipelineId === id)
+  const deals = rowsOf(state.opportunities)
+    .filter((o) => dealInPipeline(o, id))
     .map((o) => o.id);
   return { pipelines, ...cascadeOpportunityDelete(state, deals) };
+}
+
+/** A pipeline's stages in board order (by position). */
+export function stagesInOrder(pipeline: Pipeline): PipelineStage[] {
+  return [...pipeline.stages].sort((a, b) => a.position - b.position);
+}
+
+/**
+ * Where removing `stageId` moves its deals: the stage before it in board
+ * order, or the one after it when it is the first. None when it is the
+ * pipeline's only stage, or not one of its stages.
+ */
+export function stageRemovalNeighbour(
+  pipeline: Pipeline,
+  stageId: ID,
+): PipelineStage | undefined {
+  const stages = stagesInOrder(pipeline);
+  const index = stages.findIndex((s) => s.id === stageId);
+  if (index < 0) return undefined;
+  return stages[index === 0 ? 1 : index - 1];
+}
+
+/** How many of a stage's deals are closed, by status. */
+export interface ClosedDealCounts {
+  won: number;
+  lost: number;
+  abandoned: number;
+}
+
+/**
+ * The deals removing a stage moves (`cascadeStageDelete`, same test): how
+ * many, and how many of them are won, lost or abandoned. A count for a
+ * preview, so it reads the deals with `Object.values`: an e2e deals fault
+ * fails it.
+ */
+export function countStageDeals(
+  state: DbState,
+  pipelineId: ID,
+  stageId: ID,
+): { count: number; closed: ClosedDealCounts } {
+  const moving = Object.values(state.opportunities).filter((o) =>
+    dealInStage(o, pipelineId, stageId),
+  );
+  const count = (status: Opportunity["status"]) =>
+    moving.filter((o) => o.status === status).length;
+  return {
+    count: moving.length,
+    closed: {
+      won: count("won"),
+      lost: count("lost"),
+      abandoned: count("abandoned"),
+    },
+  };
 }
 
 /**
  * Removing a stage keeps its deals: they join the end of the neighbouring
  * column (`fallbackId`), in their old order, and that column is renumbered
- * 0..n-1. The stages left are renumbered too. The caller checks that both
+ * 0..n-1. The deals that moved start their time in the new stage at `at`
+ * (`stageEnteredAt`, and `updatedAt`); their status is kept, so won deals
+ * stay won. The stages left are renumbered too. The caller checks that both
  * stages exist and that they differ.
  */
 export function cascadeStageDelete(
@@ -143,20 +257,30 @@ export function cascadeStageDelete(
   pipelineId: ID,
   stageId: ID,
   fallbackId: ID,
+  at: ISODate,
 ): Partial<DbState> {
   const pipeline = state.pipelines[pipelineId]!;
-  const stages = [...pipeline.stages]
-    .sort((a, b) => a.position - b.position)
+  const stages = stagesInOrder(pipeline)
     .filter((s) => s.id !== stageId)
     .map((s, position) => ({ ...s, position }));
 
   const inColumn = (id: ID) =>
-    Object.values(state.opportunities)
-      .filter((o) => o.pipelineId === pipelineId && o.stageId === id)
+    rowsOf(state.opportunities)
+      .filter((o) => dealInStage(o, pipelineId, id))
       .sort((a, b) => a.position - b.position);
   const opportunities = { ...state.opportunities };
-  [...inColumn(fallbackId), ...inColumn(stageId)].forEach((o, position) => {
-    opportunities[o.id] = { ...o, stageId: fallbackId, position };
+  inColumn(fallbackId).forEach((o, position) => {
+    if (o.position !== position) opportunities[o.id] = { ...o, position };
+  });
+  const staying = inColumn(fallbackId).length;
+  inColumn(stageId).forEach((o, index) => {
+    opportunities[o.id] = {
+      ...o,
+      stageId: fallbackId,
+      position: staying + index,
+      stageEnteredAt: at,
+      updatedAt: at,
+    };
   });
 
   return {
@@ -272,9 +396,50 @@ export function countUserReferences(
 }
 
 /**
+ * Whether a record's custom values hold a value for `key` that the contact
+ * and deal pages show: anything but absent, `null`, "" or an empty list
+ * (`false` is a value: the page shows "No"). The contact and deal forms save
+ * `null` for every custom field left empty, so a key can be stored with no
+ * value in it.
+ */
+export function holdsCustomFieldValue(
+  values: Record<string, unknown>,
+  key: string,
+): boolean {
+  const value = values[key];
+  return (
+    value !== undefined &&
+    value !== null &&
+    value !== "" &&
+    !(Array.isArray(value) && value.length === 0)
+  );
+}
+
+/**
+ * How many records of `field`'s object type hold a value for it
+ * (`holdsCustomFieldValue`): the values `cascadeCustomFieldDelete` deletes.
+ * It also deletes the key where it holds no value, which no one loses, so
+ * those are not counted.
+ */
+export function countCustomFieldValues(
+  state: DbState,
+  field: CustomField,
+): number {
+  const table: Record<ID, { customFields: Record<string, unknown> }> =
+    field.objectType === "contact" ? state.contacts : state.opportunities;
+  return Object.values(table).filter((row) =>
+    holdsCustomFieldValue(row.customFields, field.key),
+  ).length;
+}
+
+/**
  * Deleting a custom field deletes the values stored under its key, on the
  * records of its own object type only: a contact field and a deal field may
- * share a key.
+ * share a key. The key goes wherever it is stored, value or not
+ * (`countCustomFieldValues` counts the values), so no record is left holding
+ * a key for a field that is gone. The fields of its object type left are
+ * renumbered 0..n-1 in their order, so the next one added goes last; the
+ * other type's fields are untouched. Timestamps are kept.
  */
 export function cascadeCustomFieldDelete(
   state: DbState,
@@ -283,6 +448,14 @@ export function cascadeCustomFieldDelete(
   const field = state.customFields[id];
   const customFields = omitBy(state.customFields, (_, key) => key === id);
   if (!field) return { customFields };
+
+  Object.entries(customFields)
+    .map(([, f]) => f)
+    .filter((f) => f.objectType === field.objectType)
+    .sort((a, b) => a.position - b.position)
+    .forEach((f, position) => {
+      if (f.position !== position) customFields[f.id] = { ...f, position };
+    });
 
   const strip = <T extends { customFields: Record<string, unknown> }>(
     table: Record<ID, T>,
@@ -303,4 +476,115 @@ export function cascadeCustomFieldDelete(
   return field.objectType === "contact"
     ? { customFields, contacts: strip(state.contacts) }
     : { customFields, opportunities: strip(state.opportunities) };
+}
+
+/** Whether a contact or deal carries the tag `tagId`. */
+export function holdsTag(
+  record: { tagIds: readonly ID[] },
+  tagId: ID,
+): boolean {
+  return record.tagIds.includes(tagId);
+}
+
+/**
+ * The contacts and deals tagged `tagId` (`holdsTag`): the records
+ * `cascadeTagDelete` strips it from, and the ones `cascadeTagMerge` moves
+ * to the target. A count for a preview, so it reads the tables with
+ * `Object.values`: an e2e contacts or deals fault fails it.
+ */
+export function countTaggedRecords(
+  state: DbState,
+  tagId: ID,
+): { contacts: number; deals: number } {
+  return {
+    contacts: Object.values(state.contacts).filter((c) => holdsTag(c, tagId))
+      .length,
+    deals: Object.values(state.opportunities).filter((o) => holdsTag(o, tagId))
+      .length,
+  };
+}
+
+/**
+ * How many contacts carry `targetId` once `sourceId` is merged into it: the
+ * ones tagged with either, each counted once (`cascadeTagMerge`). Reads the
+ * contacts with `Object.values`, as `countTaggedRecords`.
+ */
+export function countContactsAfterMerge(
+  state: DbState,
+  sourceId: ID,
+  targetId: ID,
+): number {
+  return Object.values(state.contacts).filter(
+    (c) => holdsTag(c, sourceId) || holdsTag(c, targetId),
+  ).length;
+}
+
+/**
+ * `tagIds` with `sourceId` replaced by `targetId` in its place, or simply
+ * dropped when `targetId` is already there: no tag is listed twice and the
+ * rest keep their order.
+ */
+export function mergedTagIds(
+  tagIds: readonly ID[],
+  sourceId: ID,
+  targetId: ID,
+): ID[] {
+  const out: ID[] = [];
+  for (const id of tagIds) {
+    const next = id === sourceId ? targetId : id;
+    if (!out.includes(next)) out.push(next);
+  }
+  return out;
+}
+
+/** `table` with `change` applied to every row tagged `tagId`; the rest kept. */
+function retag<T extends { tagIds: ID[] }>(
+  table: Record<ID, T>,
+  tagId: ID,
+  change: (tagIds: ID[]) => ID[],
+): Record<ID, T> {
+  const out: Record<ID, T> = {};
+  for (const [key, row] of Object.entries(table)) {
+    out[key] = holdsTag(row, tagId)
+      ? { ...row, tagIds: change(row.tagIds) }
+      : row;
+  }
+  return out;
+}
+
+/**
+ * Deleting a tag takes it off every contact and deal that carries it, so
+ * none is left tagged with a tag that is gone. Their timestamps are kept
+ * (as `reassignUserReferences`): the records' own details did not change.
+ * Reads every table through `Object.entries`, so an e2e read fault leaves
+ * the write alone.
+ */
+export function cascadeTagDelete(state: DbState, id: ID): Partial<DbState> {
+  return {
+    tags: omitBy(state.tags, (_, key) => key === id),
+    contacts: retag(state.contacts, id, (ids) => ids.filter((t) => t !== id)),
+    opportunities: retag(state.opportunities, id, (ids) =>
+      ids.filter((t) => t !== id),
+    ),
+  };
+}
+
+/**
+ * Merging `sourceId` into `targetId`: every contact and deal tagged with the
+ * source carries the target instead (`mergedTagIds`: in the source's place,
+ * or nowhere new when it already has the target), then the source is
+ * deleted. Record timestamps are kept, as `cascadeTagDelete`. The caller
+ * checks both tags exist and differ.
+ */
+export function cascadeTagMerge(
+  state: DbState,
+  sourceId: ID,
+  targetId: ID,
+): Partial<DbState> {
+  const change = (ids: ID[]) => mergedTagIds(ids, sourceId, targetId);
+  return {
+    tags: omitBy(state.tags, (_, key) => key === sourceId),
+    contacts: retag(state.contacts, sourceId, change),
+    opportunities: retag(state.opportunities, sourceId, change),
+  };
 }

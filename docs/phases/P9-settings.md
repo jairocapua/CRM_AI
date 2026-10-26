@@ -126,6 +126,7 @@ management notes).
     `nowIso()` (days-in-stage), with a test. The board copes with its
     selected pipeline being deleted. The remove-stage confirm says won
     deals stay won.
+  - From the P9-T04 review: a whole-table `Object.values` read inside a write (e.g. renumbering stages) trips e2e `failReads` for that table; if stages get keyboard Move up/down besides the drag, reuse the custom fields list's wait-for-refetch rule (a second optimistic move before the first refetch jumps back).
 - **Acceptance:**
   - [ ] e2e (the phase exit check): add a stage, open the board, and the new
         column is there.
@@ -140,6 +141,7 @@ management notes).
 - **Skills:** `shadcn`
 - **Scope:** tags with contact counts (`tags.list`); create, rename,
   recolour, remove; merge one tag into another with a confirm (`tags.merge`).
+  - From the P9-T04/T05 reviews: reuse `ColorSwatchPicker` (settings/) and `TAG_COLOR_LABELS` (constants); put every mutation's returned record into a page-level saved map (newest `updatedAt` wins), not only a done flag; prove "one write" with a lost-update unit test (two at once), not a 100% failure-rate test; add the remove and merge FAILURE-path e2e (dialog stays open, confirm focused) up front; `tags.list` counts through contacts, so `failReads(page, "contacts")` fails the list.
 - **Acceptance:**
   - [ ] e2e: merging tag A into B leaves B with the combined count and A gone.
 - **Refs:** `src/lib/api/tags.ts`
@@ -147,9 +149,18 @@ management notes).
 ### P9-T07 — e2e: create required custom fields via settings UI
 - **Owner:** agent · **Depends:** P9-T04
 - **Scope:** After P9-T04 lands, replace addRequiredCustomFields/DB_KEY in e2e/deal-form.spec.ts with the custom fields manager UI.
+  - From the P9-T04 review: move the helpers in `e2e/settings-custom-fields.spec.ts` (`addField`, `choose`, `storedFieldLabels`, `formFieldLabels`) to a shared `e2e/settings-helpers.ts` and teach them Required and options (controls: checkbox "Required", combobox "Type", inputs "Option N", button "Add option"). A checkbox field cannot be required ([P9-T04]).
 - **Acceptance:**
-  - [ ] (define before starting)
+  - [ ] deal-form.spec.ts creates its required custom fields through /settings/custom-fields; `grep -n "addRequiredCustomFields\|DB_KEY" e2e/deal-form.spec.ts` finds no field injection left, and the spec stays green.
 - **Refs:** added by `progress.mjs add` on 2026-10-24
+
+### P9-T08 — Gate fix: tags.merge honours the Demo Data latency
+- **Owner:** agent · **Depends:** P9-T06
+- **Scope:** tags.merge pinned simulate({ ms: 400 }), which ignores the Demo Data latency slider, so the 'a failed merge keeps the dialog open' e2e had a ~0.2-0.6s pending window and failed once in the gate's full run (Cancel already re-enabled). Merge uses the shared latency like every other write; tidy the stale settings-sections.ts placeholder comment.
+  - From the gate re-run: `users.invite` (`ms: 420`) failed the same way ("the invite dialog cannot close while the invite is on its way"), and about 20 calls pin `ms`. Fixed for the class in `simulate()`: a pinned `ms` yields to a slider latency above the default (`Math.max(ms, latencyMs)`); at or below the default, and in unit tests (latency 0), a pin keeps its own value. `src/lib/api/http.test.ts` covers it.
+- **Acceptance:**
+  - [ ] tags.merge has no fixed ms; tags unit tests green (merge+remove lost-update pair now overlaps); settings-tags.spec.ts green with --repeat-each=5; full npm run e2e green.
+- **Refs:** added by `progress.mjs add` on 2026-10-26
 
 ## Exit criteria (phase gate)
 - [ ] Add a stage → the board shows the column (e2e).

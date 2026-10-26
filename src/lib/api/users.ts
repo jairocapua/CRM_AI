@@ -11,6 +11,7 @@ import {
   type UserReferenceCounts,
 } from "@/lib/mock/cascade";
 import { newId } from "@/lib/mock/ids";
+import { listNames } from "@/lib/format";
 import { profileSchema, type ProfileKey } from "@/lib/validation/profile";
 import { inviteSchema, roleSchema } from "@/lib/validation/team";
 import { invalidate } from "./cache";
@@ -244,13 +245,6 @@ export async function update(id: ID, patch: UserPatch): Promise<User> {
   });
   invalidate("users");
   return user;
-}
-
-/** "A", "A and B", "A, B and C". */
-function listNames(names: string[]): string {
-  return names.length <= 1
-    ? (names[0] ?? "")
-    : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
 /**

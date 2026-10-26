@@ -5,7 +5,13 @@ import { PlusIcon, RotateCwIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { invalidate, loadErrorOf, useAction, useResource } from "@/lib/api";
+import {
+  ApiError,
+  invalidate,
+  loadErrorOf,
+  useAction,
+  useResource,
+} from "@/lib/api";
 import type { TagColor } from "@/types";
 import { LoadError } from "@/components/common/load-error";
 import { Button } from "@/components/ui/button";
@@ -148,13 +154,28 @@ export function TagPicker({
         itemToStringLabel={(item) => item.name}
         inputValue={query}
         onInputValueChange={setQuery}
-        onValueChange={(next) => {
+        onValueChange={(next, eventDetails) => {
           const creatable = next.find(isCreatable);
           if (creatable) {
-            void createTag(creatable.creatable).then((tag) => {
-              onChange([...value, tag.id]);
-            });
-            setQuery("");
+            // "Create" is not a value: cancelling the pick keeps Base UI
+            // from closing the list and clearing what was typed, so a
+            // refused name is still there to fix. It clears on success.
+            eventDetails.cancel();
+            void createTag(creatable.creatable).then(
+              (tag) => {
+                onChange([...value, tag.id]);
+                setQuery("");
+              },
+              (error: unknown) => {
+                // A refusal (a name taken since the list was read, one too
+                // long) says why in the API's own sentence.
+                toast.error(
+                  error instanceof ApiError
+                    ? error.message
+                    : `Could not create the tag "${creatable.creatable}".`,
+                );
+              },
+            );
             return;
           }
           onChange(next.map((t) => t.id));

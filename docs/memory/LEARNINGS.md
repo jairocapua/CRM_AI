@@ -334,3 +334,25 @@
 - 2026-10-26 [P9-T03] One e2e build can red-proof several UI tests at once when each broken line targets a different test.
 - 2026-10-26 [P9-T03] `failReads(page, "contacts")` fails a count-based preview (removalPreview) in e2e.
 - 2026-10-26 [P9-T03] On Windows a 16-worker Playwright run can fail once with `net::ERR_NO_BUFFER_SPACE`; rerun the spec alone before suspecting the change.
+- 2026-10-26 [P9-T04] e2e `failReads` patches `Object.values`; a new whole-table `Object.values` read in a write path (a cascade renumber) makes that write fail in every spec that faults the table. Read through `Object.entries` in writes, or expect it.
+- 2026-10-26 [P9-T04] Chromium keeps focus on a node React moves with `insertBefore`, so a "restore focus after reorder" effect cannot go red in Playwright; the real focus loss comes from a natively disabled button (use `focusableWhenDisabled`).
+- 2026-10-26 [P9-T04] zod 4 skips an object-level `superRefine` after an aborting issue; a `{ abort: true }` on one field hides the cross-field errors.
+- 2026-10-26 [P9-T04] The contact and deal forms save `null` for every empty custom field, so `key in customFields` is not "holds a value"; use `holdsCustomFieldValue`.
+- 2026-10-26 [P9-T04] A second optimistic move made before the first move's refetch lands jumps back when that refetch arrives; block moves until it does.
+- 2026-10-26 [P9-T04] While a modal dialog is open, `getByRole` cannot see the page behind it (aria-hidden); close the dialog before asserting on the list.
+- 2026-10-26 [P9-T04] A position computed as "count of siblings" lands mid-list after a removal unless removal renumbers; renumber in the cascade and use max + 1.
+- 2026-10-26 [P9-T05] In e2e, a dnd-kit keyboard arrow pressed before the rows are measured is lost; wait for the "over its own position" announcement, then retry ArrowDown until it announces the next position, and assert the final order exactly.
+- 2026-10-26 [P9-T05] When the API validates with the same schema as the dialog, removing the client resolver cannot turn an empty-submit e2e red; red-proof it through the shared schema.
+- 2026-10-26 [P9-T05] A "one simulated write" test at 100% failure rate cannot go red when the old code's first step is a `canFail: false` read; prove one write with a lost-update test (two mutations at once, both changes stored).
+- 2026-10-26 [P9-T05] A done flag or optimistic order kept in a component that remounts per selection (`key={active.id}`) is lost on a switch; keep the mutation's returned record in the page-level saved map.
+- 2026-10-26 [P9-T05] A lost-update test must send the two calls in both orders: only the call sent second loses to a stale read.
+- 2026-10-26 [P9-T05] The e2e `stored()` helper reads localStorage through `Object.values`, which `failReads` breaks; call `restoreReads` before reading stored state.
+- 2026-10-26 [P9-T05] On Windows, back-to-back Playwright runs can hit `net::ERR_NO_BUFFER_SPACE` (sockets exhausted); pause ~60-90s or use fewer workers before suspecting the change.
+- 2026-10-26 [P9-T06] A lost-update test on an updater-style write (`setState((s) => ({ t: { ...s.t, [id]: next } }))`) cannot go red when its two calls edit different records; send two edits to the SAME record.
+- 2026-10-26 [P9-T06] A lost-update pair needs calls with the same simulated latency: `merge` sleeps 400ms, so a 0ms `remove` sent alongside writes first and the pair proves only `merge`.
+- 2026-10-26 [P9-T06] Picking an item in a Base UI multi-select Combobox while a filter is typed closes the list and clears the input itself; to keep the text after a pseudo-item such as "Create", call `eventDetails.cancel()` in `onValueChange`.
+- 2026-10-26 [P9-T06] A tsc error inside a mutated build shows up as "no tests ran" in Playwright, not as a red test; type-check e2e mutants first.
+- 2026-10-26 [P9-T06] Another project's server can hold port 3100 (0.0.0.0) and Playwright's webServer then times out against its 404; never kill it, run with a copy of the config on another port (`-c` a scratch config with `testDir` and `webServer.cwd` set to the repo).
+- 2026-10-26 [P9-T07] Adding several records in a row leaves more than one identical toast on screen, so `toastNamed(page, "Field added")` trips Playwright strict mode; use `.first()` and prove the save by the closed dialog and the new row.
+- 2026-10-26 [P9-T08] Before [P9-T08] a `simulate({ ms })` pin overrode the Demo Data latency slider, so an e2e that slowed the app to watch a pending state got a sub-second window on pinned calls (tags.merge, users.invite) and failed under full-run load. Under load, `toBeVisible()` right after Escape can also pass mid-close-animation and hide that the dialog really closed.
+- 2026-10-26 [P9-T08] Unit tests pin the clock (`setDemoNow`), so a write with 0ms latency stamps `updatedAt` equal to a seeded one; move the clock on before asserting a bump.
