@@ -9,10 +9,22 @@ import {
 } from "./calendar-helpers";
 import { expect, NAVIGATION, test, waitForBoot } from "./fixtures";
 import {
+  addField,
+  choose,
   failEveryMutation,
+  fieldDialog,
+  fieldForm,
+  fieldList,
+  fieldRow as row,
+  fieldRows as rows,
+  fieldSubmitButton as submitButton,
+  formFieldLabels,
+  openAdd,
+  openFieldsPage,
+  openFieldsTab,
   openSection,
   pageHeading,
-  settingsForm,
+  storedFieldLabels,
   toastNamed,
 } from "./settings-helpers";
 
@@ -32,14 +44,6 @@ const sidebarLink = (page: Page, name: string) =>
     .locator('[data-slot="sidebar"]')
     .getByRole("link", { name, exact: true });
 
-/** The open tab's list of fields. */
-const fieldList = (page: Page, heading: "Contact fields" | "Deal fields") =>
-  page.getByRole("list", { name: heading, exact: true });
-const rows = (list: Locator) => list.getByRole("listitem");
-const row = (list: Locator, label: string) =>
-  rows(list).filter({
-    has: list.page().getByText(label, { exact: true }),
-  });
 const contactFields = (page: Page) => fieldList(page, "Contact fields");
 
 /** The labels in the list, top to bottom, read from each row's Edit button. */
@@ -52,58 +56,7 @@ async function listedLabels(list: Locator): Promise<string[]> {
   return names.map((name) => name.replace(/^Edit /, ""));
 }
 
-const fieldDialog = (page: Page, title: string) =>
-  page.getByRole("dialog", { name: title });
-const fieldForm = (page: Page, title: string) => settingsForm(page, title);
-const submitButton = (form: Locator) =>
-  form.getByRole("button", { name: /^(Add field|Save changes|Saving…)$/ });
 const removeDialog = (page: Page) => page.getByRole("alertdialog");
-
-async function openFieldsPage(page: Page) {
-  await expect(pageHeading(page, "Custom fields")).toBeVisible(NAVIGATION);
-  await expect(rows(contactFields(page)).first()).toBeVisible(NAVIGATION);
-}
-
-/** Opens the add dialog on the open tab. */
-async function openAdd(page: Page, title = "Add contact field") {
-  await page
-    .getByRole("main")
-    .getByRole("button", { name: "Add field", exact: true })
-    .click();
-  await expect(fieldDialog(page, title)).toBeVisible();
-  return fieldForm(page, title);
-}
-
-/** Picks `option` in a Select. */
-async function choose(page: Page, select: Locator, option: string) {
-  await select.click();
-  await page.getByRole("option", { name: option, exact: true }).click();
-}
-
-/** Adds a field to the open tab and waits for its row. */
-async function addField(
-  page: Page,
-  label: string,
-  {
-    type,
-    title = "Add contact field",
-    heading = "Contact fields",
-  }: {
-    type?: string;
-    title?: string;
-    heading?: "Contact fields" | "Deal fields";
-  } = {},
-) {
-  const form = await openAdd(page, title);
-  await form.getByLabel("Label", { exact: true }).fill(label);
-  if (type) {
-    await choose(page, form.getByRole("combobox", { name: "Type" }), type);
-  }
-  await submitButton(form).click();
-  await expect(toastNamed(page, "Field added")).toBeVisible();
-  await expect(fieldDialog(page, title)).toBeHidden();
-  await expect(row(fieldList(page, heading), label)).toBeVisible();
-}
 
 /** The custom values one contact holds, from the persisted store. */
 async function storedValues(
@@ -120,29 +73,6 @@ async function storedValues(
       return { ...db.state.contacts[id]!.customFields };
     },
     [DB_KEY, contactId] as const,
-  );
-}
-
-/** The persisted custom fields, by object type, in position order. */
-async function storedFieldLabels(page: Page, objectType: string) {
-  return page.evaluate(
-    ([key, type]) => {
-      const raw = localStorage.getItem(key);
-      if (!raw) return [];
-      const db = JSON.parse(raw) as {
-        state: {
-          customFields: Record<
-            string,
-            { label: string; objectType: string; position: number }
-          >;
-        };
-      };
-      return Object.values(db.state.customFields)
-        .filter((f) => f.objectType === type)
-        .sort((a, b) => a.position - b.position)
-        .map((f) => f.label);
-    },
-    [DB_KEY, objectType] as const,
   );
 }
 
@@ -169,14 +99,6 @@ async function openContactForm(page: Page) {
   // The custom fields mount once their read resolves.
   await expect(sheet.locator('label[for^="cf_"]').first()).toBeVisible();
   return sheet;
-}
-
-/** The custom field labels a form shows, top to bottom. */
-async function formFieldLabels(form: Locator): Promise<string[]> {
-  const labels = await form
-    .locator('label[for^="cf_"]')
-    .evaluateAll((els) => els.map((el) => el.textContent ?? ""));
-  return labels.map((label) => label.replace(/ \*$/, "").trim());
 }
 
 /** The value next to `label` in the contact page's details. */
@@ -759,12 +681,11 @@ test("a deal field added on the Deals tab shows on the new deal form", async ({
 }) => {
   await gotoApp("/settings/custom-fields");
   await openFieldsPage(page);
-  await page.getByRole("tab", { name: "Deals", exact: true }).click();
+  await openFieldsTab(page, "opportunity");
   await expect(rows(fieldList(page, "Deal fields"))).toHaveCount(5);
   await addField(page, "Setup Fee", {
+    objectType: "opportunity",
     type: "Currency",
-    title: "Add deal field",
-    heading: "Deal fields",
   });
   await expect(row(fieldList(page, "Deal fields"), "Setup Fee")).toContainText(
     "Currency",

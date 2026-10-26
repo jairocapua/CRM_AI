@@ -5,23 +5,20 @@
 
 ## Now
 
-- **Phase:** P9 Settings — active, 6/7 tasks done.
+- **Phase:** P9 Settings — active, 7/7 tasks done; the phase gate is next.
 - **Branch:** `phase/p9-settings`, cut from `master` at `4d72e89`. Nothing pushed.
-- **Status:** P9-T06 approved (`45ec20b`); P9-T07 is next.
+- **Status:** P9-T07 in review.
 
 ## Last change
 
-- P9-T06 Tags manager with merge: `/settings/tags` lists every tag with its contact count, with New tag, Edit (rename, recolour with `ColorSwatchPicker`), Merge (pick the tag to keep; the confirm says how many contacts and deals move and the kept tag's count after) and Remove (the confirm says how many contacts and deals lose it).
-- API: `tagSchema` shared by the dialog and the API (name 1-40), names unique in any letter case, `update` an allow-list. A tag an automation names (Churn Risk, Demo Booked, Needs Follow Up, Newsletter, Proposal Sent) cannot be renamed, removed or merged away; recolouring and being merged into are fine. `remove`/`merge` now sweep deals as well as contacts (deals used to keep dangling tag ids); the integrity report checks both. Previews share their rules with the mutations.
-- Tag picker: a refused new tag name toasts why and stays typed; the list stays open after a create.
-- One fix round (same-record lost-update test, concurrent-create test, merge dialog hides its picker while its first check failed, tag picker toast e2e, copy).
-- `npm run check` green (1372 Vitest); 16 related e2e specs 180/180; settings-tags 54/54 over 3 repeats; react-table 8.21.3.
+- P9-T07: `e2e/deal-form.spec.ts` creates its four required deal fields (Dropdown, Multi-select, Long text, Date) through /settings/custom-fields with the shared `addField` helper in `e2e/settings-helpers.ts` (tab, type, options, Required; it throws on a required Checkbox). The custom-field localStorage injection is gone; only the lost-stage injection stays, since no screen makes a lost stage.
+- P9-T06 (`45ec20b`): `/settings/tags` tags manager with merge; remove/merge now sweep deals as well as contacts; automation-named tags can only be recoloured.
+- `npm run check` green (1372 Vitest); deal-form, settings-custom-fields, settings-shell, smoke, fixture 60/60.
 - e2e ran on port 3102 through a scratch config: another project's server (sequoya-onboarding) held port 3100.
 
 ## Next up
 
-- P9-T07: deal-form.spec.ts creates its required fields through the custom fields UI (acceptance in the phase file).
-- Then the P9 phase gate. Gate reviewer: confirm the board copes with its selected pipeline being deleted (per-mount fallback), and grep for any new whole-table `Object.values` inside a write (it trips the e2e faults).
+- The P9 phase gate (`progress.mjs phase P9 gate`; exit criteria at the end of `docs/phases/P9-settings.md`). Gate reviewer: confirm the board copes with its selected pipeline being deleted (per-mount fallback), and grep for any new whole-table `Object.values` inside a write (it trips the e2e faults).
 
 ## Waiting on you (owner)
 

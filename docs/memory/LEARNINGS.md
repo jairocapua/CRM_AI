@@ -353,3 +353,4 @@
 - 2026-10-26 [P9-T06] Picking an item in a Base UI multi-select Combobox while a filter is typed closes the list and clears the input itself; to keep the text after a pseudo-item such as "Create", call `eventDetails.cancel()` in `onValueChange`.
 - 2026-10-26 [P9-T06] A tsc error inside a mutated build shows up as "no tests ran" in Playwright, not as a red test; type-check e2e mutants first.
 - 2026-10-26 [P9-T06] Another project's server can hold port 3100 (0.0.0.0) and Playwright's webServer then times out against its 404; never kill it, run with a copy of the config on another port (`-c` a scratch config with `testDir` and `webServer.cwd` set to the repo).
+- 2026-10-26 [P9-T07] Adding several records in a row leaves more than one identical toast on screen, so `toastNamed(page, "Field added")` trips Playwright strict mode; use `.first()` and prove the save by the closed dialog and the new row.
