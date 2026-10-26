@@ -341,3 +341,10 @@
 - 2026-10-26 [P9-T04] A second optimistic move made before the first move's refetch lands jumps back when that refetch arrives; block moves until it does.
 - 2026-10-26 [P9-T04] While a modal dialog is open, `getByRole` cannot see the page behind it (aria-hidden); close the dialog before asserting on the list.
 - 2026-10-26 [P9-T04] A position computed as "count of siblings" lands mid-list after a removal unless removal renumbers; renumber in the cascade and use max + 1.
+- 2026-10-26 [P9-T05] In e2e, a dnd-kit keyboard arrow pressed before the rows are measured is lost; wait for the "over its own position" announcement, then retry ArrowDown until it announces the next position, and assert the final order exactly.
+- 2026-10-26 [P9-T05] When the API validates with the same schema as the dialog, removing the client resolver cannot turn an empty-submit e2e red; red-proof it through the shared schema.
+- 2026-10-26 [P9-T05] A "one simulated write" test at 100% failure rate cannot go red when the old code's first step is a `canFail: false` read; prove one write with a lost-update test (two mutations at once, both changes stored).
+- 2026-10-26 [P9-T05] A done flag or optimistic order kept in a component that remounts per selection (`key={active.id}`) is lost on a switch; keep the mutation's returned record in the page-level saved map.
+- 2026-10-26 [P9-T05] A lost-update test must send the two calls in both orders: only the call sent second loses to a stale read.
+- 2026-10-26 [P9-T05] The e2e `stored()` helper reads localStorage through `Object.values`, which `failReads` breaks; call `restoreReads` before reading stored state.
+- 2026-10-26 [P9-T05] On Windows, back-to-back Playwright runs can hit `net::ERR_NO_BUFFER_SPACE` (sockets exhausted); pause ~60-90s or use fewer workers before suspecting the change.

@@ -5,31 +5,32 @@
 
 ## Now
 
-- **Phase:** P9 Settings — active, 4/7 tasks done.
+- **Phase:** P9 Settings — active, 5/7 tasks done.
 - **Branch:** `phase/p9-settings`, cut from `master` at `4d72e89`. Nothing pushed.
-- **Status:** P9-T04 approved (`ac13fa5`); P9-T05 Pipelines and stages manager is next.
+- **Status:** P9-T05 approved (pending sha); P9-T06 Tags manager with merge is next. Start it in a fresh session.
 
 ## Last change
 
-- P9-T04 Custom fields manager: `/settings/custom-fields` has Contacts and Deals tabs listing fields in form order, with Move up / Move down, Edit and Remove. One dialog adds or edits a field (label, type fixed after creation, required, placeholder, help text, dropdown options). Remove shows how many records hold a value and deletes those values. The contact and deal forms pick up every change with no edits to them.
-- API: `customFields.create` validates with the dialog's schema and refuses a duplicate key per object type (409 on the label); `update` is an allow-list (key, object type and type never change); `reorder(objectType, ids)` refuses a stale list; `removalPreview` counts held values; removing a field renumbers the rest so a new field always goes last; a new option never takes over a removed option's stored values.
-- One fix round (new field landing mid-list, a second edit reverting after a failed refetch, no e2e for a failed removal, option values reused across saves, plus small clean-ups).
-- `npm run check` green (1239 Vitest); settings, smoke, deal-form, select, fixture, link-button and contact-picker e2e 120/120; custom-fields spec 45/45 over 3 repeats; react-table 8.21.3.
+- P9-T05 Pipelines and stages manager: `/settings/pipelines` has a pipeline picker, New pipeline, Rename and Delete pipeline (the confirm says how many deals are deleted and which pipeline becomes the default), and a stage list you reorder by dragging (mouse or keyboard) with Add, Edit (name, colour, probability) and Remove stage (the confirm says how many deals move and to which stage; won deals stay won). The board follows every change.
+- API: pipeline and stage writes are one simulated write each (proven by lost-update tests), allow-lists, duplicate names refused per pipeline (409 on the name field), `reorderStages` refuses a stale list, a new stage goes before Won, deals moved by a stage removal restart their days-in-stage. `removalPreview` / `stageRemovalPreview` share their rules with the removals. New reusable `ColorSwatchPicker` for P9-T06.
+- One fix round (saved results kept across a pipeline switch, real one-write tests, delete-pipeline failure e2e, swatch tick contrast, an sr-only "Saving the new order..." status).
+- `npm run check` green (1302 Vitest); 14 related e2e specs 170/170; pipelines spec 66/66 over 3 repeats; react-table 8.21.3.
 
 ## Next up
 
-- P9-T05 (deep, UI): Pipelines and stages manager. Its phase-file scope carries the P9-T01, P9-T03 and P9-T04 review notes.
-- Then P9-T06 Tags, P9-T07 (deal-form e2e moves to the custom fields UI; acceptance now defined in the phase file).
+- P9-T06 (light, UI): Tags manager with merge. Its phase-file scope carries the P9-T04/T05 review notes (reuse `ColorSwatchPicker`, saved map, lost-update tests, failure-path e2e up front).
+- P9-T07: deal-form.spec.ts creates its required fields through the custom fields UI (acceptance defined in the phase file).
+- Then the P9 phase gate. Gate reviewer: confirm the board copes with its selected pipeline being deleted (per-mount fallback), and grep for any new whole-table `Object.values` inside a write (it trips the new opportunities/pipelines e2e faults).
 
 ## Waiting on you (owner)
 
 - Nothing blocking.
-- Optional, reversible ([P9-T04]): fields reorder with Move up/down buttons, not drag; a field's type can't change after it is added; removing a dropdown option keeps the values contacts already hold; a checkbox field can't be required. Earlier: "Pending" means never signed in, you can't change your own role or remove yourself, last-admin demotion not guarded yet ([P9-T03]); currency/role read-only, location switcher does not switch ([P9-T02]); teammates named in an automation can't be removed ([P9-T01]).
-- Optional click-through: `npm run dev`, open http://localhost:3000/settings/custom-fields → Add field (e.g. "Referral Code", Text) → open any contact, Edit: the field is there; save a value → back in Custom fields, move it up and check the contact form order → Remove it (the dialog says 1 contact holds a value) → the contact's value is gone.
+- Optional, reversible ([P9-T05]): new stages go just before Won; won/lost stages can't be switched yet; no "set default pipeline" control; new pipelines are always USD. ([P9-T04]): fields reorder with Move up/down, a field's type is fixed once added, removing a dropdown option keeps stored values, checkbox fields can't be required. Earlier ones: see DECISIONS [P9-T01]..[P9-T03].
+- Optional click-through: `npm run dev`, open http://localhost:3000/settings/pipelines → Add stage "Demo" to Sales Pipeline → open Opportunities: the Demo column sits before Closed Won → back in Pipelines, drag Demo to the top (or focus its handle, Space, Arrow Up, Space) → the board's columns follow → Remove a stage with deals: the dialog names the stage they move to.
 
 ## Open suggestions (non-blocking)
 
-- `docs/BACKLOG.md` holds P8 leftovers and the P9-T01..T04 review leftovers (select fields show raw option values on the contact/deal pages, business time zone not yet used for new contacts, last-admin guard, `scope="col"` on table headers).
+- `docs/BACKLOG.md` holds P8 leftovers and the P9-T01..T05 review leftovers (select fields show raw option values, no set-default pipeline, no stage-position integrity check, board skeleton forever on a pipelines read error, last-admin guard).
 - Calendar ids, pipeline/stage ids and `templateId` are still id-typed in authored configs; they need stable keys before any definition uses them.
 
 ## Blockers

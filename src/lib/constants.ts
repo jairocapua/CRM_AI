@@ -63,6 +63,20 @@ export const TAG_DOT_CLASSES: Record<TagColor, string> = {
   pink: "bg-pink-500",
 };
 
+/** How each tag colour is named, e.g. a colour swatch's accessible name. */
+export const TAG_COLOR_LABELS: Record<TagColor, string> = {
+  slate: "Slate",
+  red: "Red",
+  orange: "Orange",
+  amber: "Amber",
+  green: "Green",
+  teal: "Teal",
+  sky: "Sky",
+  indigo: "Indigo",
+  violet: "Violet",
+  pink: "Pink",
+};
+
 /** Same literal-class-string reasoning as TAG_COLOR_CLASSES, for the opportunity status badge. */
 export const OPPORTUNITY_STATUS_CLASSES: Record<OpportunityStatus, string> = {
   open: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300 border-sky-200 dark:border-sky-900",

@@ -62,6 +62,15 @@ export type {
   StageRollup,
 } from "./opportunities";
 export type {
+  ClosedDealCounts,
+  PipelineDraft,
+  PipelinePatch,
+  PipelineRemovalPreview,
+  StageDraft,
+  StagePatch,
+  StageRemovalPreview,
+} from "./pipelines";
+export type {
   ChannelOption,
   ComposableChannel,
   ConversationRow,

@@ -141,6 +141,7 @@ management notes).
 - **Skills:** `shadcn`
 - **Scope:** tags with contact counts (`tags.list`); create, rename,
   recolour, remove; merge one tag into another with a confirm (`tags.merge`).
+  - From the P9-T04/T05 reviews: reuse `ColorSwatchPicker` (settings/) and `TAG_COLOR_LABELS` (constants); put every mutation's returned record into a page-level saved map (newest `updatedAt` wins), not only a done flag; prove "one write" with a lost-update unit test (two at once), not a 100% failure-rate test; add the remove and merge FAILURE-path e2e (dialog stays open, confirm focused) up front; `tags.list` counts through contacts, so `failReads(page, "contacts")` fails the list.
 - **Acceptance:**
   - [ ] e2e: merging tag A into B leaves B with the combined count and A gone.
 - **Refs:** `src/lib/api/tags.ts`

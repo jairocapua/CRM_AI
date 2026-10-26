@@ -1,4 +1,11 @@
-import type { CustomField, ID } from "@/types";
+import type {
+  CustomField,
+  ID,
+  ISODate,
+  Opportunity,
+  Pipeline,
+  PipelineStage,
+} from "@/types";
 import type { DbState } from "./db-state";
 
 /**
@@ -105,37 +112,144 @@ export function cascadeOpportunityDelete(
 }
 
 /**
+ * A table's rows, read through `Object.entries`. The writes below read whole
+ * tables this way, not with `Object.values`: the e2e read fault
+ * (`failReads` in e2e/calendar-helpers.ts) patches `Object.values` to fail a
+ * table's list reads, and a write must survive it so a spec can fail only
+ * the refetch after it.
+ */
+function rowsOf<T>(table: Record<ID, T>): T[] {
+  return Object.entries(table).map(([, row]) => row);
+}
+
+/** Whether `deal` belongs to the pipeline `pipelineId`. */
+export function dealInPipeline(deal: Opportunity, pipelineId: ID): boolean {
+  return deal.pipelineId === pipelineId;
+}
+
+/** Whether `deal` sits in the stage `stageId` of the pipeline `pipelineId`. */
+export function dealInStage(
+  deal: Opportunity,
+  pipelineId: ID,
+  stageId: ID,
+): boolean {
+  return dealInPipeline(deal, pipelineId) && deal.stageId === stageId;
+}
+
+/** The pipelines left once `id` goes, in position order. */
+function pipelinesLeft(state: DbState, id: ID): Pipeline[] {
+  return rowsOf(state.pipelines)
+    .filter((p) => p.id !== id)
+    .sort((a, b) => a.position - b.position);
+}
+
+/**
+ * The pipeline that becomes the default when `id` is deleted: the first one
+ * left, when `id` was the only default; otherwise none.
+ */
+export function nextDefaultPipeline(
+  state: DbState,
+  id: ID,
+): Pipeline | undefined {
+  const left = pipelinesLeft(state, id);
+  return left.some((p) => p.isDefault) ? undefined : left[0];
+}
+
+/**
+ * How many deals deleting the pipeline `id` deletes with it
+ * (`cascadePipelineDelete`, same test). A count for a preview, so it reads
+ * the deals with `Object.values`: an e2e deals fault fails it.
+ */
+export function countPipelineDeals(state: DbState, id: ID): number {
+  return Object.values(state.opportunities).filter((o) => dealInPipeline(o, id))
+    .length;
+}
+
+/**
  * Deleting a pipeline deletes its deals through `cascadeOpportunityDelete`,
  * renumbers the pipelines left 0..n-1 and, when the default went, makes the
- * first of them the default. The caller refuses to delete the last one.
+ * first of them the default (`nextDefaultPipeline`). The caller refuses to
+ * delete the last one.
  */
 export function cascadePipelineDelete(
   state: DbState,
   id: ID,
 ): Partial<DbState> {
-  const left = Object.values(state.pipelines)
-    .filter((p) => p.id !== id)
-    .sort((a, b) => a.position - b.position);
-  const needsDefault = !left.some((p) => p.isDefault);
+  const nextDefault = nextDefaultPipeline(state, id);
   const pipelines: DbState["pipelines"] = {};
-  left.forEach((p, position) => {
+  pipelinesLeft(state, id).forEach((p, position) => {
     pipelines[p.id] = {
       ...p,
       position,
-      isDefault: p.isDefault || (needsDefault && position === 0),
+      isDefault: p.isDefault || p.id === nextDefault?.id,
     };
   });
 
-  const deals = Object.values(state.opportunities)
-    .filter((o) => o.pipelineId === id)
+  const deals = rowsOf(state.opportunities)
+    .filter((o) => dealInPipeline(o, id))
     .map((o) => o.id);
   return { pipelines, ...cascadeOpportunityDelete(state, deals) };
+}
+
+/** A pipeline's stages in board order (by position). */
+export function stagesInOrder(pipeline: Pipeline): PipelineStage[] {
+  return [...pipeline.stages].sort((a, b) => a.position - b.position);
+}
+
+/**
+ * Where removing `stageId` moves its deals: the stage before it in board
+ * order, or the one after it when it is the first. None when it is the
+ * pipeline's only stage, or not one of its stages.
+ */
+export function stageRemovalNeighbour(
+  pipeline: Pipeline,
+  stageId: ID,
+): PipelineStage | undefined {
+  const stages = stagesInOrder(pipeline);
+  const index = stages.findIndex((s) => s.id === stageId);
+  if (index < 0) return undefined;
+  return stages[index === 0 ? 1 : index - 1];
+}
+
+/** How many of a stage's deals are closed, by status. */
+export interface ClosedDealCounts {
+  won: number;
+  lost: number;
+  abandoned: number;
+}
+
+/**
+ * The deals removing a stage moves (`cascadeStageDelete`, same test): how
+ * many, and how many of them are won, lost or abandoned. A count for a
+ * preview, so it reads the deals with `Object.values`: an e2e deals fault
+ * fails it.
+ */
+export function countStageDeals(
+  state: DbState,
+  pipelineId: ID,
+  stageId: ID,
+): { count: number; closed: ClosedDealCounts } {
+  const moving = Object.values(state.opportunities).filter((o) =>
+    dealInStage(o, pipelineId, stageId),
+  );
+  const count = (status: Opportunity["status"]) =>
+    moving.filter((o) => o.status === status).length;
+  return {
+    count: moving.length,
+    closed: {
+      won: count("won"),
+      lost: count("lost"),
+      abandoned: count("abandoned"),
+    },
+  };
 }
 
 /**
  * Removing a stage keeps its deals: they join the end of the neighbouring
  * column (`fallbackId`), in their old order, and that column is renumbered
- * 0..n-1. The stages left are renumbered too. The caller checks that both
+ * 0..n-1. The deals that moved start their time in the new stage at `at`
+ * (`stageEnteredAt`, and `updatedAt`); their status is kept, so won deals
+ * stay won. The stages left are renumbered too. The caller checks that both
  * stages exist and that they differ.
  */
 export function cascadeStageDelete(
@@ -143,20 +257,30 @@ export function cascadeStageDelete(
   pipelineId: ID,
   stageId: ID,
   fallbackId: ID,
+  at: ISODate,
 ): Partial<DbState> {
   const pipeline = state.pipelines[pipelineId]!;
-  const stages = [...pipeline.stages]
-    .sort((a, b) => a.position - b.position)
+  const stages = stagesInOrder(pipeline)
     .filter((s) => s.id !== stageId)
     .map((s, position) => ({ ...s, position }));
 
   const inColumn = (id: ID) =>
-    Object.values(state.opportunities)
-      .filter((o) => o.pipelineId === pipelineId && o.stageId === id)
+    rowsOf(state.opportunities)
+      .filter((o) => dealInStage(o, pipelineId, id))
       .sort((a, b) => a.position - b.position);
   const opportunities = { ...state.opportunities };
-  [...inColumn(fallbackId), ...inColumn(stageId)].forEach((o, position) => {
-    opportunities[o.id] = { ...o, stageId: fallbackId, position };
+  inColumn(fallbackId).forEach((o, position) => {
+    if (o.position !== position) opportunities[o.id] = { ...o, position };
+  });
+  const staying = inColumn(fallbackId).length;
+  inColumn(stageId).forEach((o, index) => {
+    opportunities[o.id] = {
+      ...o,
+      stageId: fallbackId,
+      position: staying + index,
+      stageEnteredAt: at,
+      updatedAt: at,
+    };
   });
 
   return {
