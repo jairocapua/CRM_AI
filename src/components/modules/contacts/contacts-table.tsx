@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { UsersIcon } from "lucide-react";
 import type { RowSelectionState, SortingState } from "@tanstack/react-table";
 
@@ -10,6 +10,7 @@ import type { Contact, ContactStatus, FilterCondition } from "@/types";
 import { DataTable } from "@/components/common/data-table";
 import { EmptyState } from "@/components/common/empty-state";
 import { LoadError } from "@/components/common/load-error";
+import { OpenFromSearchParam } from "@/components/common/open-from-search-param";
 import { Button } from "@/components/ui/button";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { BulkActionsBar } from "./bulk-actions-bar";
@@ -256,6 +257,18 @@ export function ContactsTable() {
         </div>
       )}
 
+      {/* `/contacts?new=1` (the command palette's New contact) opens the
+          sheet. useSearchParams needs a Suspense boundary on this
+          prerendered route; it wraps only this, so the table never waits. */}
+      <Suspense fallback={null}>
+        <OpenFromSearchParam
+          name="new"
+          onOpen={() => {
+            setEditingContact(undefined);
+            setFormOpen(true);
+          }}
+        />
+      </Suspense>
       <ContactFormSheet
         open={formOpen}
         contact={editingContact}

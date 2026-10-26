@@ -356,3 +356,6 @@
 - 2026-10-26 [P9-T07] Adding several records in a row leaves more than one identical toast on screen, so `toastNamed(page, "Field added")` trips Playwright strict mode; use `.first()` and prove the save by the closed dialog and the new row.
 - 2026-10-26 [P9-T08] Before [P9-T08] a `simulate({ ms })` pin overrode the Demo Data latency slider, so an e2e that slowed the app to watch a pending state got a sub-second window on pinned calls (tags.merge, users.invite) and failed under full-run load. Under load, `toBeVisible()` right after Escape can also pass mid-close-animation and hide that the dialog really closed.
 - 2026-10-26 [P9-T08] Unit tests pin the clock (`setDemoNow`), so a write with 0ms latency stamps `updatedAt` equal to a seeded one; move the clock on before asserting a bump.
+- 2026-10-26 [P10-T01] A Base UI dialog that closes because a pick opens another dialog needs `finalFocus={false}`; otherwise it returns focus to its opener after the exit animation and steals it from the new dialog.
+- 2026-10-26 [P10-T01] An e2e proving a list stays usable after a failed search must wait for the error before picking; picking while the search is pending passes even when the error hides the list.
+- 2026-10-26 [P10-T01] Fields behind an open palette are outside Playwright's accessibility tree; assert on them after Escape, which also proves focus came back.

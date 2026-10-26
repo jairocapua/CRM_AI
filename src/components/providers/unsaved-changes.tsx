@@ -40,8 +40,11 @@ import { ConfirmDialog } from "@/components/common/confirm-dialog";
  * registration when a link is clicked, not when it renders, so registering
  * and releasing never re-render the links that use it.
  *
+ * A control that is not a link (the command palette) navigates through
+ * `useGuardedNavigate()`, which asks the same question.
+ *
  * Not guarded: the browser's back and forward (Next has no way to cancel a
- * history traversal), a programmatic `router.push`, and a Ctrl/Cmd-click,
+ * history traversal), a bare `router.push`, and a Ctrl/Cmd-click,
  * which opens a new tab and keeps this one (Next does not call `onNavigate`
  * for it).
  *
@@ -238,4 +241,34 @@ export function useLeaveGuard(): (
   options?: LeaveOptions,
 ) => NavigateHandler {
   return use(UnsavedChangesContext).guardLeave;
+}
+
+/**
+ * Returns `navigate(href, options)`, the same guard for a control that is
+ * not a link (a command palette pick): with nothing registered it runs
+ * `options.onLeave` and `router.push(href)`; while a page has unsaved edits
+ * it asks first, exactly as a guarded link does, and Discard changes pushes.
+ * Pass `returnFocus` when the control is gone by the time the question
+ * closes.
+ */
+export function useGuardedNavigate(): (
+  href: string,
+  options?: LeaveOptions,
+) => void {
+  const guardLeave = useLeaveGuard();
+  const router = useRouter();
+  return useCallback(
+    (href: string, options?: LeaveOptions) => {
+      let cancelled = false;
+      // The handler only calls `preventDefault`, so a stand-in event will do.
+      const event = {
+        preventDefault: () => {
+          cancelled = true;
+        },
+      } as Parameters<NavigateHandler>[0];
+      guardLeave(href, options)(event);
+      if (!cancelled) router.push(href);
+    },
+    [guardLeave, router],
+  );
 }

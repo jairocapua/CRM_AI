@@ -13,6 +13,7 @@ import {
   type AppointmentRow,
 } from "@/lib/api";
 import { LoadError } from "@/components/common/load-error";
+import { useOpenFromSearchParam } from "@/components/common/open-from-search-param";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppointmentDetailsDialog } from "./appointment-details-dialog";
@@ -97,7 +98,9 @@ const NONE_HIDDEN: ReadonlySet<ID> = new Set();
  * that day's "+N more" (`appointmentFocusFallback`).
  *
  * The toolbar's Book button opens the booking dialog on the day in view, or
- * on today when that day is already past. A booking invalidates
+ * on today when that day is already past; so does arriving with `?book=1`
+ * (the command palette's Book appointment), which is then removed from the
+ * URL. A booking invalidates
  * "appointments", so the view refetches and shows it without more wiring.
  * Beside it, Availability links to `/calendars/availability`, the editor for
  * each calendar's weekly hours and booking rules.
@@ -209,6 +212,8 @@ export function CalendarsWorkspace() {
     : null;
 
   const [bookOpen, setBookOpen] = useState(false);
+  // `/calendars?book=1` (the command palette's Book appointment) opens it.
+  useOpenFromSearchParam("book", () => setBookOpen(true));
 
   return (
     <div className="flex flex-col gap-4">

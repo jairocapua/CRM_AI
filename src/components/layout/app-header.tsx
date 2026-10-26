@@ -1,13 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { SearchIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Kbd } from "@/components/ui/kbd";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { findNavItem } from "@/lib/nav";
+import { CommandPalette } from "./command-palette";
 import { ModeToggle } from "./mode-toggle";
 
 export function AppHeader() {
@@ -23,16 +21,7 @@ export function AppHeader() {
       </span>
 
       <div className="ml-auto flex items-center gap-2">
-        {/* Wired to the command palette in Phase 10. */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-muted-foreground hidden w-56 justify-start gap-2 font-normal sm:flex"
-        >
-          <SearchIcon className="size-4" />
-          Search
-          <Kbd className="ml-auto">⌘K</Kbd>
-        </Button>
+        <CommandPalette />
         <ModeToggle />
       </div>
     </header>
