@@ -25,6 +25,7 @@ import { LoadError } from "@/components/common/load-error";
 import { Money } from "@/components/common/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { cn } from "@/lib/utils";
 import { stageIdFromDroppable } from "./board-dnd";
 import { BoardColumn } from "./board-column";
 import { BoardToolbar } from "./board-toolbar";
@@ -338,7 +339,16 @@ export function OpportunitiesBoard() {
           onDragEnd={(event) => void handleDragEnd(event)}
           onDragCancel={() => setActiveId(null)}
         >
-          <div className="flex flex-1 gap-3 overflow-x-auto pb-4">
+          {/* Phones snap a column to the left edge (snap-start on each
+              column); md and up scroll freely as before. Snap is off while a
+              card is dragged: mandatory snap would re-snap every small step
+              of dnd-kit's auto-scroll to a whole column. */}
+          <div
+            className={cn(
+              "flex flex-1 gap-3 overflow-x-auto pb-4",
+              activeId === null && "snap-x snap-mandatory md:snap-none",
+            )}
+          >
             {stages.map((stage) => (
               <BoardColumn
                 key={stage.id}

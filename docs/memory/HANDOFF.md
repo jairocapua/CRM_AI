@@ -5,28 +5,27 @@
 
 ## Now
 
-- **Phase:** P10 Polish — active, 2/7 tasks done.
-- **Branch:** `phase/p10-polish`, cut from `master` at `72f8362` (P9 merged as PR #6). Pushed to `origin/phase/p10-polish`; merge after the P10 gate.
-- **Status:** P10-T02 approved (`ee76c44`). Next: P10-T03 Responsive pass at 375px. Start it in a fresh session.
+- **Phase:** P10 Polish — active, 3/7 tasks done.
+- **Branch:** `phase/p10-polish`, cut from `master` at `72f8362` (P9 merged as PR #6). Pushed to `origin/phase/p10-polish` up to `f223ac6`; later commits are local. Merge after the P10 gate.
+- **Status:** P10-T03 in review. Next: P10-T04 Keyboard and accessibility.
 
 ## Last change
 
-- P10-T02 Loading and error audit: Dashboard cards and Conversations (inbox, thread, contact panel) now show `LoadError` alerts with Retry ("one fault, one alert"); the Opportunities board alerts instead of an endless skeleton or empty board; contact page panels alert instead of "No tasks yet."; failed contact/deal saves, deletes and bulk actions toast `errorMessage(...)` and keep input; route error boundaries `(app)/error.tsx` + `global-error.tsx`. `LoadError` moves focus to the loaded region after a Retry that works and announces "Still could not load after N tries." after one that fails. The contact and deal sheets keep typed values when their custom fields load late (`keepDirtyValues`). Reads keep `canFail: false`.
-- Verify: `npm run check` green (1409 Vitest); full e2e 326/327 (the one failure `ERR_NO_BUFFER_SPACE` in settings-shell, 30/30 alone); `loading-error-audit.spec.ts` 108/108 over 3 repeats. Review: three missing error-path e2e tests and three small fixes, all done in one fix round.
-- P10-T01 (`3092a10`): command palette (Ctrl+K / ⌘K).
+- P10-T03 Responsive pass at 375px: the audit found no route scrolling sideways (earlier phases already stacked conversations, put the sidebar in a Sheet below md and scrolled tables inside their card). New: an icon-only Search button on phones opens the command palette; the opportunities board snaps to columns below md, with snapping off while a card is dragged; the header separator is centred at every width. `e2e/responsive.spec.ts` checks all 20 routes at 375×812 (no sideways page scroll, main action on screen) plus the sidebar sheet, board snap, table scroller, conversation stacking and three form sheets.
+- Verify: `npm run check` green (1409 Vitest); responsive + palette + board move + smoke + fixture 65/65; `responsive.spec.ts` 90/90 over 3 repeats. Review: one must-fix (snap during a drag), fixed with a red-proven e2e.
 
 ## Next up
 
-- P10-T03 Responsive pass at 375px (sidebar→Sheet, panes stack, board scroll-snaps). The header Search button is `hidden sm:flex` (P10-T01 left mobile to this task): give phones a way to open the palette.
+- P10-T04 Keyboard and accessibility (deep). Its phase-file scope now lists the P10-T03 findings: the thread has no `h1`, `SidebarRail` duplicates the toggle inside the phone sidebar Sheet, keyboard/touch drag on the snapping board at 375px, and the settings nav's scroll-into-view claim needs an e2e.
 
 ## Waiting on you (owner)
 
-1. OPTIONAL, reversible: the palette action reads "New contact" while the contacts page says "Add contact".
-2. OPTIONAL try-out: `npm run dev`, open http://localhost:3000 → Settings › Demo data → raise latency to see skeletons, or failure rate to 100% and save a contact to see the error toast (your typing stays).
+1. OPTIONAL, reversible: phones get an icon Search button in the header; conversations on a phone show the inbox, then the thread full width with "Back to inbox".
+2. OPTIONAL, reversible: the palette action reads "New contact" while the contacts page says "Add contact".
 
 ## Open suggestions (non-blocking)
 
-- `docs/BACKLOG.md` holds the P8/P9 leftovers and the P10-T01/T02 review leftovers (contact/deal delete dialogs have no close guard; inline `instanceof ApiError` sites to migrate to `errorMessage`; a `waitForTimeout` in the audit spec).
+- `docs/BACKLOG.md` holds the P8/P9 leftovers and the P10-T01/T02/T03 review leftovers (P10-T03: main-action checks measure the leftmost control; a thread sender line wraps at 375px).
 - Calendar ids, pipeline/stage ids and `templateId` are still id-typed in authored configs.
 
 ## Blockers

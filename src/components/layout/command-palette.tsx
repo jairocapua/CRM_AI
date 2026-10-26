@@ -81,7 +81,8 @@ const OTHER_MODAL =
   '[role="dialog"][data-open], [role="alertdialog"][data-open]';
 
 /**
- * The command palette, with the header's Search button that opens it.
+ * The command palette, with the header's Search buttons that open it (the
+ * wide one from `sm` up, an icon on phones).
  *
  * Ctrl+K or ⌘K toggles it from anywhere in the app, a text field included
  * (the browser's own shortcut is prevented). It lists the modules (`NAV_ITEMS`)
@@ -167,6 +168,18 @@ export function CommandPalette() {
         <SearchIcon className="size-4" />
         Search
         <Kbd className="ml-auto">{shortcut}</Kbd>
+      </Button>
+      {/* Phones: no room for the wide button, so an icon opens the same
+          palette. */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="sm:hidden"
+        aria-label="Search"
+        aria-keyshortcuts="Control+K Meta+K"
+        onClick={openPalette}
+      >
+        <SearchIcon />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent

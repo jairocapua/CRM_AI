@@ -367,3 +367,7 @@
 - 2026-10-26 [P10-T02] A UI mutant `{err ? (` → `{false ? (` fails tsc (TS18047) and Playwright then reports no tests; use `{err && Math.random() > 2 ? (`.
 - 2026-10-26 [P10-T02] The contact page's tasks and appointments tabs read only when clicked: turn the fault on after the page loads and before the click. The opportunities panel reads on mount: turn the fault on first and open the contact by its link from a search-filtered list.
 - 2026-10-26 [P10-T02] A form sheet that `form.reset`s whenever a read it depends on lands (custom fields) wipes text typed before it; at 2000 ms latency and under load that fails e2e every time. Reset with `{ keepDirtyValues: true }` when reseeding the same record, and fully on open.
+- 2026-10-27 [P10-T03] A sheet's box is still mid-slide right after `toBeVisible()` (x = -30); poll until two reads match before asserting it fits the screen.
+- 2026-10-27 [P10-T03] The DataTable card is `overflow-hidden`, so losing the table's `overflow-x-auto` clips columns without widening the page, and a page-overflow test cannot catch it. Scroll the container to its end and assert the last column header lands on screen.
+- 2026-10-27 [P10-T03] A "keep it open" mutant must really pass `true`: `setOpenMobile(Math.random() > 2)` is `setOpenMobile(false)` and stays green.
+- 2026-10-27 [P10-T03] The shadcn Separator's `data-vertical:self-stretch` plus a fixed `h-4` pins it to the top of a flex row; add `data-vertical:self-center`.
