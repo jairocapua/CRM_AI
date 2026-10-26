@@ -320,3 +320,17 @@
 - 2026-10-26 [P8-T09] A terminal call with `timeout` over 600s runs as a background job, where node does nothing; keep e2e mutation runs to about 2 mutants (~70s `next build` each) per foreground call.
 - 2026-10-26 [P8-T09] A Button that turns natively disabled on confirm loses the focus Base UI returns to it when the dialog closes (focus lands on <body>); use `focusableWhenDisabled` + `data-disabled:opacity-50` as in load-error.tsx ([P7-T07]).
 - 2026-10-26 [P8-T09] To prove a state that lasts a few hundred ms in e2e (a pending button, a focus drop), install an in-page recorder with `page.evaluate` (MutationObserver + focusout) before the action and assert its log; retrying assertions miss short states (`recordWithdraw` in automation-requests.spec.ts).
+- 2026-10-26 [P9-T01] Every seeded user's slug is named in an automation, so the seed has no teammate `users.remove` accepts; a removal test has to invite one and hand them records.
+- 2026-10-26 [P9-T01] `expect(db.getState()).toBe(before)` proves "nothing was written": every zustand `setState` produces a new state object.
+- 2026-10-26 [P9-T01] Deleting a user with `setState` in a test now also orphans their records in the integrity report; change their slug to test only the automation-key line.
+- 2026-10-26 [P9-T01] In a git-bash Playwright run, a spec path that matches no file (`e2e/calendar.spec.ts` vs `calendars.spec.ts`) is silently ignored, not an error; check the test count.
+- 2026-10-26 [P9-T02] `failReads` cannot reach reads by id (`users.me`, `activeLocation`); use `armRecordFault`, then open Demo Data by a link so its counts arm the table.
+- 2026-10-26 [P9-T02] A screenshot .mjs in the scratch dir must load Playwright with `createRequire("C:/Dev-Projects/Full Stack CRM/package.json")("@playwright/test")`; running node from the repo dir does not help (ESM resolves from the script folder).
+- 2026-10-26 [P9-T02] On /settings the header breadcrumb is also a list inside `main`, so a bare `getByRole("list")` is ambiguous; name the list.
+- 2026-10-26 [P9-T02] `beforeunload` does not fire on client-side navigation: any plain `<Link>` inside a form with unsaved edits drops them silently unless it passes `onNavigate={guardLeave(href)}`.
+- 2026-10-26 [P9-T02] Writing a Playwright regex like `/\/settings\/profile$/` through a JS template literal in a .mjs eats the backslashes; patch such lines with the patch tool.
+- 2026-10-26 [P9-T03] Asserting a Base UI Select's value with `toHaveText` on the trigger also reads the chevron; assert on `[data-slot="select-value"]`.
+- 2026-10-26 [P9-T03] To prove a done flag hides a removed row before the refetch, turn on a list-read fault (`failUserList`) after the dialog loads and before confirming: the mutation reads by key and succeeds, the refetch fails, so only the flag can hide the row.
+- 2026-10-26 [P9-T03] One e2e build can red-proof several UI tests at once when each broken line targets a different test.
+- 2026-10-26 [P9-T03] `failReads(page, "contacts")` fails a count-based preview (removalPreview) in e2e.
+- 2026-10-26 [P9-T03] On Windows a 16-worker Playwright run can fail once with `net::ERR_NO_BUFFER_SPACE`; rerun the spec alone before suspecting the change.

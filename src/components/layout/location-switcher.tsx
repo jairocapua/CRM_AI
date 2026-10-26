@@ -2,6 +2,8 @@
 
 import { BuildingIcon, CheckIcon, ChevronsUpDownIcon } from "lucide-react";
 
+import * as api from "@/lib/api";
+import { useResource } from "@/lib/api";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,21 +18,37 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { APP_NAME } from "@/lib/constants";
 
-/**
- * GoHighLevel's sub-account switcher. Phase 1 renders a fixed list; Phase 2
- * points it at api.settings.listLocations().
- */
-const LOCATIONS = [
-  { id: "loc_1", name: "Northwind Studio", industry: "Marketing Agency" },
-  { id: "loc_2", name: "Harbor Dental", industry: "Healthcare" },
-  { id: "loc_3", name: "Peak Fitness Co.", industry: "Fitness" },
-];
+/** What the trigger reads when the active location could not be read. */
+const NEUTRAL_LABEL = "Your business";
 
+/**
+ * GoHighLevel's sub-account switcher. The trigger shows the active location
+ * (`api.settings.activeLocation()`, the business page's read, so a rename
+ * there shows here at once: `updateLocation` invalidates "settings") and the
+ * menu lists `api.settings.listLocations()`. Picking another one does
+ * nothing yet: switching is not wired.
+ *
+ * Skeleton text only on the first load. A failed read shows a neutral label
+ * (or no list), with no alert of its own: the page in view owns any error
+ * message.
+ */
 export function LocationSwitcher() {
   const { state } = useSidebar();
-  const active = LOCATIONS[0]!;
+  const active = useResource(
+    "settings",
+    () => api.settings.activeLocation(),
+    "active-location",
+  );
+  const locations = useResource(
+    "settings",
+    () => api.settings.listLocations(),
+    "locations",
+  );
+
+  const loading = active.isLoading && active.data === undefined;
 
   return (
     <SidebarMenu>
@@ -48,7 +66,16 @@ export function LocationSwitcher() {
               <BuildingIcon className="size-4" />
             </div>
             <div className="grid flex-1 text-left leading-tight">
-              <span className="truncate font-medium">{active.name}</span>
+              {loading ? (
+                <>
+                  <span className="sr-only">{NEUTRAL_LABEL}</span>
+                  <Skeleton className="my-0.5 h-3.5 w-28" />
+                </>
+              ) : (
+                <span className="truncate font-medium">
+                  {active.data?.name ?? NEUTRAL_LABEL}
+                </span>
+              )}
               <span className="text-muted-foreground truncate text-xs">
                 {APP_NAME}
               </span>
@@ -64,16 +91,18 @@ export function LocationSwitcher() {
               <DropdownMenuLabel className="text-muted-foreground text-xs">
                 Sub-accounts
               </DropdownMenuLabel>
-              {LOCATIONS.map((loc) => (
+              {(locations.data ?? []).map((loc) => (
                 <DropdownMenuItem key={loc.id} className="gap-2">
                   <BuildingIcon className="text-muted-foreground size-4" />
                   <div className="grid flex-1">
                     <span className="truncate">{loc.name}</span>
-                    <span className="text-muted-foreground truncate text-xs">
-                      {loc.industry}
-                    </span>
+                    {loc.industry ? (
+                      <span className="text-muted-foreground truncate text-xs">
+                        {loc.industry}
+                      </span>
+                    ) : null}
                   </div>
-                  {loc.id === active.id ? (
+                  {loc.id === active.data?.id ? (
                     <CheckIcon className="size-4" />
                   ) : null}
                 </DropdownMenuItem>

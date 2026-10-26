@@ -1,8 +1,9 @@
 import type { ID, Pipeline, PipelineStage } from "@/types";
 import { db } from "@/lib/mock/db";
 import { newId } from "@/lib/mock/ids";
+import { cascadePipelineDelete, cascadeStageDelete } from "@/lib/mock/cascade";
 import { invalidate } from "./cache";
-import { notFound, nowIso, simulate } from "./http";
+import { ApiError, notFound, nowIso, simulate } from "./http";
 
 export async function list(): Promise<Pipeline[]> {
   return simulate(
@@ -105,34 +106,46 @@ export async function updateStage(
 /**
  * Removing a stage moves its deals to the neighbouring stage rather than
  * deleting them — losing deals because a stage was renamed away would be a
- * genuinely bad outcome.
+ * genuinely bad outcome. They join the end of the previous stage's column
+ * (the next stage's, when the first stage goes), in their old order.
+ *
+ * - 404 for an unknown pipeline, or a stage the pipeline does not have.
+ * - 409 `LAST_STAGE` for the pipeline's only stage: the board needs one.
+ *
+ * One simulated write: a refusal or a simulated failure moves nothing.
  */
 export async function removeStage(
   pipelineId: ID,
   stageId: ID,
 ): Promise<Pipeline> {
-  const pipeline = await get(pipelineId);
-  if (pipeline.stages.length <= 1) {
-    return pipeline;
-  }
-  const index = pipeline.stages.findIndex((s) => s.id === stageId);
-  const fallback = pipeline.stages[index === 0 ? 1 : index - 1]!;
-
-  db.setState((s) => {
-    const opportunities = Object.fromEntries(
-      Object.entries(s.opportunities).map(([key, opp]) => [
-        key,
-        opp.stageId === stageId ? { ...opp, stageId: fallback.id } : opp,
-      ]),
-    );
-    return { opportunities };
+  const pipeline = await simulate(() => {
+    const state = db.getState();
+    const prev =
+      state.pipelines[pipelineId] ?? notFound("Pipeline", pipelineId);
+    const stages = [...prev.stages].sort((a, b) => a.position - b.position);
+    const index = stages.findIndex((s) => s.id === stageId);
+    if (index < 0) notFound("Stage", stageId);
+    if (stages.length <= 1) {
+      throw new ApiError(
+        `${stages[index]!.name} is the only stage in ${prev.name}, and a pipeline needs at least one stage.`,
+        409,
+        "LAST_STAGE",
+      );
+    }
+    const fallback = stages[index === 0 ? 1 : index - 1]!;
+    const changes = cascadeStageDelete(state, pipelineId, stageId, fallback.id);
+    const next: Pipeline = {
+      ...changes.pipelines![pipelineId]!,
+      updatedAt: nowIso(),
+    };
+    db.setState({
+      ...changes,
+      pipelines: { ...changes.pipelines, [pipelineId]: next },
+    });
+    return next;
   });
-
-  const stages = pipeline.stages
-    .filter((s) => s.id !== stageId)
-    .map((s, position) => ({ ...s, position }));
-
-  return update(pipelineId, { stages });
+  invalidate("pipelines", "opportunities", "analytics");
+  return pipeline;
 }
 
 export async function reorderStages(
@@ -150,16 +163,27 @@ export async function reorderStages(
   return update(pipelineId, { stages });
 }
 
+/**
+ * Deletes a pipeline with its deals, through the same cascade as deleting a
+ * deal: their timeline entries go and their tasks are detached.
+ *
+ * - 404 for an unknown pipeline.
+ * - 409 `LAST_PIPELINE` for the only pipeline left: the board needs one.
+ *
+ * When the default pipeline goes, the first one left becomes the default.
+ */
 export async function remove(id: ID): Promise<void> {
   await simulate(() => {
-    db.setState((s) => {
-      const pipelines = { ...s.pipelines };
-      delete pipelines[id];
-      const opportunities = Object.fromEntries(
-        Object.entries(s.opportunities).filter(([, o]) => o.pipelineId !== id),
+    const state = db.getState();
+    const pipeline = state.pipelines[id] ?? notFound("Pipeline", id);
+    if (Object.keys(state.pipelines).length <= 1) {
+      throw new ApiError(
+        `${pipeline.name} is the only pipeline, and the board needs one, so it can't be deleted.`,
+        409,
+        "LAST_PIPELINE",
       );
-      return { pipelines, opportunities };
-    });
+    }
+    db.setState((s) => cascadePipelineDelete(s, id));
   });
-  invalidate("pipelines", "opportunities", "analytics");
+  invalidate("pipelines", "opportunities", "tasks", "activities", "analytics");
 }

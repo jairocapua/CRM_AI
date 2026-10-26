@@ -60,6 +60,19 @@ management notes).
 - **Scope:** team list with roles; invite (`users.invite`) showing a pending
   member; role change (`users.update`); remove with a confirm that names what
   will be reassigned.
+  - From the P9-T01 review: every seeded teammate but the current user is
+    named in an automation, so `users.remove` refuses them (409
+    `NAMED_IN_AUTOMATION`); the reassign e2e invites a member, gives them a
+    contact (contact form Owner select), removes them, and checks the owner
+    and the Demo Data report. Add an e2e for the refusal message on a seeded
+    teammate. Pass `reassignTo` as `undefined`, never `""`. Define "pending"
+    (no field yet). `users.update` ignores `id` and `slug` (role change only
+    from the UI), with a test. `REASSIGN_TARGET_NOT_FOUND` text names no raw
+    id. The confirm says follows are dropped and history keeps the name.
+  - From the P9-T02 review: the page sits in the settings layout (return a
+    fragment, keep the "Team settings" heading the shell and smoke e2e use);
+    decide email uniqueness for invites; `invite` should take the location's
+    time zone rather than a hard-coded one.
 - **Acceptance:**
   - [ ] e2e: invite a member, then see them listed as pending.
   - [ ] e2e: removing a member who owns contacts reassigns them and the
@@ -76,6 +89,15 @@ management notes).
   definitions (`validation/custom-fields.ts`, `CustomFieldsSection`), so a
   change must show up there with no other edits. Currency fields stay in
   cents (the Phase 4 bug).
+  - From the P9-T03 review: the duplicate-key 409 carries `field: "key"` (or
+    the label field it derives from) and is marked with `serverErrorField`;
+    hide a removed field with a done flag before the refetch, proven by
+    failing the list read after confirming; block dialog close while a
+    mutation is pending.
+  - From the P9-T01 review: `customFields.create` refuses a duplicate key
+    for the same object type (409), and `update` ignores `key` and
+    `objectType` (either change orphans stored values and turns the
+    integrity report red), each with a test.
 - **Acceptance:**
   - [ ] e2e: add a contact field, and the contact form shows it and saves a
         value; remove it, and the value is gone.
@@ -89,6 +111,21 @@ management notes).
 - **Scope:** create and rename pipelines; add, rename, reorder (drag with
   `@dnd-kit`, as on the board) and remove stages; delete a pipeline with a
   confirm stating how many deals go with it. Uses `pipelines.*` only.
+  - From the P9-T03 review: the delete-pipeline confirm copies the Team
+    remove pattern: one `pipelineRemovalRefusal()` thrown by `remove()` and
+    returned by a preview read whose deal count uses `cascadePipelineDelete`'s
+    predicate, with a unit test comparing preview and actual deletion; done
+    flag for removed stages/pipelines proven by failing the refetch; block
+    dialog close while pending; `failReads(page, "opportunities")` fails a
+    count preview in e2e.
+  - From the P9-T01 review: `reorderStages` returns 422 unless the ids are
+    exactly the pipeline's stages (a stale list drops a stage and orphans
+    its deals); `addStage`/`updateStage`/`reorderStages` each become one
+    `simulate()` write, and `update()` stops accepting `stages`. Moved deals
+    from `removeStage` get `stageEnteredAt`/`updatedAt` reset from one
+    `nowIso()` (days-in-stage), with a test. The board copes with its
+    selected pipeline being deleted. The remove-stage confirm says won
+    deals stay won.
 - **Acceptance:**
   - [ ] e2e (the phase exit check): add a stage, open the board, and the new
         column is there.
@@ -108,7 +145,7 @@ management notes).
 - **Refs:** `src/lib/api/tags.ts`
 
 ### P9-T07 — e2e: create required custom fields via settings UI
-- **Owner:** agent · **Depends:** —
+- **Owner:** agent · **Depends:** P9-T04
 - **Scope:** After P9-T04 lands, replace addRequiredCustomFields/DB_KEY in e2e/deal-form.spec.ts with the custom fields manager UI.
 - **Acceptance:**
   - [ ] (define before starting)

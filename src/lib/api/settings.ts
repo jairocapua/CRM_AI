@@ -8,8 +8,10 @@ import { referencedKeys } from "@/lib/automations/keys";
 import { db } from "@/lib/mock/db";
 import { resumeDeliveries } from "@/lib/mock/delivery";
 import { seedDatabase, clearDatabase } from "@/lib/mock/seed";
+import { businessSchema } from "@/lib/validation/business";
 import { invalidate, invalidateAll } from "./cache";
 import { deliveryOptions } from "./delivery";
+import { parsePatch, withoutEmpty, withoutUndefined } from "./patch";
 import {
   getTuning,
   notFound,
@@ -58,18 +60,46 @@ export async function switchLocation(id: ID): Promise<void> {
   invalidateAll();
 }
 
+/** The keys `updateLocation()` saves: any of them may be sent alone. */
+const locationPatchSchema = businessSchema.partial();
+
+/**
+ * Applies `patch` to a location and returns the saved record.
+ *
+ * - Only the keys the business form edits can change (`businessSchema`:
+ *   name, email, phone, website, industry, time zone). Every other key is
+ *   ignored: `id`, the timestamps, the address and logo (no form edits them
+ *   yet), and the currency, which would change what every stored amount
+ *   means.
+ * - Each must pass the form's own rules, so the API is never looser than the
+ *   form: otherwise the call is a 422 `INVALID_LOCATION` whose `message` is
+ *   the form's sentence for the first bad field ("Enter the business name.")
+ *   and whose `field` is that key, and nothing is saved.
+ * - Values are saved trimmed; an emptied email, phone, website or industry
+ *   removes the stored value; an `undefined` value is ignored.
+ * - An unknown id is a 404.
+ */
 export async function updateLocation(
   id: ID,
   patch: Partial<Location>,
 ): Promise<Location> {
   const location = await simulate(() => {
     const prev = db.getState().locations[id] ?? notFound("Location", id);
-    const next: Location = {
-      ...prev,
-      ...patch,
-      id,
-      updatedAt: nowIso(),
-    };
+    const details = parsePatch(
+      locationPatchSchema,
+      patch,
+      "INVALID_LOCATION",
+      "Those business details are not valid.",
+    );
+    const next: Location = withoutEmpty(
+      {
+        ...prev,
+        ...withoutUndefined(details),
+        id,
+        updatedAt: nowIso(),
+      },
+      ["email", "phone", "website", "industry"],
+    );
     db.setState((s) => ({ locations: { ...s.locations, [id]: next } }));
     return next;
   });
@@ -238,6 +268,71 @@ export async function integrityReport(): Promise<string[]> {
         "activities point at a missing opportunity",
         Object.values(s.activities).filter(
           (a) => a.opportunityId && !s.opportunities[a.opportunityId],
+        ).length,
+      );
+
+      // Every person a record hands work to, as `users.remove()` reassigns
+      // them (`reassignUserReferences` in @/lib/mock/cascade). Users are
+      // looked up by key, never listed. History is not checked: `createdBy`,
+      // notes' and messages' `authorId` and activities' `actorId` keep a
+      // teammate who is gone, and the pages show them as unknown.
+      const gone = (userId: ID | undefined) =>
+        userId !== undefined && !s.users[userId];
+      const contacts = Object.values(s.contacts);
+      missing(
+        "contacts are owned by a missing user",
+        contacts.filter((c) => gone(c.ownerId)).length,
+      );
+      missing(
+        "contacts are followed by a missing user",
+        contacts.filter((c) => c.followers.some(gone)).length,
+      );
+      missing(
+        "opportunities are owned by a missing user",
+        Object.values(s.opportunities).filter((o) => gone(o.ownerId)).length,
+      );
+      missing(
+        "tasks are assigned to a missing user",
+        Object.values(s.tasks).filter((t) => gone(t.assigneeId)).length,
+      );
+      missing(
+        "conversations are assigned to a missing user",
+        Object.values(s.conversations).filter((c) => gone(c.assigneeId)).length,
+      );
+      missing(
+        "appointments are assigned to a missing user",
+        Object.values(s.appointments).filter((a) => gone(a.assignedUserId))
+          .length,
+      );
+      missing(
+        "calendars list a missing team member",
+        Object.values(s.calendars).filter((c) => c.teamMemberIds.some(gone))
+          .length,
+      );
+      missing(
+        "smart lists are owned by a missing user",
+        Object.values(s.smartLists).filter((l) => gone(l.ownerId)).length,
+      );
+
+      // Custom values are keyed by their field's `key`, per object type, and
+      // `customFields.remove()` sweeps them (`cascadeCustomFieldDelete`).
+      const fieldKeys = new Set(
+        Object.values(s.customFields).map((f) => `${f.objectType}:${f.key}`),
+      );
+      const undefinedValue = (
+        objectType: string,
+        values: Record<string, unknown>,
+      ) =>
+        Object.keys(values).some((k) => !fieldKeys.has(`${objectType}:${k}`));
+      missing(
+        "contacts hold a value for a missing custom field",
+        contacts.filter((c) => undefinedValue("contact", c.customFields))
+          .length,
+      );
+      missing(
+        "opportunities hold a value for a missing custom field",
+        Object.values(s.opportunities).filter((o) =>
+          undefinedValue("opportunity", o.customFields),
         ).length,
       );
 

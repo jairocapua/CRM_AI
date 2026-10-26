@@ -4,25 +4,33 @@
 > Since 2026-10-25 the build may also run from Hermes Agent, which has no `Workflow` tool: the orchestrator follows `.claude/workflows/build-phase.js` step by step with helper agents (implementer, then verifier + reviewer in parallel, up to 2 fix rounds) and does the recorder steps itself.
 
 ## Now
-- **Phase:** P8 Automation — **gate re-passed** after the owner's added task P8-T09; 9/9 tasks done. Ready to merge.
-- **Branch:** `phase/p8-automation`, cut from `master` at `584f50e`; pushed to GitHub.
-- **Status:** P8-T09 done (`6c44c2e`); P8 gate re-passed on 2026-10-26.
+
+- **Phase:** P9 Settings — active, 3/7 tasks done.
+- **Branch:** `phase/p9-settings`, cut from `master` at `4d72e89`. Nothing pushed.
+- **Status:** P9-T03 approved (`e1b2560`); P9-T04 Custom fields manager is next. Start it in a fresh session.
 
 ## Last change
-- P8-T09 (owner decision): staff can withdraw their own automation request while it is still "Requested". A fifth status "Withdrawn" keeps it in the list; a confirm dialog asks first; other people's requests and answered ones show no Withdraw button; the developer cannot change a withdrawn request. One fix round: keyboard focus stays on the button when a withdraw fails, and the button cannot be pressed twice.
-- Gate re-run: `npm run check` green (1051 Vitest), full `npm run e2e` 184/184, react-table 8.21.3, tracker OK. The first P8 gate (8cbd834) passed with no code must-fix; P8-T09 was reviewed on its own as the only change since.
+
+- P9-T03 Team and invites: `/settings/team` lists the team (role, Active/Pending, last seen; your row marked "You"). Invite dialog (duplicate emails refused, location time zone, no email promised). Role Select per teammate (not your own). Remove dialog previews what moves and to whom (you by default), or explains why the teammate can't be removed (named in an automation). `users.update` is now an allow-list (profile keys + role); `users.removalPreview` shares its rules with `users.remove`.
+- One fix round: an e2e proves a removed row hides before the list reloads; the success toast names the new owner only when something moved; the invite dialog can't close mid-invite; extra focus and copy tests.
+- `npm run check` green (1159 Vitest); settings, smoke, fixture, link-button and select e2e 82/82; react-table 8.21.3.
 
 ## Next up
-- After the merge: cut `phase/p9-settings` from `master` (name in `docs/phases/P9-settings.md`), set P9 active, and start P9-T01 in a fresh session: "Autopilot: continue the build per CLAUDE.md".
+
+- P9-T04 (deep, UI): Custom fields manager. Its phase-file scope carries the P9-T01 and P9-T03 review notes (duplicate key 409 with field marking; `update` ignores `key`/`objectType`; done flag proven by failing the refetch; no dialog close while pending).
+- Then P9-T05 Pipelines and stages (scope also carries review notes), P9-T06 Tags, P9-T07 (depends on P9-T04).
 
 ## Waiting on you (owner)
-- **Merge P8 (required):** open a PR from `phase/p8-automation` to `master` on GitHub (jairocapua/CRM_AI) and merge it, as for P7.
-- **Optional click-through** (every item is already proven by tests): `npm run dev`, open http://localhost:3000, then Automation (8 cards, 5 folders) → Speed to Lead (diagram with "Replied" / "No reply" and End pills; narrow window shows only the step list) → Run history (click a Started time, see each step's status, click the contact) → "Request an automation" (send one, reload, see "Requested"; press Withdraw, confirm, see "Withdrawn") → `/settings/demo-data` (no integrity problems).
-- Optional: the fixed triggers/waits for four automations (DECISIONS [P8-T01]) and the list's status wording ([P8-T03]).
+
+- Nothing blocking.
+- Optional, reversible: "Pending" means never signed in; you can't change your own role or remove yourself; demoting the last admin is not guarded yet (BACKLOG) ([P9-T03]). Currency/role read-only on the forms, no address/logo, location switcher does not switch ([P9-T02]). Teammates named in an automation can't be removed ([P9-T01]).
+- Optional click-through: `npm run dev`, open http://localhost:3000/settings → Profile (change your first name, Save; the sidebar shows it) → Team (Invite teammate, see "Pending"; Remove on Priya explains the automation; Remove on your invitee removes them) → Demo data (no integrity problems).
 
 ## Open suggestions (non-blocking)
-- `docs/BACKLOG.md` holds P8 leftovers and gate suggestions: an ESLint rule confining `@/lib/automations`, stronger "no seeded ids in definitions" tests, unique slugs/tag names in the API, `next typegen` before `tsc` on a fresh clone, React Flow's `role="application"`, DataTable `aria-sort`, a run status filter, a seeded request dated after its automation's first runs, one flaky-under-load fixture test.
+
+- `docs/BACKLOG.md` holds P8 leftovers and the P9-T01/T02/T03 review leftovers (business time zone not yet used for new contacts, last-admin guard, `scope="col"` on table headers).
 - Calendar ids, pipeline/stage ids and `templateId` are still id-typed in authored configs; they need stable keys before any definition uses them.
 
 ## Blockers
+
 - None.

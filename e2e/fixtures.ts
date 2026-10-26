@@ -73,15 +73,15 @@ export async function waitForBoot(page: Page): Promise<void> {
 
 /**
  * The sidebar footer's user-menu trigger (`NavUser`,
- * src/components/layout/nav-user.tsx, which renders `CURRENT_USER`).
+ * src/components/layout/nav-user.tsx, which shows `api.users.me()`: the
+ * seeded current user, Jordan Reyes, until a test renames them).
  *
  * A page-wide match on purpose: on a phone the sidebar is a modal Sheet, and
  * this also finds the trigger inside it. Do not scope it to the sidebar or the
  * header.
  *
- * The only place in e2e/ that names the current user. When P9-T02 points
- * `NavUser` at `api.users.me()`, update this one locator: to the seeded
- * current user's name, or to a stable accessible name.
+ * Matched by the seeded name, so a spec that renames the current user
+ * (e2e/settings-profile.spec.ts) finds the trigger by the new name itself.
  */
 export function userMenu(page: Page): Locator {
   return page.getByRole("button", { name: /Jordan Reyes/ });

@@ -239,7 +239,7 @@ needs backend work:
 - Pipeline and stage management (from Phase 4) — `pipelines.ts` has create,
   rename, add/update/reorder/remove stage and delete. Note `removeStage` merges
   deals into a neighbouring stage without renumbering `position`, and
-  `pipelines.remove` hard-deletes every deal with no activity sweep; both want
+  `pipelines.remove` hard-deletes every deal with no activity sweep (both done in [P9-T01]); both want
   handling before this ships. Settings (Phase 9) is the natural home.
 - An opportunities list view (from Phase 4) — `opportunities.list()` is a
   paginated, sortable `applyQuery` feed whose search also covers `lostReason`,

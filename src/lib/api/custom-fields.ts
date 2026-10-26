@@ -1,6 +1,7 @@
 import type { CustomField, ID } from "@/types";
 import { db } from "@/lib/mock/db";
 import { newId } from "@/lib/mock/ids";
+import { cascadeCustomFieldDelete } from "@/lib/mock/cascade";
 import { invalidate } from "./cache";
 import { notFound, nowIso, simulate } from "./http";
 
@@ -67,15 +68,21 @@ export async function update(
   return field;
 }
 
+/**
+ * Deletes a field and the values stored under its key on the records of its
+ * object type (contacts or deals, never both). 404 for an unknown field.
+ */
 export async function remove(id: ID): Promise<void> {
-  await simulate(() => {
-    db.setState((s) => {
-      const customFields = { ...s.customFields };
-      delete customFields[id];
-      return { customFields };
-    });
+  const objectType = await simulate(() => {
+    const field =
+      db.getState().customFields[id] ?? notFound("Custom field", id);
+    db.setState((s) => cascadeCustomFieldDelete(s, id));
+    return field.objectType;
   });
-  invalidate("customFields", "contacts");
+  invalidate(
+    "customFields",
+    objectType === "contact" ? "contacts" : "opportunities",
+  );
 }
 
 /** Persists a drag-reordered list in a single write. */

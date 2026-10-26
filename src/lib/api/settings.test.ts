@@ -138,9 +138,13 @@ describe("automations on the Demo Data page", () => {
       tags: Object.fromEntries(
         Object.entries(s.tags).filter(([, t]) => t.name !== "Newsletter"),
       ),
-      users: Object.fromEntries(
-        Object.entries(s.users).filter(([, u]) => u.slug !== "priya"),
-      ),
+      // Priya's slug changes: her records still resolve by id, so the only
+      // line is the automation's. (Deleting her outright would also orphan
+      // every record she owns.)
+      users: {
+        ...s.users,
+        usr_priya: { ...s.users["usr_priya"]!, slug: "priya-renamed" },
+      },
     }));
 
     const report = await settle(settings.integrityReport());
@@ -302,5 +306,238 @@ describe("automation requests on the Demo Data page", () => {
     expect(await settle(settings.integrityReport())).toEqual([
       "1 automation requests point at a missing automation",
     ]);
+  });
+});
+
+/**
+ * What the settings removals keep consistent (P9-T01): every person a record
+ * names, and every custom value's field. Each case breaks one seeded record.
+ */
+describe("teammates and custom fields on the Demo Data page", () => {
+  type State = Awaited<ReturnType<typeof seededWorld>>["db"] extends {
+    getState: () => infer S;
+  }
+    ? S
+    : never;
+  type TableName =
+    | "contacts"
+    | "opportunities"
+    | "tasks"
+    | "conversations"
+    | "appointments"
+    | "calendars"
+    | "smartLists";
+
+  /** The report after `patch` is applied to the table's first record. */
+  async function reportWith<K extends TableName>(
+    table: K,
+    patch: (row: State[K][string]) => Partial<State[K][string]>,
+  ) {
+    const { db } = await seededWorld();
+    const settings = await import("./settings");
+    expect(await settle(settings.integrityReport())).toEqual([]);
+    db.setState((s) => {
+      const rows = s[table] as Record<string, State[K][string]>;
+      const first = Object.values(rows)[0]!;
+      return {
+        [table]: { ...rows, [first.id]: { ...first, ...patch(first) } },
+      } as Partial<State>;
+    });
+    return settle(settings.integrityReport());
+  }
+
+  it("finds nothing wrong with a fresh seed that names people and custom values", async () => {
+    const { db } = await seededWorld();
+    const settings = await import("./settings");
+    const s = db.getState();
+    // Not vacuous: the seed fills every field the checks below read.
+    const contacts = Object.values(s.contacts);
+    expect(contacts.filter((c) => c.ownerId).length).toBeGreaterThan(0);
+    expect(contacts.filter((c) => c.followers.length).length).toBeGreaterThan(
+      0,
+    );
+    expect(
+      contacts.filter((c) => Object.keys(c.customFields).length).length,
+    ).toBeGreaterThan(0);
+    expect(
+      Object.values(s.opportunities).filter(
+        (o) => Object.keys(o.customFields).length,
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      Object.values(s.smartLists).filter((l) => l.ownerId).length,
+    ).toBeGreaterThan(0);
+    expect(await settle(settings.integrityReport())).toEqual([]);
+  });
+
+  it.each([
+    {
+      line: "1 contacts are owned by a missing user",
+      run: () => reportWith("contacts", () => ({ ownerId: "usr_gone" })),
+    },
+    {
+      line: "1 contacts are followed by a missing user",
+      run: () =>
+        reportWith("contacts", () => ({
+          followers: ["usr_priya", "usr_gone"],
+        })),
+    },
+    {
+      line: "1 opportunities are owned by a missing user",
+      run: () => reportWith("opportunities", () => ({ ownerId: "usr_gone" })),
+    },
+    {
+      line: "1 tasks are assigned to a missing user",
+      run: () => reportWith("tasks", () => ({ assigneeId: "usr_gone" })),
+    },
+    {
+      line: "1 conversations are assigned to a missing user",
+      run: () =>
+        reportWith("conversations", () => ({ assigneeId: "usr_gone" })),
+    },
+    {
+      line: "1 appointments are assigned to a missing user",
+      run: () =>
+        reportWith("appointments", () => ({ assignedUserId: "usr_gone" })),
+    },
+    {
+      line: "1 calendars list a missing team member",
+      run: () =>
+        reportWith("calendars", (c) => ({
+          teamMemberIds: [...c.teamMemberIds, "usr_gone"],
+        })),
+    },
+    {
+      line: "1 smart lists are owned by a missing user",
+      run: () => reportWith("smartLists", () => ({ ownerId: "usr_gone" })),
+    },
+    {
+      line: "1 contacts hold a value for a missing custom field",
+      run: () =>
+        reportWith("contacts", (c) => ({
+          customFields: { ...c.customFields, gone_field: "x" },
+        })),
+    },
+    {
+      // A deal field's key is not a contact field.
+      line: "1 contacts hold a value for a missing custom field",
+      run: () =>
+        reportWith("contacts", (c) => ({
+          customFields: { ...c.customFields, competitor: "Keap" },
+        })),
+    },
+    {
+      line: "1 opportunities hold a value for a missing custom field",
+      run: () =>
+        reportWith("opportunities", (o) => ({
+          customFields: { ...o.customFields, budget_range: "10k" },
+        })),
+    },
+  ])("reports: $line", async ({ line, run }) => {
+    expect(await run()).toEqual([line]);
+  });
+});
+
+/**
+ * The business page saves through `updateLocation` (P9-T02): only the keys
+ * the form edits, checked with the form's own rules.
+ */
+describe("updateLocation()", () => {
+  async function world() {
+    const { db } = await seededWorld();
+    const settings = await import("./settings");
+    const id = db.getState().locationId;
+    return { db, settings, id };
+  }
+
+  it.each([
+    ["name", { name: "   " }, "Enter the business name."],
+    [
+      "email",
+      { email: "hello@" },
+      "Enter a valid email address, like name@example.com.",
+    ],
+    [
+      "website",
+      { website: "northwind.studio" },
+      "Enter a web address that starts with https://.",
+    ],
+    [
+      "timezone",
+      { timezone: "Mars/Olympus" },
+      "Choose a time zone from the list.",
+    ],
+    ["timezone", { timezone: "" }, "Choose a time zone."],
+  ] as const)(
+    "refuses a bad %s with a 422 naming it, and writes nothing",
+    async (field, patch, message) => {
+      const { db, settings, id } = await world();
+      const before = db.getState();
+      await expect(
+        settle(settings.updateLocation(id, patch)),
+      ).rejects.toMatchObject({
+        status: 422,
+        code: "INVALID_LOCATION",
+        field,
+        message,
+      });
+      expect(db.getState()).toBe(before);
+    },
+  );
+
+  it("saves the business details trimmed and removes emptied optional values", async () => {
+    const { db, settings, id } = await world();
+    const saved = await settle(
+      settings.updateLocation(id, {
+        name: " Northwind Creative ",
+        email: "",
+        phone: " +1 555 0142 ",
+        website: "",
+        industry: " Design ",
+        timezone: "Asia/Singapore",
+      }),
+    );
+    expect(saved).toMatchObject({
+      id,
+      name: "Northwind Creative",
+      phone: "+1 555 0142",
+      industry: "Design",
+      timezone: "Asia/Singapore",
+      currency: "USD",
+    });
+    expect(saved).not.toHaveProperty("email");
+    expect(saved).not.toHaveProperty("website");
+    expect(db.getState().locations[id]).toEqual(saved);
+    expect((await settle(settings.activeLocation())).name).toBe(
+      "Northwind Creative",
+    );
+  });
+
+  it("ignores every key the business form does not edit", async () => {
+    const { db, settings, id } = await world();
+    const prev = db.getState().locations[id]!;
+    const saved = await settle(
+      settings.updateLocation(id, {
+        name: "Renamed",
+        currency: "EUR",
+        address: { city: "Oslo" },
+        createdAt: "2020-01-01T00:00:00.000Z",
+        id: "loc_other",
+      }),
+    );
+    expect(saved).toMatchObject({
+      id,
+      name: "Renamed",
+      currency: prev.currency,
+      address: prev.address,
+      createdAt: prev.createdAt,
+    });
+  });
+
+  it("is a 404 for an unknown location", async () => {
+    const { settings } = await world();
+    await expect(
+      settle(settings.updateLocation("loc_nope", { name: "X" })),
+    ).rejects.toMatchObject({ status: 404 });
   });
 });

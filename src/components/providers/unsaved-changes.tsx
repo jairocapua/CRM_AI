@@ -25,7 +25,8 @@ import { ConfirmDialog } from "@/components/common/confirm-dialog";
  *   `onNavigate` asks "Discard unsaved changes?" first. Keep editing (or
  *   Escape) stays put; Discard changes releases the registration and goes to
  *   `href`. The guarded links are the sidebar's nav links, the user menu's
- *   links and the availability editor's Back to calendars;
+ *   links, the settings section nav and the availability editor's Back to
+ *   calendars;
  * - a reload or a closed tab asks through the browser's own `beforeunload`
  *   prompt. Its wording is the browser's and cannot be set, and browsers
  *   show it only after the viewer has interacted with the page.
@@ -51,7 +52,8 @@ import { ConfirmDialog } from "@/components/common/confirm-dialog";
  * is left to lose then, and the viewer clicks the link again.
  *
  * There is one registration at a time: a second page registering would
- * replace the first. Only the availability editor registers today.
+ * replace the first. The availability editor and the profile and business
+ * settings forms register.
  *
  * Follows link.md's "Blocking navigation" (node_modules/next/dist/docs/
  * 01-app/03-api-reference/02-components/link.md), with the app's

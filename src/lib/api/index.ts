@@ -44,6 +44,14 @@ export type {
 } from "./automation-requests";
 export type { AppointmentRow, CalendarPatch } from "./calendars";
 export type {
+  InviteDraft,
+  RemovalPreview,
+  TeamMember,
+  TeamMemberStatus,
+  UserPatch,
+  UserReferenceCounts,
+} from "./users";
+export type {
   OpportunityDraft,
   OpportunityPatch,
   StageRollup,

@@ -523,7 +523,7 @@ test.describe("on a phone", () => {
     await page
       .getByRole("menuitem", { name: "My profile", exact: true })
       .click();
-    await expect(page).toHaveURL(/\/settings$/, NAVIGATION);
+    await expect(page).toHaveURL(/\/settings\/profile$/, NAVIGATION);
     await expect(mobileSidebar(page, HIDDEN)).toHaveCount(0);
     await expect(anyAlertDialog(page)).toHaveCount(0);
   });
