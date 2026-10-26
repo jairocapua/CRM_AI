@@ -7,7 +7,7 @@
 
 - **Phase:** P10 Polish — active, 3/7 tasks done.
 - **Branch:** `phase/p10-polish`, cut from `master` at `72f8362` (P9 merged as PR #6). Pushed to `origin/phase/p10-polish` up to `f223ac6`; later commits are local. Merge after the P10 gate.
-- **Status:** P10-T03 in review. Next: P10-T04 Keyboard and accessibility.
+- **Status:** P10-T03 approved (`f9da554`). Next: P10-T04 Keyboard and accessibility.
 
 ## Last change
 
