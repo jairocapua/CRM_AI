@@ -7,7 +7,7 @@
 
 - **Phase:** P9 Settings — active, 4/7 tasks done.
 - **Branch:** `phase/p9-settings`, cut from `master` at `4d72e89`. Nothing pushed.
-- **Status:** P9-T04 approved (pending sha); P9-T05 Pipelines and stages manager is next.
+- **Status:** P9-T04 approved (`ac13fa5`); P9-T05 Pipelines and stages manager is next.
 
 ## Last change
 
