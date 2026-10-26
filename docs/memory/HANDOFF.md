@@ -7,7 +7,7 @@
 
 - **Phase:** P10 Polish — active, 4/7 tasks done.
 - **Branch:** `phase/p10-polish`, cut from `master` at `72f8362` (P9 merged as PR #6). Pushed to `origin/phase/p10-polish` up to `f223ac6`; the P10-T03 and P10-T04 commits are local. Merge after the P10 gate.
-- **Status:** P10-T04 in review. Next: P10-T05 Cleanup from the Phase 5 review. Start it in a fresh session.
+- **Status:** P10-T04 approved (`d84c30a`). Next: P10-T05 Cleanup from the Phase 5 review. Start it in a fresh session.
 
 ## Last change
 
