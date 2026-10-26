@@ -7,7 +7,7 @@
 
 - **Phase:** P9 Settings — active, 5/7 tasks done.
 - **Branch:** `phase/p9-settings`, cut from `master` at `4d72e89`. Nothing pushed.
-- **Status:** P9-T05 approved (pending sha); P9-T06 Tags manager with merge is next. Start it in a fresh session.
+- **Status:** P9-T05 approved (`4fa93a3`); P9-T06 Tags manager with merge is next. Start it in a fresh session.
 
 ## Last change
 
