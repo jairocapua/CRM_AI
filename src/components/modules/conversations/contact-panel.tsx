@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fullName, initials, toDate } from "@/lib/format";
+import { useConversationContact } from "./use-conversation-contact";
 
 /**
  * Who you are talking to, beside the thread: identity, the contact's details
@@ -24,18 +25,7 @@ import { fullName, initials, toDate } from "@/lib/format";
  * appointment — the context a rep needs before replying.
  */
 export function ContactPanel({ conversationId }: { conversationId: string }) {
-  const conversation = useResource(
-    "conversations",
-    () => api.conversations.get(conversationId),
-    conversationId,
-  );
-  const contactId = conversation.data?.contactId;
-  const contact = useResource(
-    "contacts",
-    () =>
-      contactId ? api.contacts.get(contactId) : Promise.resolve(undefined),
-    contactId ?? "none",
-  );
+  const { conversation, contact } = useConversationContact(conversationId);
 
   if (conversation.error?.status === 404 || contact.error?.status === 404) {
     return (

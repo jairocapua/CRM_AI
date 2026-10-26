@@ -14,7 +14,13 @@ import { toast } from "sonner";
 
 import type { Contact, Conversation, Message, User } from "@/types";
 import * as api from "@/lib/api";
-import { apiNow, invalidate, loadErrorOf, useResource } from "@/lib/api";
+import {
+  apiNow,
+  errorMessage,
+  invalidate,
+  loadErrorOf,
+  useResource,
+} from "@/lib/api";
 import { ChannelIcon, CHANNEL_LABELS } from "@/components/common/channel-icon";
 import { EmptyState } from "@/components/common/empty-state";
 import { LoadError } from "@/components/common/load-error";
@@ -34,29 +40,15 @@ import {
   type PendingSend,
   type ThreadEntry,
 } from "./message-list";
-
-function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof api.ApiError ? error.message : fallback;
-}
+import { useConversationContact } from "./use-conversation-contact";
 
 /** The middle pane: one conversation, read and reply. */
 export function ThreadView({ id }: { id: string }) {
-  const conversation = useResource(
-    "conversations",
-    () => api.conversations.get(id),
-    id,
-  );
+  const { conversation, contact } = useConversationContact(id);
   const messages = useResource(
     "conversations",
     () => api.conversations.listMessages(id),
     id,
-  );
-  const contactId = conversation.data?.contactId;
-  const contact = useResource(
-    "contacts",
-    () =>
-      contactId ? api.contacts.get(contactId) : Promise.resolve(undefined),
-    contactId ?? "none",
   );
   const users = useResource("users", () => api.users.list());
   const me = useResource("users", () => api.users.me(), "me");
@@ -322,34 +314,38 @@ function ThreadHeader({
 }) {
   const { isMobile, detailsOpen, toggleDetails } = useInbox();
 
-  async function toggleStar() {
+  /** Writes one header flag; true when it saved, a toast when it did not. */
+  async function saveFlag(write: Promise<void>): Promise<boolean> {
     try {
-      await api.conversations.setStarred(
-        conversation.id,
-        !conversation.isStarred,
-      );
+      await write;
+      return true;
     } catch (error) {
       toast.error(errorMessage(error, "Could not update the conversation."));
+      return false;
     }
+  }
+
+  async function toggleStar() {
+    await saveFlag(
+      api.conversations.setStarred(conversation.id, !conversation.isStarred),
+    );
   }
 
   async function toggleArchive() {
     const archiving = !conversation.isArchived;
-    try {
-      await api.conversations.setArchived(conversation.id, archiving);
-      if (archiving) {
-        toast.success("Conversation archived", {
-          action: {
-            label: "Undo",
-            onClick: () =>
-              void api.conversations
-                .setArchived(conversation.id, false)
-                .catch(() => toast.error("Could not restore it.")),
-          },
-        });
-      }
-    } catch (error) {
-      toast.error(errorMessage(error, "Could not update the conversation."));
+    const saved = await saveFlag(
+      api.conversations.setArchived(conversation.id, archiving),
+    );
+    if (saved && archiving) {
+      toast.success("Conversation archived", {
+        action: {
+          label: "Undo",
+          onClick: () =>
+            void api.conversations
+              .setArchived(conversation.id, false)
+              .catch(() => toast.error("Could not restore it.")),
+        },
+      });
     }
   }
 

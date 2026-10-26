@@ -102,7 +102,6 @@ export function defaultChannel(
 export interface InboxQuery {
   tab?: InboxTab;
   channel?: Channel;
-  assigneeId?: ID | "unassigned";
   q?: string;
   /**
    * The open thread. It is exempt from the Unread and Starred tab conditions
@@ -137,14 +136,6 @@ export async function listInbox(
         }
         if (query.tab === "starred" && !c.isStarred && !kept) return false;
         if (query.channel && !c.channels.includes(query.channel)) return false;
-        if (query.assigneeId === "unassigned" && c.assigneeId) return false;
-        if (
-          query.assigneeId &&
-          query.assigneeId !== "unassigned" &&
-          c.assigneeId !== query.assigneeId
-        ) {
-          return false;
-        }
         if (term) {
           const contact = contacts[c.contactId];
           const haystack = [
@@ -245,7 +236,12 @@ export async function markRead(conversationId: ID): Promise<void> {
   invalidate("conversations");
 }
 
-export async function setStarred(id: ID, starred: boolean): Promise<void> {
+/** The thread header's flags; an unknown id writes nothing. */
+async function setFlag(
+  id: ID,
+  flag: "isStarred" | "isArchived",
+  value: boolean,
+): Promise<void> {
   await simulate(() => {
     db.setState((s) => {
       const conversation = s.conversations[id];
@@ -253,7 +249,7 @@ export async function setStarred(id: ID, starred: boolean): Promise<void> {
       return {
         conversations: {
           ...s.conversations,
-          [id]: { ...conversation, isStarred: starred },
+          [id]: { ...conversation, [flag]: value },
         },
       };
     });
@@ -261,20 +257,12 @@ export async function setStarred(id: ID, starred: boolean): Promise<void> {
   invalidate("conversations");
 }
 
-export async function setArchived(id: ID, archived: boolean): Promise<void> {
-  await simulate(() => {
-    db.setState((s) => {
-      const conversation = s.conversations[id];
-      if (!conversation) return {};
-      return {
-        conversations: {
-          ...s.conversations,
-          [id]: { ...conversation, isArchived: archived },
-        },
-      };
-    });
-  });
-  invalidate("conversations");
+export function setStarred(id: ID, starred: boolean): Promise<void> {
+  return setFlag(id, "isStarred", starred);
+}
+
+export function setArchived(id: ID, archived: boolean): Promise<void> {
+  return setFlag(id, "isArchived", archived);
 }
 
 /**
