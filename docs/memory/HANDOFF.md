@@ -7,7 +7,7 @@
 
 - **Phase:** P9 Settings — active, 6/7 tasks done.
 - **Branch:** `phase/p9-settings`, cut from `master` at `4d72e89`. Nothing pushed.
-- **Status:** P9-T06 in review; P9-T07 is next.
+- **Status:** P9-T06 approved (`45ec20b`); P9-T07 is next.
 
 ## Last change
 
