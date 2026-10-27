@@ -5,28 +5,31 @@
 
 ## Now
 
-- **Phase:** P10 Polish — active, 7/7 tasks done; the P10 gate is next.
-- **Branch:** `phase/p10-polish`, cut from `master` at `72f8362` (P9 merged as PR #6). Pushed to `origin/phase/p10-polish` up to P10-T04; P10-T05..T07 are local only. No PR yet: open it after the P10 gate. Merge after the P10 gate.
-- **Status:** P10-T07 approved (`968a178`). Next: the P10 gate.
+- **Phase:** P10 Polish — gate passed. Every phase is done (92/92 tasks); the build plan is complete.
+- **Branch:** `phase/p10-polish`, cut from `master` at `72f8362` (P9 merged as PR #6). Pushed to `origin/phase/p10-polish` up to P10-T04; P10-T05..T07 and the gate are local only. No PR yet.
+- **Status:** P10 gate passed. Waiting on the owner to push and merge.
 
 ## Last change
 
-- P10-T07 README and demo walkthrough: `README.md` replaces the create-next-app stub. It covers what Nimbus is, how to run it, tests and checks, the API seam and the backend migration steps, automations as code, the Settings → Demo data controls, and a 5-minute walkthrough of seven screens.
-- Verify: every README command ran as written. `npm install`, `npm test` (1477), `npm run lint`, `npm run check` green, `npm start` and `npm run dev` served `/dashboard`, `npm run e2e:install`, `npm run e2e` 436/436, `npm run format` changed nothing. Review: five fact fixes applied (Demo data label, 7d/90d not the already-selected 30d, contacts need first and last name, migration must move the re-exported types and clock before deleting `src/lib/mock/`, PROGRESS.md may be hand-edited then `--check`).
+- P10 gate: `npm run check` green (1477 Vitest, lint, typecheck, build). Full `npm run e2e` 435/436; the one failure (`automation-detail.spec.ts:215`) was `net::ERR_NO_BUFFER_SPACE` (Windows ran out of sockets) and that spec passed 21/21 alone with `--repeat-each=3`. `@tanstack/react-table` 8.21.3.
+- Gate review: PASS, no must-fixes. Exit criteria → evidence: 375px `e2e/responsive.spec.ts:70` (all 20 routes); axe `e2e/a11y.spec.ts:85` (every route, light and dark) and :106-157 (overlays); keyboard `e2e/keyboard.spec.ts:98-358` and `e2e/board-keyboard.spec.ts:171`; console errors and hydration warnings `e2e/fixtures.ts:138-167` (auto fixture on every test, self-tested in `e2e/fixture.spec.ts`) plus `e2e/smoke.spec.ts`. README walkthrough spot-checked against the code.
+- Review leftovers (dev-only double seed under Strict Mode, untested boot-chunk retry, 12/20 tab-through routes, and more) are in `docs/BACKLOG.md`.
 
 ## Next up
 
-- The P10 gate: full check + full e2e + gate review against local `master`.
+- Nothing planned: all ten phases are done. New work starts from `docs/BACKLOG.md` or a new phase file, after the owner's questions and plan approval.
 
 ## Waiting on you (owner)
 
-1. OPTIONAL, reversible: the board's same-column drag now lands where the preview shows (from P10-T04).
-2. OPTIONAL, reversible: light-mode grey text and the red Delete colour are a little darker, for readability (from P10-T04).
-3. OPTIONAL: CLAUDE.md lines 32-34 say rewriting `http.ts` alone is the whole backend migration; the README has the accurate steps. CLAUDE.md is protected, so say the word and I'll fix it while you approve the edit (BACKLOG row from P10-T07).
+1. REQUIRED: say "push" and I push `phase/p10-polish` and open the pull request into `master` on GitHub (jairocapua/CRM_AI). Then you merge it.
+2. OPTIONAL human check (every criterion is already proven by named tests): run the demo walkthrough once. In the repo run `npm run dev`, open http://localhost:3000, and follow README.md "Five-minute demo walkthrough".
+3. OPTIONAL, reversible: the board's same-column drag now lands where the preview shows (from P10-T04).
+4. OPTIONAL, reversible: light-mode grey text and the red Delete colour are a little darker, for readability (from P10-T04).
+5. OPTIONAL: CLAUDE.md lines 32-34 say rewriting `http.ts` alone is the whole backend migration; the README has the accurate steps. CLAUDE.md is protected, so say the word and I'll fix it while you approve the edit (BACKLOG row from P10-T07).
 
 ## Open suggestions (non-blocking)
 
-- `docs/BACKLOG.md` holds the P8/P9 leftovers and the P10-T01..T07 review leftovers.
+- `docs/BACKLOG.md` holds the P8/P9 leftovers, the P10-T01..T07 review leftovers and the P10 gate review leftovers.
 - Calendar ids, pipeline/stage ids and `templateId` are still id-typed in authored configs.
 
 ## Blockers
