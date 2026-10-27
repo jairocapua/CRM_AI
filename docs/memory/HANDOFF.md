@@ -5,37 +5,32 @@
 
 ## Now
 
-- **Phase:** P9 Settings — gate passed, 8/8 tasks done. Waiting on the owner to merge.
-- **Branch:** `phase/p9-settings`, cut from `master` at `4d72e89`. Pushed at `54c61e6`; PR #5 merged up to P9-T03, PR #6 (https://github.com/jairocapua/CRM_AI/pull/6) holds P9-T04..T08 and the gate.
-- **Status:** P9 phase gate passed. Next: the owner pushes/merges, then P10 Polish starts on `phase/p10-polish` in a fresh session.
+- **Phase:** P10 Polish — gate passed. Every phase is done (92/92 tasks); the build plan is complete.
+- **Branch:** `phase/p10-polish`, cut from `master` at `72f8362` (P9 merged as PR #6). Pushed to `origin/phase/p10-polish` in full; PR #7 (https://github.com/jairocapua/CRM_AI/pull/7) is open into `master`.
+- **Status:** P10 gate passed. Pushed; waiting on the owner to merge PR #7.
 
 ## Last change
 
-- P9 gate: `npm run check` green (1379 Vitest); full e2e 281/282, the one failure a boot-wait load flake in `link-buttons.spec.ts` that passed 15/15 alone (BACKLOG); the six settings specs 249/249 over 3 repeats; react-table 8.21.3. The gate review found no blocking defects.
-- Exit criteria: add a stage → board column (`e2e/settings-pipelines.spec.ts:246`); integrity report clean after every destructive settings action (unit tests in users/custom-fields/pipelines/tags tests, plus Demo Data e2e checks); check and e2e green.
-- P9-T08 gate fix (`993f558`): `simulate()` lets a slowed demo (Demo Data latency above the default) slow calls that pin their own `ms`; the gate's full runs had failed once each on the tags merge and team invite "cannot close while saving" checks.
-- P9-T07 (`662dd84`): deal-form e2e creates its required fields through Settings › Custom fields. P9-T06 (`45ec20b`): tags manager with merge.
-- e2e ran on port 3102 through a scratch config: another project's server (sequoya-onboarding) held port 3100.
+- P10 gate: `npm run check` green (1477 Vitest, lint, typecheck, build). Full `npm run e2e` 435/436; the one failure (`automation-detail.spec.ts:215`) was `net::ERR_NO_BUFFER_SPACE` (Windows ran out of sockets) and that spec passed 21/21 alone with `--repeat-each=3`. `@tanstack/react-table` 8.21.3.
+- Gate review: PASS, no must-fixes. Exit criteria → evidence: 375px `e2e/responsive.spec.ts:70` (all 20 routes); axe `e2e/a11y.spec.ts:85` (every route, light and dark) and :106-157 (overlays); keyboard `e2e/keyboard.spec.ts:98-358` and `e2e/board-keyboard.spec.ts:171`; console errors and hydration warnings `e2e/fixtures.ts:138-167` (auto fixture on every test, self-tested in `e2e/fixture.spec.ts`) plus `e2e/smoke.spec.ts`. README walkthrough spot-checked against the code.
+- Review leftovers (dev-only double seed under Strict Mode, untested boot-chunk retry, 12/20 tab-through routes, and more) are in `docs/BACKLOG.md`.
 
 ## Next up
 
-- After the merge: `git switch master && git merge --ff-only origin/master && git switch -c phase/p10-polish`, `progress.mjs phase P10 active`, then P10-T01 Command palette (⌘K).
+- Nothing planned: all ten phases are done. New work starts from `docs/BACKLOG.md` or a new phase file, after the owner's questions and plan approval.
 
 ## Waiting on you (owner)
 
-1. REQUIRED: merge PR #6 (https://github.com/jairocapua/CRM_AI/pull/6) into `master` on GitHub.
-2. OPTIONAL: stop the `sequoya-onboarding` server on port 3100 before running `npm run e2e` in the CRM, or the run times out.
-3. OPTIONAL human checks (every criterion is already proven by named tests): `npm run dev`, open http://localhost:3000, then
-   - Settings › Pipelines → Add stage "Demo" to Sales Pipeline → Opportunities: a Demo column sits before Closed Won.
-   - Settings › Tags → Merge on "Cold" → pick "Warm" → the dialog gives the counts → Merge tags → Cold is gone, Warm shows the new count; Edit "Newsletter": the name is locked with the reason.
-   - Settings › Team → Invite a teammate → they show as Pending; Remove them → the dialog says where their records go.
-   - After each, Settings › Demo data → the integrity report says everything is consistent.
-4. OPTIONAL, reversible product choices: see DECISIONS [P9-T01]..[P9-T08] (e.g. tag names unique ignoring case, automation-named tags only recolourable, new stages go before Won, field types fixed once added).
+1. REQUIRED: merge PR #7 on GitHub: https://github.com/jairocapua/CRM_AI/pull/7
+2. OPTIONAL human check (every criterion is already proven by named tests): run the demo walkthrough once. In the repo run `npm run dev`, open http://localhost:3000, and follow README.md "Five-minute demo walkthrough".
+3. OPTIONAL, reversible: the board's same-column drag now lands where the preview shows (from P10-T04).
+4. OPTIONAL, reversible: light-mode grey text and the red Delete colour are a little darker, for readability (from P10-T04).
+5. OPTIONAL: CLAUDE.md lines 32-34 say rewriting `http.ts` alone is the whole backend migration; the README has the accurate steps. CLAUDE.md is protected, so say the word and I'll fix it while you approve the edit (BACKLOG row from P10-T07).
 
 ## Open suggestions (non-blocking)
 
-- `docs/BACKLOG.md` holds the P8 leftovers, the P9-T01..T06 review leftovers and the P9 gate suggestions (more integrity checks: one default pipeline, positions, unique tag names/slugs; unknown tag ids accepted by contact/deal writes; smart-list filters not swept).
-- Calendar ids, pipeline/stage ids and `templateId` are still id-typed in authored configs; they need stable keys before any definition uses them.
+- `docs/BACKLOG.md` holds the P8/P9 leftovers, the P10-T01..T07 review leftovers and the P10 gate review leftovers.
+- Calendar ids, pipeline/stage ids and `templateId` are still id-typed in authored configs.
 
 ## Blockers
 

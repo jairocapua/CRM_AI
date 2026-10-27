@@ -131,6 +131,7 @@ interface PersistedDb {
         status: string;
         pipelineId: string;
         stageId: string;
+        position: number;
         expectedCloseAt?: string;
         closedAt?: string;
         lostReason?: string;
@@ -240,6 +241,8 @@ export interface SeededDeal {
   status: string;
   pipelineId: string;
   stageId: string;
+  /** Its place in its stage's column (0-based, as stored). */
+  position: number;
   /** As stored: a UTC ISO instant, or null when the deal has no date. */
   expectedCloseAt: string | null;
   /** When the deal was won or lost, or null while it is open. */
@@ -257,6 +260,7 @@ export async function readDeals(page: Page): Promise<SeededDeal[]> {
     status: deal.status,
     pipelineId: deal.pipelineId,
     stageId: deal.stageId,
+    position: deal.position,
     expectedCloseAt: deal.expectedCloseAt ?? null,
     closedAt: deal.closedAt ?? null,
     lostReason: deal.lostReason ?? null,
@@ -594,10 +598,12 @@ export type FaultTable =
   | "automationRequests"
   | "calendars"
   | "contacts"
+  | "conversations"
   | "customFields"
   | "opportunities"
   | "pipelines"
   | "tags"
+  | "tasks"
   | "users"
   | "workflowRuns";
 
@@ -619,6 +625,9 @@ export type FaultTable =
  * `stageId`, `contactId` and `value` (an automation trigger names a
  * `pipelineId` and `stageId` but is not a store record). Only pipelines
  * have `stages` and `isDefault` (a location has a `currency`, not those).
+ * Only conversations have `channels`, `lastChannel` and `messageIds`. Tasks
+ * have a `title` and a `priority`, and so do automation requests, which also
+ * have a `problem` (P10-T02).
  */
 const TABLE_SHAPES: Record<
   FaultTable,
@@ -631,6 +640,10 @@ const TABLE_SHAPES: Record<
   opportunities: { has: ["pipelineId", "stageId", "contactId", "value"] },
   pipelines: { has: ["stages", "isDefault", "currency", "position"] },
   tags: { has: ["name", "slug", "color"], lacks: ["timezone"] },
+  tasks: { has: ["title", "priority"], lacks: ["problem"] },
+  conversations: {
+    has: ["contactId", "channels", "lastChannel", "messageIds", "unreadCount"],
+  },
   users: { has: ["slug", "firstName", "role", "isActive"] },
   workflowRuns: { has: ["workflowId", "contactId", "steps", "startedAt"] },
   automationRequests: { has: ["problem", "trigger", "outcome", "priority"] },
@@ -729,7 +742,13 @@ interface ReadFaultWindow {
  * dashboard's analytics; every pipelines.ts write reads pipelines by key or
  * through `Object.entries` (`create`/`update` check names that way,
  * `remove()` renumbers that way), so a spec can fail only the list read
- * after a write. Restore reads
+ * after a write. For tasks it catches every task list (`list`, `listDue`
+ * for the dashboard's Due today card, `listForContact`) and the integrity
+ * check; task writes read by key. For conversations it catches the inbox
+ * (`listInbox`), the sidebar's unread count, `openForContact` (a contact's
+ * Message button) and the integrity check; `get`, `listMessages` and every
+ * write read the conversation by key, so the thread itself keeps loading
+ * (P10-T02). Restore reads
  * before a step that reaches them. `readFaultThrows` counts the reads the
  * fault has failed.
  */

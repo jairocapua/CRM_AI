@@ -66,6 +66,12 @@ left for a cleanup pass).
 - **Scope:** add `@axe-core/playwright`; fix serious and critical issues on
   every route. Tab through each module with no focus traps; dialogs return
   focus; the board supports keyboard drag (Tab → Space → arrows → Space).
+  - From the P10-T03 run: the conversation thread has no `h1`; the phone
+    sidebar Sheet also renders `SidebarRail`, a second "Toggle Sidebar"
+    control inside the dialog; the board snaps (`snap-mandatory`) below md,
+    so try keyboard and touch drag there at 375px too. `settings-nav.tsx`
+    claims the row is kept scrolled to the current section: prove it with
+    an e2e at 375px (`scrollLeft > 0` on /settings/demo-data) or fix it.
 - **Acceptance:**
   - [ ] e2e: axe reports no serious or critical violations on any route, in
         light and dark mode.

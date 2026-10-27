@@ -21,6 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import {
   UnsavedChangesProvider,
+  useGuardedNavigate,
   useLeaveGuard,
   useUnsavedChanges,
 } from "./unsaved-changes";
@@ -56,6 +57,18 @@ function Registrar({
 
 function Probe({ onRender }: { onRender: (guard: GuardLeave) => void }) {
   onRender(useLeaveGuard());
+  return null;
+}
+
+type GuardedNavigate = ReturnType<typeof useGuardedNavigate>;
+
+/** A palette-like holder of `useGuardedNavigate()`, reporting each render. */
+function NavigateProbe({
+  onRender,
+}: {
+  onRender: (navigate: GuardedNavigate) => void;
+}) {
+  onRender(useGuardedNavigate());
   return null;
 }
 
@@ -192,6 +205,62 @@ describe("UnsavedChangesProvider", () => {
     await click("/contacts");
     expect(question().open).toBe(true);
     expect(question().finalFocus).toBeUndefined();
+  });
+
+  it("useGuardedNavigate pushes at once when clean, asks while registered, and pushes on Discard", async () => {
+    let navigate: GuardedNavigate | undefined;
+    const mounted = createRoot(document.createElement("div"));
+    root = mounted;
+    await act(async () => {
+      mounted.render(
+        createElement(UnsavedChangesProvider, null, [
+          createElement(Registrar, {
+            key: "registrar",
+            onRender: (set) => {
+              register = set;
+            },
+          }),
+          createElement(NavigateProbe, {
+            key: "navigator",
+            onRender: (next) => {
+              navigate = next;
+            },
+          }),
+        ]),
+      );
+    });
+    const go = (...args: Parameters<NonNullable<typeof navigate>>) => {
+      if (!navigate) throw new Error("Navigator never rendered");
+      return act(async () => navigate?.(...args));
+    };
+    const onLeave = vi.fn();
+
+    // Clean: straight there.
+    await go("/dashboard", { onLeave });
+    expect(push).toHaveBeenCalledExactlyOnceWith("/dashboard");
+    expect(onLeave).toHaveBeenCalledOnce();
+    expect(question().open).toBe(false);
+    push.mockClear();
+    onLeave.mockClear();
+
+    // Registered: asks, and nothing moves until the viewer answers.
+    await setRegistration(SUBJECT);
+    const trigger = document.createElement("button");
+    await go("/dashboard", { onLeave, returnFocus: trigger });
+    expect(push).not.toHaveBeenCalled();
+    expect(onLeave).not.toHaveBeenCalled();
+    expect(question().open).toBe(true);
+    expect((question().finalFocus as () => HTMLElement)()).toBe(trigger);
+
+    // Keep editing: still nothing.
+    await act(async () => question().onOpenChange(false));
+    expect(push).not.toHaveBeenCalled();
+
+    // Asked again, then Discard changes: pushed once.
+    await go("/dashboard", { onLeave });
+    await act(async () => question().onConfirm());
+    expect(push).toHaveBeenCalledExactlyOnceWith("/dashboard");
+    expect(onLeave).toHaveBeenCalledOnce();
   });
 
   it("a registration released while asking (a save finished) closes the question and drops the link", async () => {

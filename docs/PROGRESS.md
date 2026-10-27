@@ -9,7 +9,7 @@
 > Phases 0–6 were built before this tracker existed; their notes are in `docs/history/phases-0-6.md`.
 
 <!-- summary:start -->
-**Overall:** 85/92 tasks done (92%) · **Current phase:** P10 · **Next agent task:** P10-T01 · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
+**Overall:** 92/92 tasks done (100%) · **Current phase:** — · **Next agent task:** — · **Awaiting review:** none · **Blocked:** none · **Waiting on you:** none
 <!-- summary:end -->
 
 ## P7 — Calendars
@@ -116,14 +116,14 @@ Status: done · Progress: 8/8 · Points: 4 · Branch: phase/p9-settings · File:
 | P9-T08 | Gate fix: tags.merge honours the Demo Data latency | agent | done | P9-T06 | 993f558 | 2026-10-26 | simulate(): a pinned ms yields to a slider latency above the default (class fix; tags.merge and users.invite pending-state e2e failed under load); tags.merge pin removed; http.test.ts. check 1379/1379; full e2e 281/282 (link-buttons boot-wait flake, 15/15 alone); 6 settings specs 249/249 x3. |
 
 ## P10 — Polish
-Status: todo · Progress: 0/7 · Points: 5 · Branch: phase/p10-polish · File: docs/phases/P10-polish.md
+Status: done · Progress: 7/7 · Points: 5 · Branch: phase/p10-polish · File: docs/phases/P10-polish.md
 
 | ID | Task | Owner | Status | Depends | Commit | Updated | Notes |
 |---|---|---|---|---|---|---|---|
-| P10-T01 | Command palette (⌘K) | agent | todo | P9 |  |  |  |
-| P10-T02 | Loading and error audit | agent | todo | P9 |  |  |  |
-| P10-T03 | Responsive pass at 375px | agent | todo | P9 |  |  |  |
-| P10-T04 | Keyboard and accessibility | agent | todo | P9 |  |  |  |
-| P10-T05 | Cleanup from the Phase 5 review | agent | todo | P9 |  |  |  |
-| P10-T06 | Load the seed lazily | agent | todo | P9 |  |  |  |
-| P10-T07 | README and demo walkthrough | agent | todo | P10-T01, P10-T02, P10-T03, P10-T04 |  |  |  |
+| P10-T01 | Command palette (⌘K) | agent | done | P9 | 3092a10 | 2026-10-26 | Palette with nav, contact/deal search, quick actions; review pass, 4 small fixes folded in |
+| P10-T02 | Loading and error audit | agent | done | P9 | ee76c44 | 2026-10-26 | Audit: dashboard/conversations/board/contact panels alerts, route boundaries, mutation toasts, LoadError focus+announce; 1 fix round |
+| P10-T03 | Responsive pass at 375px | agent | done | P9 | f9da554 | 2026-10-27 | 375px pass: phone Search icon, board snap (off while dragging), header separator centred; e2e/responsive.spec.ts covers all 20 routes |
+| P10-T04 | Keyboard and accessibility | agent | done | P9 | d84c30a | 2026-10-27 | axe clean on 20 routes x 2 themes + overlays; board keyboard drag with announcements; tab-through and focus-return e2e; one fix round |
+| P10-T05 | Cleanup from the Phase 5 review | agent | done | P9 | fdb2de6 | 2026-10-27 | Four Phase 5 smells removed with no behaviour change; characterisation tests pass on old code; check 1471 green, 190 e2e green; review approved. |
+| P10-T06 | Load the seed lazily | agent | done | P9 | 8564ae9 | 2026-10-27 | Seed + faker now a lazy chunk. /dashboard JS (summed script responses on next start; Next 16 build prints no sizes): 2401.9 KiB (782.9 gzip) before -> 1945.3 KiB (614.8 gzip) on a seeded load; first run also fetches the ~458 KiB seed chunk while booting. e2e seed-lifecycle covers first run, reload, |
+| P10-T07 | README and demo walkthrough | agent | done | P10-T01, P10-T02, P10-T03, P10-T04 | 968a178 | 2026-10-27 | README rewritten: run, tests, API seam + migration, demo data controls, 5-min walkthrough; every command ran (check green, e2e 436/436); review: 5 fact fixes applied |

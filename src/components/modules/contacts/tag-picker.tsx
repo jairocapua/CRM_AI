@@ -100,6 +100,9 @@ export function TagPicker({
   // tags read started elsewhere never sets it, so it never pulls focus here.
   // The activeElement check covers a browser that does fire that blur.
   const retryHadFocus = useRef(false);
+  // The input, set by Retry: LoadError moves focus there itself after a
+  // Retry that worked (P10-T02), before the effect below would.
+  const retryFocusTarget = useRef<HTMLElement | null>(null);
 
   const [createTag] = useAction(async (name: string) => {
     const color =
@@ -265,9 +268,14 @@ export function TagPicker({
             onRetry={() => {
               // A native <button>: Enter and Space fire click too.
               retryHadFocus.current = true;
+              retryFocusTarget.current =
+                anchor.current?.querySelector<HTMLElement>(
+                  '[data-slot="combobox-chip-input"]',
+                ) ?? null;
               invalidate("tags");
             }}
             retrying={tags.isRefreshing}
+            focusTarget={retryFocusTarget}
           />
         </div>
       ) : null}

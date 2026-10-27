@@ -3,7 +3,7 @@
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { useAction } from "@/lib/api";
+import { errorMessage, useAction } from "@/lib/api";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,9 +28,17 @@ export function DeleteContactDialog({
   onDeleted?: () => void;
 }) {
   const [remove, isDeleting] = useAction(async () => {
-    const result = await api.contacts.remove(contactIds);
-    toast.success(`${pluralize(result.deleted, "contact")} deleted`);
+    let deleted: number;
+    try {
+      ({ deleted } = await api.contacts.remove(contactIds));
+    } catch (error) {
+      // The dialog stays open, to try again or cancel.
+      toast.error(errorMessage(error, "Could not delete the contacts."));
+      return;
+    }
+    toast.success(`${pluralize(deleted, "contact")} deleted`);
     onDeleted?.();
+    onOpenChange(false);
   });
 
   return (
@@ -50,7 +58,9 @@ export function DeleteContactDialog({
           <AlertDialogAction
             variant="destructive"
             disabled={isDeleting}
-            onClick={() => void remove().then(() => onOpenChange(false))}
+            focusableWhenDisabled
+            className="data-disabled:opacity-50"
+            onClick={() => void remove()}
           >
             {isDeleting ? "Deleting…" : "Delete"}
           </AlertDialogAction>

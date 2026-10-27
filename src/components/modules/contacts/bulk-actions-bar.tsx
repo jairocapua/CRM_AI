@@ -5,7 +5,7 @@ import { TagIcon, Trash2Icon, UserIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { useAction, useResource } from "@/lib/api";
+import { errorMessage, useAction, useResource } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -35,22 +35,38 @@ export function BulkActionsBar({
   const users = useResource("users", () => api.users.list());
 
   const [addTags, isAddingTags] = useAction(async () => {
-    await api.contacts.addTags(selectedIds, pendingTagIds);
+    try {
+      await api.contacts.addTags(selectedIds, pendingTagIds);
+    } catch (error) {
+      // The picked tags stay picked, to try again.
+      toast.error(errorMessage(error, "Could not add the tags."));
+      return;
+    }
     toast.success("Tags added");
     setPendingTagIds([]);
   });
 
   const [removeTags, isRemovingTags] = useAction(async () => {
-    await api.contacts.removeTags(selectedIds, pendingTagIds);
+    try {
+      await api.contacts.removeTags(selectedIds, pendingTagIds);
+    } catch (error) {
+      toast.error(errorMessage(error, "Could not remove the tags."));
+      return;
+    }
     toast.success("Tags removed");
     setPendingTagIds([]);
   });
 
   const [assignOwner, isAssigningOwner] = useAction(async (next: string) => {
-    await api.contacts.assignOwner(
-      selectedIds,
-      next === "unassigned" ? undefined : next,
-    );
+    try {
+      await api.contacts.assignOwner(
+        selectedIds,
+        next === "unassigned" ? undefined : next,
+      );
+    } catch (error) {
+      toast.error(errorMessage(error, "Could not change the owner."));
+      return;
+    }
     toast.success(next === "unassigned" ? "Owner cleared" : "Owner assigned");
   });
 

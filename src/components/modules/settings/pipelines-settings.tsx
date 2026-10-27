@@ -346,7 +346,7 @@ function PipelinePanel({
             type="button"
             variant="outline"
             size="sm"
-            aria-label={`Delete ${pipeline.name}`}
+            aria-label={`Delete pipeline ${pipeline.name}`}
             onClick={onDelete}
           >
             <Trash2Icon data-icon="inline-start" aria-hidden />

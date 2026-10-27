@@ -16,7 +16,8 @@ import {
 
 import type { ActivityType } from "@/types";
 import * as api from "@/lib/api";
-import { apiNow, useResource, type ActivityRow } from "@/lib/api";
+import { apiNow, loadErrorOf, useResource, type ActivityRow } from "@/lib/api";
+import { LoadError } from "@/components/common/load-error";
 import {
   Card,
   CardContent,
@@ -33,6 +34,8 @@ import {
 } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatRelative } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { REGION_FOCUS, useCardRegion } from "./card-region";
 
 const ICONS: Partial<Record<ActivityType, LucideIcon>> = {
   "contact.created": UserPlusIcon,
@@ -62,17 +65,27 @@ function hrefFor(activity: ActivityRow): string | undefined {
 
 export function ActivityFeed() {
   const feed = useResource("activities", () => api.activities.listRecent(12));
+  const loadError = loadErrorOf(feed);
+  const region = useCardRegion();
   const now = apiNow();
 
   return (
-    <Card className="lg:col-span-2">
+    <Card {...region.regionProps} className={cn("lg:col-span-2", REGION_FOCUS)}>
       <CardHeader>
-        <CardTitle>Recent activity</CardTitle>
+        <CardTitle id={region.titleId}>Recent activity</CardTitle>
         <CardDescription>Across every contact and deal.</CardDescription>
       </CardHeader>
       <CardContent>
         {feed.isLoading ? (
           <Skeleton className="h-72 w-full" />
+        ) : loadError ? (
+          <LoadError
+            title="Could not load recent activity"
+            message={loadError.message}
+            onRetry={feed.refetch}
+            retrying={feed.isRefreshing}
+            focusTarget={region.ref}
+          />
         ) : (feed.data ?? []).length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             Nothing has happened yet.

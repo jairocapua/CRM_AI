@@ -5,14 +5,14 @@ import {
   layoutProblems,
 } from "@/lib/automations/integrity";
 import { referencedKeys } from "@/lib/automations/keys";
-import { db } from "@/lib/mock/db";
+import { clearDatabase, db } from "@/lib/mock/db";
 import { resumeDeliveries } from "@/lib/mock/delivery";
-import { seedDatabase, clearDatabase } from "@/lib/mock/seed";
 import { businessSchema } from "@/lib/validation/business";
 import { invalidate, invalidateAll } from "./cache";
 import { deliveryOptions } from "./delivery";
 import { parsePatch, withoutEmpty, withoutUndefined } from "./patch";
 import {
+  ApiError,
   getTuning,
   notFound,
   nowIso,
@@ -22,6 +22,20 @@ import {
 } from "./http";
 
 /**
+ * The seed builder and faker with it (several hundred KiB) are their own
+ * chunk, fetched only on a boot that finds no seeded workspace (first run,
+ * or the first load after a clear) and on reseed. A seeded reload never
+ * downloads them.
+ */
+function loadSeed() {
+  return import("@/lib/mock/seed");
+}
+
+/** The sentence a reseed shows when the seed chunk cannot be fetched. */
+export const SEED_UNAVAILABLE_MESSAGE =
+  "Could not load the demo data. Check your connection and try again.";
+
+/**
  * Brings the datastore up before any screen reads it: rehydrate from storage,
  * then seed on first run. Lives behind the seam so no component ever needs to
  * know that persistence is localStorage — against a real backend this becomes
@@ -29,7 +43,7 @@ import {
  */
 export async function bootstrap(): Promise<void> {
   await db.persist.rehydrate();
-  if (!db.getState().seededAt) seedDatabase();
+  if (!db.getState().seededAt) (await loadSeed()).seedDatabase();
   // Messages a refresh caught mid-delivery pick up where they left off.
   resumeDeliveries(deliveryOptions);
   invalidateAll();
@@ -157,6 +171,11 @@ export async function stats(): Promise<DbStats> {
 }
 
 export async function reseed(): Promise<void> {
+  // Offline, or a tab left open across a deploy (the old chunk is gone): a
+  // refusal the page can show, with nothing written.
+  const { seedDatabase } = await loadSeed().catch(() => {
+    throw new ApiError(SEED_UNAVAILABLE_MESSAGE, 503, "SEED_UNAVAILABLE");
+  });
   await simulate(() => seedDatabase(), { ms: 600, canFail: false });
   invalidateAll();
 }

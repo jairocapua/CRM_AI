@@ -7,7 +7,8 @@ import { isBefore, parseISO, startOfDay } from "date-fns";
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { ApiError, apiNow, useResource } from "@/lib/api";
+import { ApiError, apiNow, loadErrorOf, useResource } from "@/lib/api";
+import { LoadError } from "@/components/common/load-error";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -19,6 +20,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatRelative } from "@/lib/format";
+import { REGION_FOCUS, useCardRegion } from "./card-region";
 
 /**
  * Open tasks due today or earlier. Ticking one completes it through the API,
@@ -27,6 +29,8 @@ import { formatRelative } from "@/lib/format";
  */
 export function DueTasksCard() {
   const tasks = useResource("tasks", () => api.tasks.listDue(8));
+  const loadError = loadErrorOf(tasks);
+  const region = useCardRegion();
   const [completing, setCompleting] = useState<ReadonlySet<string>>(new Set());
 
   async function complete(id: string) {
@@ -53,14 +57,22 @@ export function DueTasksCard() {
   const rows = tasks.data ?? [];
 
   return (
-    <Card>
+    <Card {...region.regionProps} className={REGION_FOCUS}>
       <CardHeader>
-        <CardTitle>Due today</CardTitle>
+        <CardTitle id={region.titleId}>Due today</CardTitle>
         <CardDescription>Open tasks due today or overdue.</CardDescription>
       </CardHeader>
       <CardContent>
         {tasks.isLoading ? (
           <Skeleton className="h-40 w-full" />
+        ) : loadError ? (
+          <LoadError
+            title="Could not load tasks"
+            message={loadError.message}
+            onRetry={tasks.refetch}
+            retrying={tasks.isRefreshing}
+            focusTarget={region.ref}
+          />
         ) : rows.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
             <CircleCheckIcon className="size-5" aria-hidden />

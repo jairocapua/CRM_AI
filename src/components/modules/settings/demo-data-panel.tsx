@@ -11,7 +11,8 @@ import {
 import { toast } from "sonner";
 
 import * as api from "@/lib/api";
-import { useAction, useResource } from "@/lib/api";
+import { errorMessage, loadErrorOf, useAction, useResource } from "@/lib/api";
+import { LoadError } from "@/components/common/load-error";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -48,7 +49,12 @@ export function DemoDataPanel() {
   );
 
   const [reseed, isReseeding] = useAction(async () => {
-    await api.settings.reseed();
+    try {
+      await api.settings.reseed();
+    } catch (error) {
+      toast.error(errorMessage(error, "Could not reseed the workspace."));
+      return;
+    }
     toast.success("Workspace reseeded", {
       description: "All demo data has been regenerated from the fixed seed.",
     });
@@ -63,6 +69,7 @@ export function DemoDataPanel() {
 
   const counts = stats.data?.counts ?? {};
   const problems = integrity.data ?? [];
+  const integrityError = loadErrorOf(integrity);
 
   return (
     <div className="flex flex-col gap-4">
@@ -107,7 +114,7 @@ export function DemoDataPanel() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            {problems.length === 0 ? (
+            {integrityError ? null : problems.length === 0 ? (
               <CheckCircle2Icon className="text-status-good size-4" />
             ) : (
               <AlertTriangleIcon className="text-status-critical size-4" />
@@ -122,6 +129,13 @@ export function DemoDataPanel() {
         <CardContent>
           {integrity.isLoading ? (
             <Skeleton className="h-5 w-64" />
+          ) : integrityError ? (
+            <LoadError
+              title="Could not run the check"
+              message={integrityError.message}
+              onRetry={integrity.refetch}
+              retrying={integrity.isRefreshing}
+            />
           ) : problems.length === 0 ? (
             <p className="text-sm">
               No problems found — every reference resolves.
@@ -147,13 +161,14 @@ export function DemoDataPanel() {
         <CardContent className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="latency">Latency</Label>
+              <Label id="latency-label">Latency</Label>
               <span className="text-muted-foreground text-sm tabular-nums">
                 {latency} ms
               </span>
             </div>
             <Slider
               id="latency"
+              aria-labelledby="latency-label"
               value={[latency]}
               min={0}
               max={3000}
@@ -168,13 +183,14 @@ export function DemoDataPanel() {
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="failure">Failure rate</Label>
+              <Label id="failure-label">Failure rate</Label>
               <span className="text-muted-foreground text-sm tabular-nums">
                 {Math.round(failureRate * 100)}%
               </span>
             </div>
             <Slider
               id="failure"
+              aria-labelledby="failure-label"
               value={[failureRate]}
               min={0}
               max={1}
@@ -186,8 +202,8 @@ export function DemoDataPanel() {
               }}
             />
             <p className="text-muted-foreground text-xs">
-              Reads that back a whole screen are exempt, so the app stays
-              navigable at 100%; mutations and detail loads will fail.
+              Reads are exempt, so every screen still loads at 100%; saves,
+              sends and deletes fail with an error message.
             </p>
           </div>
         </CardContent>

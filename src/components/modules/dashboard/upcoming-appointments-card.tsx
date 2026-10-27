@@ -5,7 +5,8 @@ import { CalendarIcon } from "lucide-react";
 import { format, isSameDay, parseISO } from "date-fns";
 
 import * as api from "@/lib/api";
-import { apiNow, useResource } from "@/lib/api";
+import { apiNow, loadErrorOf, useResource } from "@/lib/api";
+import { LoadError } from "@/components/common/load-error";
 import {
   Card,
   CardContent,
@@ -16,6 +17,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { TAG_DOT_CLASSES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { REGION_FOCUS, useCardRegion } from "./card-region";
 
 /** "Today", "Tomorrow", else "Wed, Sep 10" — against the demo clock. */
 function dayLabel(date: Date, now: Date): string {
@@ -35,18 +37,28 @@ export function UpcomingAppointmentsCard() {
   const upcoming = useResource("appointments", () =>
     api.calendars.listUpcoming(6),
   );
+  const loadError = loadErrorOf(upcoming);
+  const region = useCardRegion();
   const now = apiNow();
   const rows = upcoming.data ?? [];
 
   return (
-    <Card>
+    <Card {...region.regionProps} className={REGION_FOCUS}>
       <CardHeader>
-        <CardTitle>Upcoming appointments</CardTitle>
+        <CardTitle id={region.titleId}>Upcoming appointments</CardTitle>
         <CardDescription>Next confirmed bookings.</CardDescription>
       </CardHeader>
       <CardContent>
         {upcoming.isLoading ? (
           <Skeleton className="h-40 w-full" />
+        ) : loadError ? (
+          <LoadError
+            title="Could not load appointments"
+            message={loadError.message}
+            onRetry={upcoming.refetch}
+            retrying={upcoming.isRefreshing}
+            focusTarget={region.ref}
+          />
         ) : rows.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
             <CalendarIcon className="size-5" aria-hidden />

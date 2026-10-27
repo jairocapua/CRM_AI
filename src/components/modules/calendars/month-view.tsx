@@ -180,7 +180,8 @@ function AppointmentChip({
       className={cn(
         "flex min-w-0 items-center rounded-full text-xs leading-4 sm:rounded-sm sm:border sm:px-1 sm:py-px",
         TAG_COLOR_CLASSES[appointment.calendarColor],
-        cancelled && "opacity-60",
+        // Dashed, not faded: opacity took the text under 4.5:1 contrast.
+        cancelled && "border-dashed",
       )}
     >
       <button

@@ -1,6 +1,6 @@
 import type { ID } from "@/types";
 import { db } from "../db";
-import { EMPTY_DB, type DbState, type Table } from "../db-state";
+import type { DbState, Table } from "../db-state";
 import { REF_DATE, resetRng } from "./rng";
 import {
   seedCustomFields,
@@ -180,8 +180,4 @@ export function seedDatabase(): DbState {
   if (process.env.NODE_ENV !== "production") assertNothingAfterAnchor(next);
   db.setState(next, true);
   return next;
-}
-
-export function clearDatabase() {
-  db.setState({ ...EMPTY_DB }, true);
 }

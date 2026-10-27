@@ -94,3 +94,4 @@ export { apiNow, nowIso } from "./http";
 export { invalidate, invalidateAll } from "./cache";
 export type { ResourceKey } from "./cache";
 export { loadErrorOf, useAction, useResource } from "./use-resource";
+export { errorMessage } from "./error-message";

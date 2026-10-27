@@ -3,7 +3,8 @@
 import { HistoryIcon } from "lucide-react";
 
 import * as api from "@/lib/api";
-import { apiNow, useResource } from "@/lib/api";
+import { apiNow, loadErrorOf, useResource } from "@/lib/api";
+import { LoadError } from "@/components/common/load-error";
 import {
   Item,
   ItemContent,
@@ -23,6 +24,20 @@ export function ContactActivityPanel({ contactId }: { contactId: string }) {
 
   if (activities.isLoading) {
     return <Skeleton className="mt-3 h-32 w-full" />;
+  }
+
+  const loadError = loadErrorOf(activities);
+  if (loadError) {
+    return (
+      <div className="pt-3">
+        <LoadError
+          title="Could not load activity"
+          message={loadError.message}
+          onRetry={activities.refetch}
+          retrying={activities.isRefreshing}
+        />
+      </div>
+    );
   }
 
   const rows = activities.data ?? [];

@@ -19,13 +19,18 @@ import { toast } from "sonner";
 
 import type { Contact, Opportunity, User } from "@/types";
 import * as api from "@/lib/api";
-import { invalidate, loadErrorOf, useResource } from "@/lib/api";
+import { errorMessage, invalidate, loadErrorOf, useResource } from "@/lib/api";
 import { EmptyState } from "@/components/common/empty-state";
 import { LoadError } from "@/components/common/load-error";
 import { Money } from "@/components/common/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { stageIdFromDroppable } from "./board-dnd";
+import { cn } from "@/lib/utils";
+import {
+  boardDragAnnouncements,
+  boardDropTarget,
+  DEAL_DRAG_INSTRUCTIONS,
+} from "./board-dnd";
 import { BoardColumn } from "./board-column";
 import { BoardToolbar } from "./board-toolbar";
 import { DealCardBody } from "./deal-card";
@@ -93,6 +98,8 @@ export function OpportunitiesBoard() {
   const users = useResource("users", () => api.users.list());
   const tags = useResource("tags", () => api.tags.list());
   const tagsError = loadErrorOf(tags);
+  const pipelinesError = loadErrorOf(pipelines);
+  const boardError = loadErrorOf(board);
 
   const contactsById = useMemo(
     () => new Map((contacts.data?.rows ?? []).map((c) => [c.id, c])),
@@ -150,6 +157,17 @@ export function OpportunitiesBoard() {
   );
 
   const stages = useMemo(() => activePipeline?.stages ?? [], [activePipeline]);
+  // What a screen reader hears during a drag: the deal, the stage it is
+  // over and its position there among the cards shown (board-dnd.ts), so
+  // hidden lost deals and deals the search filters out are not counted.
+  // The drop itself (handleDragEnd) still computes against every deal.
+  const accessibility = useMemo(
+    () => ({
+      announcements: boardDragAnnouncements(visible, stages),
+      screenReaderInstructions: { draggable: DEAL_DRAG_INSTRUCTIONS },
+    }),
+    [visible, stages],
+  );
   const rollups = useMemo(
     () => api.opportunities.rollupByStage(live, stages),
     [live, stages],
@@ -188,25 +206,15 @@ export function OpportunitiesBoard() {
     const dragged = deals.find((d) => d.id === active.id);
     if (!dragged) return;
 
-    const overId = String(over.id);
-    const overDeal = deals.find((d) => d.id === overId);
-    const targetStageId = stageIdFromDroppable(overId) ?? overDeal?.stageId;
-    if (!targetStageId) return;
-
-    // Mirror `api.opportunities.move` exactly: it splices into the destination
-    // column with the dragged deal already removed, so compute the index the
-    // same way or the optimistic order and the stored order disagree.
+    // `index` is in `api.opportunities.move`'s terms: it splices into the
+    // destination column with the dragged deal already removed, so the
+    // optimistic order below is computed the same way.
+    const target = boardDropTarget(deals, dragged.id, String(over.id));
+    if (!target || target.inPlace) return;
+    const { stageId: targetStageId, index: insertAt } = target;
     const column = deals
       .filter((d) => d.stageId === targetStageId && d.id !== dragged.id)
       .sort((a, b) => a.position - b.position);
-    const overIndex = overDeal
-      ? column.findIndex((d) => d.id === overDeal.id)
-      : -1;
-    const insertAt = overIndex < 0 ? column.length : overIndex;
-
-    if (dragged.stageId === targetStageId && dragged.position === insertAt) {
-      return;
-    }
 
     const reordered = [...column];
     reordered.splice(insertAt, 0, { ...dragged, stageId: targetStageId });
@@ -232,10 +240,23 @@ export function OpportunitiesBoard() {
         stageId: targetStageId,
         position: insertAt,
       });
-    } catch {
+    } catch (error) {
       setOverride(null);
-      toast.error("Could not move that deal. Put it back where it was.");
+      toast.error("Could not move that deal. Put it back where it was.", {
+        description: errorMessage(error, "Please try again."),
+      });
     }
+  }
+
+  if (pipelinesError && !pipelines.isLoading) {
+    return (
+      <LoadError
+        title="Could not load pipelines"
+        message={pipelinesError.message}
+        onRetry={pipelines.refetch}
+        retrying={pipelines.isRefreshing}
+      />
+    );
   }
 
   if (pipelines.isLoading || !pipelines.data) {
@@ -269,24 +290,30 @@ export function OpportunitiesBoard() {
       />
 
       <p className="text-sm text-muted-foreground">
-        {live.length} live deals ·{" "}
-        <Money
-          cents={boardTotal.total}
-          currency={activePipeline.currency}
-          className="font-medium text-foreground"
-        />{" "}
-        pipeline value ·{" "}
-        <Money
-          cents={boardTotal.weighted}
-          currency={activePipeline.currency}
-          className="font-medium text-foreground"
-        />{" "}
-        weighted forecast
+        {boardError ? (
+          "Live deals and their value show once the deals load."
+        ) : (
+          <>
+            {live.length} live deals ·{" "}
+            <Money
+              cents={boardTotal.total}
+              currency={activePipeline.currency}
+              className="font-medium text-foreground"
+            />{" "}
+            pipeline value ·{" "}
+            <Money
+              cents={boardTotal.weighted}
+              currency={activePipeline.currency}
+              className="font-medium text-foreground"
+            />{" "}
+            weighted forecast
+          </>
+        )}
       </p>
 
       {/* The contacts table's rule: only once the board is on screen, never
           above its skeleton. The columns and cards stay, without tags. */}
-      {!board.isLoading && tagsError ? (
+      {!board.isLoading && !boardError && tagsError ? (
         <LoadError
           title="Could not load tags"
           message={tagsError.message}
@@ -297,15 +324,37 @@ export function OpportunitiesBoard() {
 
       {board.isLoading ? (
         <Skeleton className="h-96 w-full" />
+      ) : boardError ? (
+        <LoadError
+          title="Could not load deals"
+          message={boardError.message}
+          onRetry={() => {
+            board.refetch();
+            // One fault, one alert: the tags alert is hidden while this
+            // one shows, so re-read the tags too if they failed.
+            if (tagsError) invalidate("tags");
+          }}
+          retrying={board.isRefreshing}
+        />
       ) : (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
+          accessibility={accessibility}
           onDragStart={handleDragStart}
           onDragEnd={(event) => void handleDragEnd(event)}
           onDragCancel={() => setActiveId(null)}
         >
-          <div className="flex flex-1 gap-3 overflow-x-auto pb-4">
+          {/* Phones snap a column to the left edge (snap-start on each
+              column); md and up scroll freely as before. Snap is off while a
+              card is dragged: mandatory snap would re-snap every small step
+              of dnd-kit's auto-scroll to a whole column. */}
+          <div
+            className={cn(
+              "flex flex-1 gap-3 overflow-x-auto pb-4",
+              activeId === null && "snap-x snap-mandatory md:snap-none",
+            )}
+          >
             {stages.map((stage) => (
               <BoardColumn
                 key={stage.id}

@@ -4,11 +4,7 @@ import {
   AlertCircleIcon,
   CheckCheckIcon,
   CheckIcon,
-  PhoneIncomingIcon,
-  PhoneMissedIcon,
-  PhoneOutgoingIcon,
   RotateCcwIcon,
-  VoicemailIcon,
   XIcon,
 } from "lucide-react";
 
@@ -30,13 +26,9 @@ import {
   MessageScrollerViewport,
 } from "@/components/ui/message-scroller";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  formatClockTime,
-  formatDayLabel,
-  formatDuration,
-  toDate,
-} from "@/lib/format";
+import { formatClockTime, formatDayLabel, toDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { callKind } from "./call-kind";
 
 /**
  * A send the server has not confirmed yet. It renders like an outbound
@@ -220,26 +212,7 @@ function ChatBubble({
 }
 
 function CallRow({ message }: { message: Message }) {
-  const missed = message.callMeta?.missed ?? false;
-  const voicemail = message.channel === "voicemail";
-  const Icon = voicemail
-    ? VoicemailIcon
-    : missed
-      ? PhoneMissedIcon
-      : message.direction === "inbound"
-        ? PhoneIncomingIcon
-        : PhoneOutgoingIcon;
-  const label = voicemail
-    ? "Voicemail"
-    : missed
-      ? "Missed call"
-      : message.direction === "inbound"
-        ? "Inbound call"
-        : "Outbound call";
-  const duration =
-    !missed && message.callMeta
-      ? formatDuration(message.callMeta.durationSec)
-      : null;
+  const { Icon, label, missed, duration } = callKind(message);
 
   return (
     <Marker className="justify-center text-xs">

@@ -478,7 +478,7 @@ test("deleting a pipeline states its deal count, then it is gone from settings a
 
   await choosePipeline(page, "Renewals");
   await page
-    .getByRole("button", { name: "Delete Renewals", exact: true })
+    .getByRole("button", { name: "Delete pipeline Renewals", exact: true })
     .click();
   const dialog = removeDialog(page);
   await expect(dialog).toContainText(
@@ -518,7 +518,10 @@ test("deleting the default names the next default, and the last pipeline can't b
   await openPipelinesPage(page);
 
   await page
-    .getByRole("button", { name: `Delete ${SALES}`, exact: true })
+    .getByRole("button", {
+      name: `Delete pipeline ${SALES}`,
+      exact: true,
+    })
     .click();
   let dialog = removeDialog(page);
   await expect(dialog).toContainText(
@@ -534,7 +537,10 @@ test("deleting the default names the next default, and the last pipeline can't b
   ).toBeVisible();
 
   await page
-    .getByRole("button", { name: "Delete Client Onboarding", exact: true })
+    .getByRole("button", {
+      name: "Delete pipeline Client Onboarding",
+      exact: true,
+    })
     .click();
   dialog = removeDialog(page);
   await dialog
@@ -544,7 +550,7 @@ test("deleting the default names the next default, and the last pipeline can't b
   await expect(pipelineHeading(page, "Renewals")).toBeFocused();
 
   await page
-    .getByRole("button", { name: "Delete Renewals", exact: true })
+    .getByRole("button", { name: "Delete pipeline Renewals", exact: true })
     .click();
   dialog = removeDialog(page);
   await expect(
@@ -767,7 +773,7 @@ test("a deleted pipeline goes at once, before the list is read again", async ({
   await openPipelinesPage(page);
   await choosePipeline(page, "Renewals");
   await page
-    .getByRole("button", { name: "Delete Renewals", exact: true })
+    .getByRole("button", { name: "Delete pipeline Renewals", exact: true })
     .click();
   const dialog = removeDialog(page);
   await expect(dialog).toContainText("deleted with it");
@@ -851,7 +857,10 @@ test("the delete-pipeline count failing shows an alert in the dialog, and Retry 
   await openPipelinesPage(page);
   await failReads(page, "opportunities");
   await page
-    .getByRole("button", { name: `Delete ${SALES}`, exact: true })
+    .getByRole("button", {
+      name: `Delete pipeline ${SALES}`,
+      exact: true,
+    })
     .click();
 
   const dialog = removeDialog(page);
@@ -964,7 +973,7 @@ test("a failed pipeline delete keeps the dialog open with focus on its button", 
   await choosePipeline(page, "Renewals");
 
   await page
-    .getByRole("button", { name: "Delete Renewals", exact: true })
+    .getByRole("button", { name: "Delete pipeline Renewals", exact: true })
     .click();
   const dialog = removeDialog(page);
   // The count is a read, so it loads (slowly) despite the failure rate.

@@ -324,7 +324,8 @@ function AppointmentBlock({
           TAG_COLOR_CLASSES[appointment.calendarColor],
           clippedStart && "rounded-t-none border-t-0",
           clippedEnd && "rounded-b-none border-b-0",
-          cancelled && "opacity-60",
+          // Dashed, not faded: opacity took the text under 4.5:1 contrast.
+          cancelled && "border-dashed",
         )}
       >
         <span

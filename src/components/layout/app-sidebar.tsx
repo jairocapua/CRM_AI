@@ -44,7 +44,7 @@ export function AppSidebar() {
   // the question opens over the Sheet). On desktop the Sheet is already
   // closed, so this does nothing.
   const guardLeave = useLeaveGuard();
-  const { setOpenMobile } = useSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
   const leave = { onLeave: () => setOpenMobile(false) };
 
   return (
@@ -87,7 +87,10 @@ export function AppSidebar() {
       <SidebarFooter>
         <NavUser />
       </SidebarFooter>
-      <SidebarRail />
+      {/* The rail toggles the desktop sidebar; on a phone the sidebar is a
+          Sheet, and a second "Toggle Sidebar" inside that dialog would only
+          close it. */}
+      {isMobile ? null : <SidebarRail />}
     </Sidebar>
   );
 }

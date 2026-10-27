@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import Link from "next/link";
 import {
   ArchiveIcon,
@@ -14,9 +14,16 @@ import { toast } from "sonner";
 
 import type { Contact, Conversation, Message, User } from "@/types";
 import * as api from "@/lib/api";
-import { apiNow, useResource } from "@/lib/api";
+import {
+  apiNow,
+  errorMessage,
+  invalidate,
+  loadErrorOf,
+  useResource,
+} from "@/lib/api";
 import { ChannelIcon, CHANNEL_LABELS } from "@/components/common/channel-icon";
 import { EmptyState } from "@/components/common/empty-state";
+import { LoadError } from "@/components/common/load-error";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, LinkButton } from "@/components/ui/button";
 import {
@@ -33,32 +40,24 @@ import {
   type PendingSend,
   type ThreadEntry,
 } from "./message-list";
-
-function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof api.ApiError ? error.message : fallback;
-}
+import { useConversationContact } from "./use-conversation-contact";
 
 /** The middle pane: one conversation, read and reply. */
 export function ThreadView({ id }: { id: string }) {
-  const conversation = useResource(
-    "conversations",
-    () => api.conversations.get(id),
-    id,
-  );
+  const { conversation, contact } = useConversationContact(id);
   const messages = useResource(
     "conversations",
     () => api.conversations.listMessages(id),
     id,
   );
-  const contactId = conversation.data?.contactId;
-  const contact = useResource(
-    "contacts",
-    () =>
-      contactId ? api.contacts.get(contactId) : Promise.resolve(undefined),
-    contactId ?? "none",
-  );
   const users = useResource("users", () => api.users.list());
   const me = useResource("users", () => api.users.me(), "me");
+  const { inboxFailed } = useInbox();
+  const pane = useRef<HTMLDivElement>(null);
+  // The contact's read only counts once the conversation named it.
+  const loadError =
+    loadErrorOf(conversation) ??
+    (conversation.data ? loadErrorOf(contact) : null);
 
   // Viewing is reading. Keyed on "has unread" rather than the count, so the
   // invalidation markRead itself causes cannot re-trigger it.
@@ -79,6 +78,29 @@ export function ThreadView({ id }: { id: string }) {
               Back to inbox
             </LinkButton>
           }
+        />
+      </div>
+    );
+  }
+
+  if (loadError && !conversation.isLoading && !contact.isLoading) {
+    // One fault, one alert: while the inbox shows its alert, its Retry
+    // re-reads this pane too.
+    if (inboxFailed) {
+      return (
+        <p className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
+          Use Retry in the inbox to load this conversation.
+        </p>
+      );
+    }
+    return (
+      <div className="p-4">
+        <LoadError
+          title="Could not load the conversation"
+          message={loadError.message}
+          onRetry={() => invalidate("conversations", "contacts")}
+          retrying={conversation.isRefreshing || contact.isRefreshing}
+          focusTarget={pane}
         />
       </div>
     );
@@ -112,6 +134,10 @@ export function ThreadView({ id }: { id: string }) {
         contact={contact.data}
         messages={messages.data}
         messagesLoading={messages.isLoading}
+        messagesError={loadErrorOf(messages)}
+        onRetryMessages={messages.refetch}
+        messagesRetrying={messages.isRefreshing}
+        paneRef={pane}
         users={users.data ?? []}
         meId={me.data?.id}
       />
@@ -124,6 +150,10 @@ function Thread({
   contact,
   messages,
   messagesLoading,
+  messagesError,
+  onRetryMessages,
+  messagesRetrying,
+  paneRef,
   users,
   meId,
 }: {
@@ -131,6 +161,11 @@ function Thread({
   contact: Contact;
   messages: Message[] | undefined;
   messagesLoading: boolean;
+  messagesError: api.ApiError | null;
+  onRetryMessages: () => void;
+  messagesRetrying: boolean;
+  /** The pane, focused after a Retry of the conversation that worked. */
+  paneRef: RefObject<HTMLDivElement | null>;
   users: User[];
   meId: string | undefined;
 }) {
@@ -214,7 +249,13 @@ function Thread({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div
+      ref={paneRef}
+      role="region"
+      aria-label={`Conversation with ${fullName(contact)}`}
+      tabIndex={-1}
+      className="flex h-full min-h-0 flex-col outline-none"
+    >
       <ThreadHeader conversation={conversation} contact={contact} />
 
       <div className="relative min-h-0 flex-1">
@@ -222,6 +263,15 @@ function Thread({
           <div className="flex flex-col gap-3 p-4">
             <Skeleton className="h-12 w-2/3" />
             <Skeleton className="ml-auto h-12 w-1/2" />
+          </div>
+        ) : messagesError ? (
+          <div className="p-4">
+            <LoadError
+              title="Could not load messages"
+              message={messagesError.message}
+              onRetry={onRetryMessages}
+              retrying={messagesRetrying}
+            />
           </div>
         ) : entries.length === 0 ? (
           <div className="flex h-full items-center justify-center p-6">
@@ -264,34 +314,38 @@ function ThreadHeader({
 }) {
   const { isMobile, detailsOpen, toggleDetails } = useInbox();
 
-  async function toggleStar() {
+  /** Writes one header flag; true when it saved, a toast when it did not. */
+  async function saveFlag(write: Promise<void>): Promise<boolean> {
     try {
-      await api.conversations.setStarred(
-        conversation.id,
-        !conversation.isStarred,
-      );
+      await write;
+      return true;
     } catch (error) {
       toast.error(errorMessage(error, "Could not update the conversation."));
+      return false;
     }
+  }
+
+  async function toggleStar() {
+    await saveFlag(
+      api.conversations.setStarred(conversation.id, !conversation.isStarred),
+    );
   }
 
   async function toggleArchive() {
     const archiving = !conversation.isArchived;
-    try {
-      await api.conversations.setArchived(conversation.id, archiving);
-      if (archiving) {
-        toast.success("Conversation archived", {
-          action: {
-            label: "Undo",
-            onClick: () =>
-              void api.conversations
-                .setArchived(conversation.id, false)
-                .catch(() => toast.error("Could not restore it.")),
-          },
-        });
-      }
-    } catch (error) {
-      toast.error(errorMessage(error, "Could not update the conversation."));
+    const saved = await saveFlag(
+      api.conversations.setArchived(conversation.id, archiving),
+    );
+    if (saved && archiving) {
+      toast.success("Conversation archived", {
+        action: {
+          label: "Undo",
+          onClick: () =>
+            void api.conversations
+              .setArchived(conversation.id, false)
+              .catch(() => toast.error("Could not restore it.")),
+        },
+      });
     }
   }
 
@@ -314,12 +368,13 @@ function ThreadHeader({
         </AvatarFallback>
       </Avatar>
       <div className="flex min-w-0 flex-1 flex-col">
-        <Link
-          href={`/contacts/${contact.id}`}
-          className="truncate text-sm font-semibold hover:underline"
-        >
-          {fullName(contact)}
-        </Link>
+        {/* The thread's page heading (the inbox beside it has its own on
+            wide screens; on a phone this is the only one). */}
+        <h1 className="truncate text-sm font-semibold">
+          <Link href={`/contacts/${contact.id}`} className="hover:underline">
+            {fullName(contact)}
+          </Link>
+        </h1>
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           {conversation.channels.map((channel) => (
             <span

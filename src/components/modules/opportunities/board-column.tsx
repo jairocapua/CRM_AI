@@ -48,7 +48,7 @@ export function BoardColumn({
 
   return (
     <section
-      className="flex w-72 shrink-0 flex-col gap-2"
+      className="flex w-72 shrink-0 snap-start flex-col gap-2"
       aria-label={`${stage.name} stage`}
     >
       <header className="flex flex-col gap-1 rounded-md border bg-muted/40 px-3 py-2">

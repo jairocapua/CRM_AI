@@ -5,8 +5,9 @@ import { CalendarClockIcon, ExternalLinkIcon, UserXIcon } from "lucide-react";
 import { format } from "date-fns";
 
 import * as api from "@/lib/api";
-import { apiNow, useResource } from "@/lib/api";
+import { apiNow, loadErrorOf, useResource } from "@/lib/api";
 import { EmptyState } from "@/components/common/empty-state";
+import { LoadError } from "@/components/common/load-error";
 import { Money } from "@/components/common/money";
 import { ContactStatusBadge } from "@/components/modules/contacts/contact-status-badge";
 import { ContactInfoPanel } from "@/components/modules/contacts/detail/contact-info-panel";
@@ -16,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fullName, initials, toDate } from "@/lib/format";
+import { useConversationContact } from "./use-conversation-contact";
 
 /**
  * Who you are talking to, beside the thread: identity, the contact's details
@@ -23,24 +25,27 @@ import { fullName, initials, toDate } from "@/lib/format";
  * appointment — the context a rep needs before replying.
  */
 export function ContactPanel({ conversationId }: { conversationId: string }) {
-  const conversation = useResource(
-    "conversations",
-    () => api.conversations.get(conversationId),
-    conversationId,
-  );
-  const contactId = conversation.data?.contactId;
-  const contact = useResource(
-    "contacts",
-    () =>
-      contactId ? api.contacts.get(contactId) : Promise.resolve(undefined),
-    contactId ?? "none",
-  );
+  const { conversation, contact } = useConversationContact(conversationId);
 
   if (conversation.error?.status === 404 || contact.error?.status === 404) {
     return (
       <div className="p-3">
         <EmptyState icon={UserXIcon} title="Contact not found" />
       </div>
+    );
+  }
+
+  // The conversation and the contact are the thread pane's reads too, so a
+  // failure there is that pane's alert (or the inbox's), never a second one
+  // here ([P7-T47]); this pane's own alerts are its cards below.
+  const failed =
+    loadErrorOf(conversation) !== null ||
+    (conversation.data !== undefined && loadErrorOf(contact) !== null);
+  if (failed && !contact.isLoading && !conversation.isLoading) {
+    return (
+      <p className="p-4 text-sm text-muted-foreground">
+        Contact details show once the conversation loads.
+      </p>
     );
   }
 
@@ -101,6 +106,17 @@ function NextAppointment({ contactId }: { contactId: string }) {
     contactId,
   );
   if (appointments.isLoading) return <Skeleton className="h-16 w-full" />;
+  const loadError = loadErrorOf(appointments);
+  if (loadError) {
+    return (
+      <LoadError
+        title="Could not load the next appointment"
+        message={loadError.message}
+        onRetry={appointments.refetch}
+        retrying={appointments.isRefreshing}
+      />
+    );
+  }
 
   const now = apiNow().toISOString();
   const next = (appointments.data ?? [])
@@ -133,6 +149,17 @@ function OpenDeals({ contactId }: { contactId: string }) {
     contactId,
   );
   if (opportunities.isLoading) return <Skeleton className="h-20 w-full" />;
+  const loadError = loadErrorOf(opportunities);
+  if (loadError) {
+    return (
+      <LoadError
+        title="Could not load open deals"
+        message={loadError.message}
+        onRetry={opportunities.refetch}
+        retrying={opportunities.isRefreshing}
+      />
+    );
+  }
 
   // Won and lost deals are history; beside a live thread only what is still
   // in play matters.

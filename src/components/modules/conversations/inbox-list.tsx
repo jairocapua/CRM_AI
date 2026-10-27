@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArchiveIcon,
@@ -12,10 +12,11 @@ import {
 
 import type { Channel, InboxTab } from "@/types";
 import * as api from "@/lib/api";
-import { apiNow, useResource } from "@/lib/api";
+import { apiNow, invalidate, loadErrorOf, useResource } from "@/lib/api";
 import type { ConversationRow } from "@/lib/api";
 import { CHANNEL_LABELS, ChannelIcon } from "@/components/common/channel-icon";
 import { EmptyState } from "@/components/common/empty-state";
+import { LoadError } from "@/components/common/load-error";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,28 +71,16 @@ export const DEFAULT_INBOX_FILTERS: InboxFilters = {
 };
 
 /**
- * The inbox list. Its filters are owned by `InboxShell`, not kept here: on
- * mobile the list unmounts whenever a thread opens (and the shell swaps trees
- * when the viewport crosses `md`), and the filters must survive both.
+ * The inbox read, for `filters`. Called by `InboxShell`, not the list: the
+ * thread and contact panes need to know when it failed (one fault, one
+ * alert), and on mobile the list unmounts while a thread is open.
  */
-export function InboxList({
-  selectedId,
-  filters,
-  onFiltersChange,
-}: {
-  selectedId: string | undefined;
-  filters: InboxFilters;
-  onFiltersChange: (next: InboxFilters) => void;
-}) {
+export function useInboxRows(
+  filters: InboxFilters,
+  selectedId: string | undefined,
+) {
   const { tab, channel, search } = filters;
-  const setTab = (next: InboxTab) => onFiltersChange({ ...filters, tab: next });
-  const setChannel = (next: ChannelFilter) =>
-    onFiltersChange({ ...filters, channel: next });
-  const setSearch = (next: string) =>
-    onFiltersChange({ ...filters, search: next });
   const q = useDebouncedValue(search.trim(), 250);
-  const [newOpen, setNewOpen] = useState(false);
-
   // `keepId` is read by the fetcher but deliberately left out of the cache
   // key: switching threads must not refetch (and flash) the list. It takes
   // effect on the next refetch — which opening an unread thread triggers via
@@ -107,6 +96,46 @@ export function InboxList({
       }),
     `${tab}|${channel}|${q}`,
   );
+  return { ...inbox, q };
+}
+
+export type InboxRows = ReturnType<typeof useInboxRows>;
+
+/**
+ * Retries a failed inbox read, and with it every read the thread and contact
+ * panes hid their own alerts for: the conversation and its messages (all
+ * under "conversations") and the contact ("contacts").
+ */
+export function retryInbox() {
+  invalidate("conversations", "contacts");
+}
+
+/**
+ * The inbox list. Its filters are owned by `InboxShell`, not kept here: on
+ * mobile the list unmounts whenever a thread opens (and the shell swaps trees
+ * when the viewport crosses `md`), and the filters must survive both.
+ */
+export function InboxList({
+  selectedId,
+  filters,
+  onFiltersChange,
+  inbox,
+}: {
+  selectedId: string | undefined;
+  filters: InboxFilters;
+  onFiltersChange: (next: InboxFilters) => void;
+  inbox: InboxRows;
+}) {
+  const { tab, channel, search } = filters;
+  const setTab = (next: InboxTab) => onFiltersChange({ ...filters, tab: next });
+  const setChannel = (next: ChannelFilter) =>
+    onFiltersChange({ ...filters, channel: next });
+  const setSearch = (next: string) =>
+    onFiltersChange({ ...filters, search: next });
+  const { q } = inbox;
+  const [newOpen, setNewOpen] = useState(false);
+  const loadError = loadErrorOf(inbox);
+  const list = useRef<HTMLUListElement>(null);
 
   const rows = inbox.data ?? [];
   const now = apiNow();
@@ -190,6 +219,16 @@ export function InboxList({
               <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
+        ) : loadError ? (
+          <div className="p-3">
+            <LoadError
+              title="Could not load conversations"
+              message={loadError.message}
+              onRetry={retryInbox}
+              retrying={inbox.isRefreshing}
+              focusTarget={list}
+            />
+          </div>
         ) : rows.length === 0 ? (
           <div className="p-3">
             <EmptyState
@@ -207,7 +246,12 @@ export function InboxList({
             />
           </div>
         ) : (
-          <ul className="flex flex-col p-1.5" aria-label="Conversations">
+          <ul
+            ref={list}
+            tabIndex={-1}
+            className="flex flex-col p-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            aria-label="Conversations"
+          >
             {rows.map((row) => (
               <li key={row.id}>
                 <InboxRow
