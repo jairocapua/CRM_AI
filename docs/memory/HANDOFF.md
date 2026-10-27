@@ -6,8 +6,8 @@
 ## Now
 
 - **Phase:** P10 Polish — gate passed. Every phase is done (92/92 tasks); the build plan is complete.
-- **Branch:** `phase/p10-polish`, cut from `master` at `72f8362` (P9 merged as PR #6). Pushed to `origin/phase/p10-polish` up to P10-T04; P10-T05..T07 and the gate are local only. No PR yet.
-- **Status:** P10 gate passed. Waiting on the owner to push and merge.
+- **Branch:** `phase/p10-polish`, cut from `master` at `72f8362` (P9 merged as PR #6). Pushed to `origin/phase/p10-polish` in full; PR #7 (https://github.com/jairocapua/CRM_AI/pull/7) is open into `master`.
+- **Status:** P10 gate passed. Pushed; waiting on the owner to merge PR #7.
 
 ## Last change
 
@@ -21,7 +21,7 @@
 
 ## Waiting on you (owner)
 
-1. REQUIRED: say "push" and I push `phase/p10-polish` and open the pull request into `master` on GitHub (jairocapua/CRM_AI). Then you merge it.
+1. REQUIRED: merge PR #7 on GitHub: https://github.com/jairocapua/CRM_AI/pull/7
 2. OPTIONAL human check (every criterion is already proven by named tests): run the demo walkthrough once. In the repo run `npm run dev`, open http://localhost:3000, and follow README.md "Five-minute demo walkthrough".
 3. OPTIONAL, reversible: the board's same-column drag now lands where the preview shows (from P10-T04).
 4. OPTIONAL, reversible: light-mode grey text and the red Delete colour are a little darker, for readability (from P10-T04).
